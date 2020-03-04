@@ -59,6 +59,10 @@ def interpert_RF(model, examples, feature_names):
     examples, pandas dataframe of validation examples
     feature_names, list of features names corresponding to the columns of examples
     '''
+
+    #SH: we should be able to pull out the feature_names from pandas
+    # ex: feature_names = examples.columns
+
     print( f'Interpreting {examples.shape[0]} examples...')
     prediction, bias, contributions = ti.predict( model, examples)
     forecast_probabilities = model.predict_proba(examples) [:,1] *100.
