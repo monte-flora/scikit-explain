@@ -3,9 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy
+import timeit
 
 from matplotlib import gridspec
-from wofs.util.news_e_plotting_cbook_v2 import cb_colors as wofs
 from treeinterpreter import treeinterpreter as ti
 
 
@@ -19,24 +19,37 @@ def indexs_based_on_performance( model, examples, targets):
     ------------------
      model, sklearn RandomForestClassifier object
      examples, pandas dataframe of validation examples
-
+     targets, a numpy array
     '''
+    
+    #SH: technically, examples is a multi-dim numpy array, not a dataframe. For this to
+    #work for me, I need to say examples.values in the function call. Added check below.
+    
+    #convert a pandas DataFrame to multi-dim numpy array to work with indexing below.
+    if isinstance(examples, pd.DataFrame): examples = examples.to_numpy()
+    
+    #get indices of 0's and 1's
     positive_idx = np.where(targets > 0)
     negative_idx = np.where(targets < 1)
 
+    #get respective targets
     positive_class = targets[positive_idx]
     negative_class = targets[negative_idx]    
     
+    #compute forecast probabilities for each binary class
     forecast_probabilities_on_pos_class = model.predict_proba(examples[positive_idx[0], :])[:,1]
     forecast_probabilities_on_neg_class = model.predict_proba(examples[negative_idx[0], :])[:,1]
     
+    #compute the absolute difference
     diff_from_pos = abs(positive_class - forecast_probabilities_on_pos_class)
     diff_from_neg = abs(negative_class - forecast_probabilities_on_neg_class)
     
-    sorted_diff_for_hits = np.array( list( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0] )) )
-    sorted_diff_for_misses = np.array( list( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0], reverse=True )) )
-    sorted_diff_for_false_alarms = np.array( list( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0], reverse=True )) )
+    #sort based on difference and store in array  (~8 seconds for 3mil examples)    
+    sorted_diff_for_hits = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0]))
+    sorted_diff_for_misses = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0], reverse=True ))
+    sorted_diff_for_false_alarms = np.array( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0], reverse=True )) 
 
+    #store all resulting indicies in one dictionary
     adict =  { 
                 'hits': [ sorted_diff_for_hits[i][1] for i in range(5+1) ],
                 'false_alarms': [ sorted_diff_for_false_alarms[i][1] for i in range(5+1) ],
@@ -46,8 +59,7 @@ def indexs_based_on_performance( model, examples, targets):
     for key in list(adict.keys()):
         adict[key] = np.array(adict[key]).astype(int)
 
-    return adict 
-
+    return adict   
 
 def interpert_RF(model, examples, feature_names):
     '''
