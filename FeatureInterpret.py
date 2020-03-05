@@ -39,20 +39,20 @@ def indexs_based_on_performance( model, examples, targets, num):
         and items are top 5 examples of each 
 
     '''
-    positive_class = targets[np.where(targets > 0)]
-    negative_class = targets[np.where(targets < 1)]    
+    positive_class = targets[np.where(targets > 0)][0]
+    negative_class = targets[np.where(targets < 1)][0]
     
     forecast_probabilities = _predict(model, examples)
     
-    forecast_probabilities_on_pos_class = forecast_probabilities[positive_idx[0]]
-    forecast_probabilities_on_neg_class = forecast_probabilities[negative_idx[0]]
+    forecast_probabilities_on_pos_class = forecast_probabilities[positive_idx]
+    forecast_probabilities_on_neg_class = forecast_probabilities[negative_idx]
     
     diff_from_pos = abs(positive_class - forecast_probabilities_on_pos_class)
     diff_from_neg = abs(negative_class - forecast_probabilities_on_neg_class)
     
-    sorted_diff_for_hits = np.array( list( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0] )) )
-    sorted_diff_for_misses = np.array( list( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0], reverse=True )) )
-    sorted_diff_for_false_alarms = np.array( list( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0], reverse=True )) )
+    sorted_diff_for_hits = np.array( list( sorted( zip(diff_from_pos, positive_idx), key = lambda x:x[0] )) )
+    sorted_diff_for_misses = np.array( list( sorted( zip(diff_from_pos, positive_idx), key = lambda x:x[0], reverse=True )) )
+    sorted_diff_for_false_alarms = np.array( list( sorted( zip(diff_from_neg, negative_idx), key = lambda x:x[0], reverse=True )) )
 
     adict =  { 
                 'hits': [ sorted_diff_for_hits[i][1] for i in range(num+1) ],
