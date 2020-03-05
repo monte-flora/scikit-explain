@@ -60,6 +60,8 @@ def indexs_based_on_performance( model, examples, targets, num):
                 'misses': [ sorted_diff_for_misses[i][1] for i in range(num+1) ]
                 } 
 
+    # Converting the np.arrays to interger type so they
+    # be used as indices
     for key in list(adict.keys()):
         adict[key] = np.array(adict[key]).astype(int)
 
@@ -75,10 +77,13 @@ def interpert_RF(model, examples, feature_names):
     model, sklearn RandomForestClassifier object
     examples, pandas dataframe of validation examples
     feature_names, list of features names corresponding to the columns of examples
+    
+    Return:
+        pandas dataframe
     '''
     print( f'Interpreting {examples.shape[0]} examples...')
     prediction, bias, contributions = ti.predict( model, examples)
-    forecast_probabilities = model.predict_proba(examples) [:,1] *100.
+    forecast_probabilities = _predict(model, examples)*100.
     contributions_to_the_positive_class = contributions[:,:,1]
    
     #contribution_df = {feature_name: [ ] for feature_name in feature_names}
@@ -121,6 +126,18 @@ def partial_dependence_1d(df, model, feature, **kwargs):
     # where the ML model is sensitive to X* (McGovern et al. 2019). Only disadvantage is
     # that PDP do not account for non-linear interactions between X and the other predictors.
     #########################################################################
+    
+    Args: 
+        df: pandas dataframe of validation examples
+        model: sklearn or similar model object with a predict_proba method
+        feature: str of the feature to be evaluated
+        kwargs: a dictionary contain 'mean' and 'std' to calculate the variable_range in normalized space 
+                (functionality not currently included)
+    Returns:
+            pdp_values, numpy.array of partial dependence variables (size = len(variable_range))
+            variable_range, numpy.array of values used in calculating the partial dependence
+            all_values, all examples of feature (useful for plotting a histogram in the PDP plots)
+    
     '''
     all_values = df[feature]
     variable_range = np.linspace(np.percentile(all_values,10), np.percentile(all_values,90), num = 20 )
@@ -149,6 +166,16 @@ def partial_dependence_2d(df, model, features, **kwargs):
     # where the ML model is sensitive to X* (McGovern et al. 2019). Only disadvantage is
     # that PDP do not account for non-linear interactions between X and the other predictors.
     #########################################################################
+    
+     Args: 
+        df: pandas dataframe of validation examples
+        model: sklearn or similar model object with a predict_proba method
+        features: 2-tuple of features to be evaluated
+        
+    Returns:
+            pdp_values, 2D numpy.array of partial dependence variables (size = len(variable_range))
+            var1_range, numpy.array of values used in calculating the partial dependence for the first feature
+            var2_range, "..." for the second feature
     '''
     values_for_var1 = df[features[0]]
     values_for_var2 = df[features[1]]
