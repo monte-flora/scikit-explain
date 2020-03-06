@@ -39,8 +39,11 @@ def indexs_based_on_performance( model, examples, targets, num):
         and items are top 5 examples of each 
 
     '''
-    positive_class = targets[np.where(targets > 0)][0]
-    negative_class = targets[np.where(targets < 1)][0]
+    positive_idx = np.where(targets > 0)[0]
+    negative_idx = np.where(targets < 1)[0]
+
+    positive_class = targets[positive_idx]
+    negative_class = targets[negative_idx]
     
     forecast_probabilities = _predict(model, examples)
     
