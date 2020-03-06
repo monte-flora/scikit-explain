@@ -10,14 +10,28 @@ class ModelClarify():
     '''
     Class for computing various ML model interpretations...blah blah blah
 
+    Args:
+        model : a scikit-learn model
+        examples_in : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
+            to specify the feature names
+        targets_in: numpy array of targets/labels
+        classification: defaults to True for classification problems. 
+            Set to false otherwise.
+        feature_names : defaults to None. Should only be set if examples_in is a 
+            nd.numpy array. Make sure it's a list
     '''
 
-    def __init__(self, model, examples_in, targets_in, classification=True):
+    def __init__(self, model, examples_in, targets_in, classification=True, 
+            feature_names=None):
 
         self._model    = model
         self._examples = examples_in
         self._targets  = targets_in
-        self._feature_names  = examples_in.columns.to_list()
+
+        if isinstance(self._examples, np.ndarray): 
+            self._feature_names  = feature_names
+        else:
+            self._feature_names  = examples_in.columns.to_list()
 
         self._classification = classification
 
@@ -35,7 +49,8 @@ class ModelClarify():
         if (type(self._model).__name__ not in list_of_acceptable_tree_models):
             raise Exception(f'{model_name} model is not accepted for this method.')                
         
-        if (performance_dict is None): self.get_indices_based_on_performance()
+        if (performance_dict is None): 
+            performance_dict = self.get_indices_based_on_performance()
 
         # will be returned; a list of pandas dataframes, one for each performance dict key
         list_of_dfs = []
@@ -56,7 +71,7 @@ class ModelClarify():
 
             tmp_data = []
     
-            #loop over each case appending and append each feature and value to a dictionary
+            #loop over each case appending each feature and value to a dictionary
             for i in range(n_examples):
 
                 key_list = []
@@ -101,7 +116,7 @@ class ModelClarify():
 
         tmp_data = []
     
-        #loop over each case appending and append each feature and value to a dictionary
+        #loop over each case appending each feature and value to a dictionary
         for i in range(n_examples):
 
             key_list = []
