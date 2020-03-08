@@ -35,6 +35,56 @@ class ModelClarify():
 
         self._classification = classification
 
+    def get_indices_based_on_performance(self, num_indices=10):
+
+        '''
+        Determines the best 'hits' (forecast probabilties closest to 1)
+        or false alarms (forecast probabilities furthest from 0 )
+        or misses (forecast probabilties furthest from 1 )
+
+        The returned dictionary below can be passed into interpert_tree_based_model()
+
+        Args:
+        ------------------
+            num_indices : Integer representing the number of indices (examples) to return.
+                          Default is 10
+        '''
+        
+        if isinstance(self._examples, pd.DataFrame): examples_cp = self._examples.to_numpy()
+
+        #get indices for each binary class
+        positive_idx = np.where(self._targets > 0)
+        negative_idx = np.where(self._targets < 1)
+
+        #get targets for each binary class
+        positive_class = self._targets[positive_idx[0]]
+        negative_class = self._targets[negative_idx[0]]    
+    
+        #compute forecast probabilities for each binary class
+        forecast_probabilities_on_pos_class = self._model.predict_proba(examples_cp[positive_idx[0], :])[:,1]
+        forecast_probabilities_on_neg_class = self._model.predict_proba(examples_cp[negative_idx[0], :])[:,1]
+    
+        #compute the absolute difference
+        diff_from_pos = abs(positive_class - forecast_probabilities_on_pos_class)
+        diff_from_neg = abs(negative_class - forecast_probabilities_on_neg_class)
+    
+        #sort based on difference and store in array
+        sorted_diff_for_hits = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0]))
+        sorted_diff_for_misses = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0], reverse=True ))
+        sorted_diff_for_false_alarms = np.array( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0], reverse=True )) 
+
+        #store all resulting indicies in one dictionary
+        adict =  { 
+                    'hits': [ sorted_diff_for_hits[i][1] for i in range(num_indices+1) ],
+                    'false_alarms': [ sorted_diff_for_false_alarms[i][1] for i in range(num_indices+1) ],
+                    'misses': [ sorted_diff_for_misses[i][1] for i in range(num_indices+1) ]
+                    } 
+
+        for key in list(adict.keys()):
+            adict[key] = np.array(adict[key]).astype(int)
+
+        return adict  
+
     def tree_interpreter_performance_based(self, performance_dict=None):
 
         '''
@@ -249,16 +299,19 @@ class ModelClarify():
 
     def calculate_first_order_ALE(self, feature=None, quantiles=None):
 
-        """Computes first-order ALE function on single continuous feature data.
+        """
+            Computes first-order ALE function on single continuous feature data.
 
-        Parameters
-        ----------
-        feature : string
-            Feature's name.
-        quantiles : array
-            Quantiles of feature.
+            Parameters
+            ----------
+            feature : string
+                The name of the feature to consider.
+            quantiles : array
+                Quantiles of feature.
         """
         
+        #TODO: incorporate the monte carlo aspect into these routines in a clean way...
+
         # make sure feature is set
         if (feature is None): raise Exception('Specify a feature.')
 
@@ -266,8 +319,8 @@ class ModelClarify():
         if isinstance(quantiles, list): quantiles = np.array(quantiles)
 
         if (quantiles is None):
-            quantiles = np.linspace(np.percentile(all_values,10), 
-                                    np.percentile(all_values,90), num = 20)
+            quantiles = np.linspace(np.percentile(self._examples,10), 
+                                    np.percentile(self._examples,90), num = 20)
 
         # define ALE function
         ALE = np.zeros(len(quantiles) - 1)
@@ -289,9 +342,11 @@ class ModelClarify():
                 z_up[feature]  = quantiles[i]
     
                 if (self._classification is True):
-                    ALE[i - 1] += (self._model.predict_proba(z_up) - self._model.predict_proba(z_low)).sum() / subset.shape[0]
+                    ALE[i - 1] += (self._model.predict_proba(z_up)[:,1] - 
+                                   self._model.predict_proba(z_low)[:,1]).sum() / subset.shape[0]
                 else:
-                    ALE[i - 1] += (self._model.predict(z_up) - self._model.predict(z_low)).sum() / subset.shape[0]
+                    ALE[i - 1] += (self._model.predict(z_up) - 
+                                   self._model.predict(z_low)).sum() / subset.shape[0]
           
         # The accumulated effect      
         ALE = ALE.cumsum()  
@@ -299,55 +354,130 @@ class ModelClarify():
         # Now we have to center ALE function in order to obtain null expectation for ALE function
         ALE -= ALE.mean()
 
+        return ALE, quantiles
+
+    def calculate_second_order_ALE(self, feature=None, quantiles=None):
+
+        """
+            Computes second-order ALE function on two continuous features data.
+
+            Parameters
+            ----------
+            feature : string
+                The name of the feature to consider.
+            quantiles : array
+                Quantiles of feature.
+        """
+
+        # make sure feature is set
+        if (feature is None): raise Exception('Specify a feature.')
+
+        # convert quantiles to array if list
+        if isinstance(quantiles, list): quantiles = np.array(quantiles)
+
+        if (quantiles is None):
+            quantiles = np.linspace(np.percentile(self._examples,10), 
+                                    np.percentile(self._examples,90), num = 20)
+
+        # define ALE function
+        ALE = np.zeros((quantiles.shape[1], quantiles.shape[1]))
+
+        for i in range(1, len(quantiles[0])):
+            for j in range(1, len(quantiles[1])):
+                # Select subset of training data that falls within subset
+                subset = train_set[(quantiles[0,i-1] <= self._examples[features[0]]) &
+                                   (quantiles[0,i] > self._examples[features[0]]) &
+                                   (quantiles[1,j-1] <= self._examples[features[1]]) &
+                                   (quantiles[1,j] > self._examples[features[1]])]
+                # Without any observation, local effect on splitted area is null
+                if (len(subset) != 0):
+                    
+                    #get lower and upper bounds on accumulated grid
+                    z_low = [subset.copy() for _ in range(2)]
+                    z_up  = [subset.copy() for _ in range(2)]
+
+                    # The main ALE idea that compute prediction difference between 
+                    # same data except feature's one
+                    z_low[0][features[0]] = quantiles[0, i - 1]
+                    z_low[0][features[1]] = quantiles[1, j - 1]
+                    z_low[1][features[0]] = quantiles[0, i]
+                    z_low[1][features[1]] = quantiles[1, j - 1]
+                    z_up[0][features[0]] = quantiles[0, i - 1]
+                    z_up[0][features[1]] = quantiles[1, j]
+                    z_up[1][features[0]] = quantiles[0, i]
+                    z_up[1][features[1]] = quantiles[1, j]
+
+                    if (self._classification is True):
+                        ALE[i,j] += (self._model.predict_proba(z_up[1])[:,1] - 
+                                     self._model.predict_proba(z_up[0])[:,1] - 
+                                    (self._model.predict_proba(z_low[1])[:,1] -
+                                     self._model.predict_proba(z_low[0])[:,1])).sum() / subset.shape[0]
+
+                    else:
+                        ALE[i,j] += (self._model.predict(z_up[1]) - 
+                                     self._model.predict(z_up[0]) - 
+                                    (self._model.predict(z_low[1]) -
+                                     self._model.predict(z_low[0]))).sum() / subset.shape[0]
+
+        # The accumulated effect
+        ALE = np.cumsum(ALE, axis=0)
+
+        # Now we have to center ALE function in order to obtain null expectation for ALE function
+        ALE -= ALE.mean()  
+
+        return ALE, quantiles
+
+    def calculate_first_order_ALE_categorical(self, feature=None, 
+                features_classes=None):
+
+        """
+            Computes first-order ALE function on single categorical feature data.
+
+            Parameters
+            ----------
+            feature : string
+                The name of the feature to consider.
+            features_classes : list or string
+                The values the feature can take.
+        """
+
+        # make sure feature is set
+        if (feature is None): raise Exception('Specify a feature.')
+
+        # get range of values of feature class if not set
+        if (feature_classes is None): 
+            features_classes = self._examples[feature].unique().to_list()
+
+        num_cat = len(features_classes)
+        ALE = np.zeros(num_cat)  # Final ALE function
+
+        for i in range(num_cat):
+            subset = self._examples[self._examples[feature] == features_classes[i]]
+
+            # Without any observation, local effect on splitted area is null
+            if len(subset) != 0:
+                z_low = subset.copy()
+                z_up = subset.copy()
+
+                # The main ALE idea that compute prediction difference between same data except feature's one
+                z_low[feature] = quantiles[i - 1]
+                z_up[feature] = quantiles[i]
+
+                if (self._classification is True):
+                    ALE[i] += (self._model.predict_proba(z_up)[:,1] - 
+                                   self._model.predict_proba(z_low)[:,1]).sum() / subset.shape[0]
+                else:
+                    ALE[i] += (self._model.predict(z_up) - 
+                                   self._model.predict(z_low)).sum() / subset.shape[0]
+
+
+        # The accumulated effect
+        ALE = np.cumsum(ALE, axis=0)
+
+        # Now we have to center ALE function in order to obtain null expectation for ALE function
+        ALE -= ALE.mean()  
+
         return ALE
 
 
-    def get_indices_based_on_performance(self, num_indices=10):
 
-        '''
-        Determines the best 'hits' (forecast probabilties closest to 1)
-        or false alarms (forecast probabilities furthest from 0 )
-        or misses (forecast probabilties furthest from 1 )
-
-        The returned dictionary below can be passed into interpert_tree_based_model()
-
-        Args:
-        ------------------
-            num_indices : Integer representing the number of indices (examples) to return.
-                          Default is 10
-        '''
-        
-        if isinstance(self._examples, pd.DataFrame): examples_cp = self._examples.to_numpy()
-
-        #get indices for each binary class
-        positive_idx = np.where(self._targets > 0)
-        negative_idx = np.where(self._targets < 1)
-
-        #get targets for each binary class
-        positive_class = self._targets[positive_idx[0]]
-        negative_class = self._targets[negative_idx[0]]    
-    
-        #compute forecast probabilities for each binary class
-        forecast_probabilities_on_pos_class = self._model.predict_proba(examples_cp[positive_idx[0], :])[:,1]
-        forecast_probabilities_on_neg_class = self._model.predict_proba(examples_cp[negative_idx[0], :])[:,1]
-    
-        #compute the absolute difference
-        diff_from_pos = abs(positive_class - forecast_probabilities_on_pos_class)
-        diff_from_neg = abs(negative_class - forecast_probabilities_on_neg_class)
-    
-        #sort based on difference and store in array
-        sorted_diff_for_hits = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0]))
-        sorted_diff_for_misses = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0], reverse=True ))
-        sorted_diff_for_false_alarms = np.array( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0], reverse=True )) 
-
-        #store all resulting indicies in one dictionary
-        adict =  { 
-                    'hits': [ sorted_diff_for_hits[i][1] for i in range(num_indices+1) ],
-                    'false_alarms': [ sorted_diff_for_false_alarms[i][1] for i in range(num_indices+1) ],
-                    'misses': [ sorted_diff_for_misses[i][1] for i in range(num_indices+1) ]
-                    } 
-
-        for key in list(adict.keys()):
-            adict[key] = np.array(adict[key]).astype(int)
-
-        return adict  
