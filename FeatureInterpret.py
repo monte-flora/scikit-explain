@@ -6,7 +6,6 @@ list_of_acceptable_tree_models = ['RandomForestClassifier', 'RandomForestRegress
     'DecisionTree', 'ExtraTreesClassifier', 'ExtraTreesRegressor']
 
 def indexs_based_on_performance(the_probabilities, targets, num_indices=10):
-
     '''
     Determines the best 'hits' (forecast probabilties closest to 1)
     or false alarms (forecast probabilities furthest from 0 )
@@ -19,8 +18,8 @@ def indexs_based_on_performance(the_probabilities, targets, num_indices=10):
      model, sklearn RandomForestClassifier object
      examples, pandas dataframe of validation examples
      targets, a numpy array
+     num_indices, 
     '''
-    
     #get indices for each binary class
     positive_idx = np.where(targets > 0)
     negative_idx = np.where(targets < 1)
@@ -38,9 +37,10 @@ def indexs_based_on_performance(the_probabilities, targets, num_indices=10):
     diff_from_neg = abs(negative_class - forecast_probabilities_on_neg_class)
     
     #sort based on difference and store in array
-    sorted_diff_for_hits = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0]))
-    sorted_diff_for_misses = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0], reverse=True ))
-    sorted_diff_for_false_alarms = np.array( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0], reverse=True )) 
+    sorted_diff_for_hits = np.array( list( sorted( zip(diff_from_pos, positive_idx), key = lambda x:x[0] )) )
+    sorted_diff_for_misses = np.array( list( sorted( zip(diff_from_pos, positive_idx), key = lambda x:x[0], reverse=True )) )
+    sorted_diff_for_false_alarms = np.array( list( sorted( zip(diff_from_neg, negative_idx), key = lambda x:x[0], reverse=True )) )
+
 
     #store all resulting indicies in one dictionary
     adict =  { 
@@ -49,6 +49,8 @@ def indexs_based_on_performance(the_probabilities, targets, num_indices=10):
                 'misses': [ sorted_diff_for_misses[i][1] for i in range(num_indices+1) ]
                 } 
 
+    # Converting the np.arrays to interger type so they
+    # be used as indices
     for key in list(adict.keys()):
         adict[key] = np.array(adict[key]).astype(int)
 
@@ -64,8 +66,10 @@ def interpert_RF(model, df_of_examples, feature_names=None):
     model, sklearn RandomForestClassifier object
     examples, pandas dataframe of validation examples
     feature_names, list of features names corresponding to the columns of examples
+    
+    Return:
+        pandas dataframe
     '''
-
     #check to make sure model is of type Tree
     if (type(model).__name__ not in list_of_acceptable_tree_models):
         raise Exception(f'{model_name} model is not accepted for this method.')
@@ -115,7 +119,6 @@ def getStats(in_dataframe, n_best=10):
     return mean, max, min, std
 
 def compute_1d_partial_dependence(df_in, model, feature, **kwargs):
-
     '''
     Calculate the partial dependence.
     # Friedman, J., 2001: Greedy function approximation: a gradient boosting machine.Annals of Statistics,29 (5), 1189–1232.
@@ -127,6 +130,18 @@ def compute_1d_partial_dependence(df_in, model, feature, **kwargs):
     # where the ML model is sensitive to X* (McGovern et al. 2019). Only disadvantage is
     # that PDP do not account for non-linear interactions between X and the other predictors.
     #########################################################################
+    
+    Args: 
+        df: pandas dataframe of validation examples
+        model: sklearn or similar model object with a predict_proba method
+        feature: str of the feature to be evaluated
+        kwargs: a dictionary contain 'mean' and 'std' to calculate the variable_range in normalized space 
+                (functionality not currently included)
+    Returns:
+            pdp_values, numpy.array of partial dependence variables (size = len(variable_range))
+            variable_range, numpy.array of values used in calculating the partial dependence
+            all_values, all examples of feature (useful for plotting a histogram in the PDP plots)
+    
     '''
     
     # get data in numpy format
@@ -162,9 +177,16 @@ def compute_2d_partial_dependence(df, model, features, **kwargs):
     # for a range of values of X*, regions of non-zero slope indicates that
     # where the ML model is sensitive to X* (McGovern et al. 2019). Only disadvantage is
     # that PDP do not account for non-linear interactions between X and the other predictors.
-    #########################################################################
-
-    features: tuple 
+    #######################################################################
+     Args: 
+        df: pandas dataframe of validation examples
+        model: sklearn or similar model object with a predict_proba method
+        features: 2-tuple of features to be evaluated
+        
+    Returns:
+            pdp_values, 2D numpy.array of partial dependence variables (size = len(variable_range))
+            var1_range, numpy.array of values used in calculating the partial dependence for the first feature
+            var2_range, "..." for the second feature
     '''
 
     # get data for both features
