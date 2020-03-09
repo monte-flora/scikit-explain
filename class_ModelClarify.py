@@ -1,5 +1,7 @@
 import numpy as np
-import pandas as pd 
+import pandas as pd
+from PermutationImportance.permutation_importance import sklearn_permutation_importance
+from sklearn.metrics import roc_auc_score, roc_curve, average_precision_score
 from treeinterpreter import treeinterpreter as ti
 
 list_of_acceptable_tree_models = ['RandomForestClassifier', 'RandomForestRegressor',
@@ -478,6 +480,49 @@ class ModelClarify():
         ALE -= ALE.mean()  
 
         return ALE
+
+    def permutation_importance(
+                               self, 
+                               n_multipass_vars, 
+                               evaluation_fn='auprc', 
+                               subsample = 1.0, 
+                               njobs=1,
+                               nbootstrap = 1 
+                               ):
+        """
+        Perform single or multipass permutation importance using Eli's code.
+
+            Parameters:
+            -----------
+            n_multipass_vars : integer
+                number of variables to calculate the multipass permutation importance for.
+            evaluation_fn : string or callable
+                evaluation function
+            subsample: float 
+                value of between 0-1 to subsample examples (useful for speedier results)
+            njobs : interger or float
+                if integer, interpreted as the number of processors to use for multiprocessing
+                if float, interpreted as the fraction of proceesors to use
+            nbootstrap: integer
+                number of bootstrapp resamples 
+        """
+        if evaluation_fn.lower() == 'auc':
+            evaluation_fn = roc_auc_score
+            scoring_strategy = 'argmin_of_mean'
+        elif evaluation_fn.lower() == 'auprc':
+            evaluation_fn = average_precision_score
+            scoring_strategy = 'argmin_of_mean'
+
+        result = sklearn_permutation_importance( model = self._model,
+                                                 scoring_data = (self._examples, self._targets),
+                                                 evaluation_fn = evaluation_fn,
+                                                 variable_names = self._feature_names,
+                                                 scoring_strategy = scoring_strategy,
+                                                 subsample=subsample,
+                                                 nimportant_vars = n_multipass_vars,
+                                                 njobs = njobs,
+                                                 nbootstrap = nbootstrap)   
+        return result 
 
 
 
