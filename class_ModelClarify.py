@@ -323,10 +323,11 @@ class ModelClarify():
 
         if (quantiles is None):
             # Find the ranges to calculate the local effects over
-            percentiles = np.linspace(10, 90, num=nbins)
-            quantiles = np.percentile(self._examples[feature].values, percentiles)
-        
-        
+            # Since the local effect is a deriative, it best to keep 
+            # the bins equally spaced. 
+            percentiles = np.percentile(df[feature].values, [5,95])
+            quantiles = np.linspace(percentiles[0], percentiles[1], num=nbins)
+       
         # define ALE function
         ale = np.zeros(len(quantiles) - 1)
 
