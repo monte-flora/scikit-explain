@@ -299,7 +299,7 @@ class ModelClarify():
 
         return pdp_values, var1_range, var2_range
 
-    def calculate_first_order_ALE(self, feature=None, quantiles=None):
+    def calculate_first_order_ale(self, feature=None, quantiles=None):
 
         """
             Computes first-order ALE function on single continuous feature data.
@@ -313,7 +313,8 @@ class ModelClarify():
         """
         
         #TODO: incorporate the monte carlo aspect into these routines in a clean way...
-
+        nbins = 15 
+        
         # make sure feature is set
         if (feature is None): raise Exception('Specify a feature.')
 
@@ -321,42 +322,44 @@ class ModelClarify():
         if isinstance(quantiles, list): quantiles = np.array(quantiles)
 
         if (quantiles is None):
-            quantiles = np.linspace(np.percentile(self._examples,10), 
-                                    np.percentile(self._examples,90), num = 20)
-
+            # Find the ranges to calculate the local effects over
+            percentiles = np.linspace(10, 90, num=nbins)
+            quantiles = np.percentile(self._examples[feature].values, percentiles)
+        
+        
         # define ALE function
-        ALE = np.zeros(len(quantiles) - 1)
+        ale = np.zeros(len(quantiles) - 1)
 
         # loop over all ranges
         for i in range(1, len(quantiles)):
     
             # get subset of data
-            subset = self._examples[(quantiles[i - 1] <= self._examples[feature]) & 
+            df_subset = self._examples[ (self._examples[feature]>= quantiles[i - 1]) & 
                                     (self._examples[feature] < quantiles[i])]
 
             # Without any observation, local effect on splitted area is null
             if len(subset) != 0:
-                z_low = subset.copy()
-                z_up  = subset.copy()
-
+                lower_bound = df_subset.copy()
+                upper_bound = df_subset.copy()
+            
                 # The main ALE idea that compute prediction difference between same data except feature's one
-                z_low[feature] = quantiles[i - 1]
-                z_up[feature]  = quantiles[i]
-    
-                if (self._classification is True):
-                    ALE[i - 1] += (self._model.predict_proba(z_up)[:,1] - 
-                                   self._model.predict_proba(z_low)[:,1]).sum() / subset.shape[0]
+                lower_bound[feature] = quantiles[i - 1]
+                upper_bound[feature]  = quantiles[i]
+            
+                if self._classification:
+                    effect = 100.*(model.predict_proba(upper_bound)[:,1] - model.predict_proba(lower_bound)[:,1])
                 else:
-                    ALE[i - 1] += (self._model.predict(z_up) - 
-                                   self._model.predict(z_low)).sum() / subset.shape[0]
-          
+                    effect = model.predict(upper_bound) - model.predict(lower_bound)
+              ale[i-1] = np.mean(effect)  
+        
         # The accumulated effect      
-        ALE = ALE.cumsum()  
+        ale = ale.cumsum()
+        mean_ale = ale.mean()
 
         # Now we have to center ALE function in order to obtain null expectation for ALE function
-        ALE -= ALE.mean()
+        ALE -= mean_ale
 
-        return ALE, quantiles
+        return ALE, mean_ale, quantiles
 
     def calculate_second_order_ALE(self, feature=None, quantiles=None):
 
