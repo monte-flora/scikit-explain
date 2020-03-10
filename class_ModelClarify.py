@@ -313,9 +313,7 @@ class ModelClarify():
         """
         
         #TODO: incorporate the monte carlo aspect into these routines in a clean way...
-
         nbins = 15
-
         # make sure feature is set
         if (feature is None): raise Exception('Specify a feature.')
 
@@ -328,7 +326,7 @@ class ModelClarify():
             # the bins equally spaced. 
             percentiles = np.percentile(df[feature].values, [5,95])
             quantiles = np.linspace(percentiles[0], percentiles[1], num=nbins)
-
+        
         # define ALE function
         ale = np.zeros(len(quantiles) - 1)
 
@@ -347,13 +345,17 @@ class ModelClarify():
                 # The main ALE idea that compute prediction difference between same data except feature's one
                 lower_bound[feature] = quantiles[i - 1]
                 upper_bound[feature]  = quantiles[i]
-
+            
+                # The main ALE idea that compute prediction difference between same data except feature's one
+                lower_bound[feature] = quantiles[i - 1]
+                upper_bound[feature]  = quantiles[i]
+            
                 if self._classification:
                     effect = 100.*(model.predict_proba(upper_bound)[:,1] - model.predict_proba(lower_bound)[:,1])
                 else:
                     effect = model.predict(upper_bound) - model.predict(lower_bound)
               ale[i-1] = np.mean(effect)  
-
+        
         # The accumulated effect      
         ale = ale.cumsum()
         mean_ale = ale.mean()
