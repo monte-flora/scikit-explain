@@ -74,18 +74,55 @@ class ModelClarify():
         sorted_diff_for_hits = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0]))
         sorted_diff_for_misses = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0], reverse=True ))
         sorted_diff_for_false_alarms = np.array( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0], reverse=True )) 
+        sorted_diff_for_corr_negs = np.array( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0]))
 
         #store all resulting indicies in one dictionary
         adict =  { 
                     'hits': [ sorted_diff_for_hits[i][1] for i in range(num_indices+1) ],
                     'false_alarms': [ sorted_diff_for_false_alarms[i][1] for i in range(num_indices+1) ],
-                    'misses': [ sorted_diff_for_misses[i][1] for i in range(num_indices+1) ]
+                    'misses': [ sorted_diff_for_misses[i][1] for i in range(num_indices+1) ],
+                    'corr_negs':  [ sorted_diff_for_corr_negs[i][1] for i in range(num_indices+1) ]
                     } 
 
         for key in list(adict.keys()):
             adict[key] = np.array(adict[key]).astype(int)
 
         return adict  
+
+    def _sort_df(self, df ):
+        """
+        sort a dataframe by the absolute value 
+        """
+        return df.reindex(df.abs().sort_values(ascending=False).index)
+
+    def get_top_contributors(self, num_indices=100):
+        """
+        Return the "num" number of top contributors (based on absolute value)
+
+            Parameters:
+            -----------
+                ncontributors: integer
+                    number of top contributors to return 
+                num_indices: integer
+                    see get_
+        """
+        performance_dict = self.get_indices_based_on_performance(num_indices)
+        dict_of_dfs = self.tree_interpreter_performance_based(performance_dict=performance_dict)
+        adict = { }
+        for key in list(dict_of_dfs.keys()):
+            df = dict_of_dfs[key]
+            series = df.mean(axis=0) 
+            sorted_df = self._sort_df(series)
+            idxs = performance_dict[key]  
+            top_vars = { }
+            for var in list(sorted_df.index): 
+                top_vars[var] = { 
+                            'Mean Value': np.mean(self._examples[var].values[idxs]),
+                            'Mean Contribution': series[var]
+                            }
+            adict[key] = top_vars
+
+        return adict
 
     def tree_interpreter_performance_based(self, performance_dict=None):
 
@@ -105,10 +142,11 @@ class ModelClarify():
             performance_dict = self.get_indices_based_on_performance()
 
         # will be returned; a list of pandas dataframes, one for each performance dict key
-        list_of_dfs = []
+        dict_of_dfs = {}
 
         for key,values in zip(performance_dict.keys(), performance_dict.values()):
 
+            print(key) 
             # number of examples
             n_examples = values.shape[0]
 
@@ -139,9 +177,9 @@ class ModelClarify():
             #return a pandas DataFrame to do analysis on
             contributions_dataframe = pd.DataFrame(data=tmp_data)
 
-            list_of_dfs.append(contributions_dataframe)
+            dict_of_dfs[key] = contributions_dataframe
 
-        return list_of_dfs 
+        return dict_of_dfs 
 
     def tree_interpreter_simple(self):
 
@@ -322,11 +360,9 @@ class ModelClarify():
 
         if (quantiles is None):
             # Find the ranges to calculate the local effects over
-            # Since the local effect is a deriative, it best to keep 
-            # the bins equally spaced. 
-            percentiles = np.percentile(df[feature].values, [5,95])
-            quantiles = np.linspace(percentiles[0], percentiles[1], num=nbins)
-        
+            # Using quantiles ensures each bin gets the same number of examples
+            quantiles = np.percentile(self._examples[feature].values, np.arange(2.5,97.5+5,5))
+
         # define ALE function
         ale = np.zeros(len(quantiles) - 1)
 
@@ -338,7 +374,7 @@ class ModelClarify():
                                     (self._examples[feature] < quantiles[i])]
 
             # Without any observation, local effect on splitted area is null
-            if len(subset) != 0:
+            if len(df_subset) != 0:
                 lower_bound = df_subset.copy()
                 upper_bound = df_subset.copy()
                 
@@ -351,22 +387,22 @@ class ModelClarify():
                 upper_bound[feature]  = quantiles[i]
             
                 if self._classification:
-                    effect = 100.*(model.predict_proba(upper_bound)[:,1] - model.predict_proba(lower_bound)[:,1])
+                    effect = 100.*(self._model.predict_proba(upper_bound)[:,1] - self._model.predict_proba(lower_bound)[:,1])
                 else:
-                    effect = model.predict(upper_bound) - model.predict(lower_bound)
-              ale[i-1] = np.mean(effect)  
+                    effect = self._model.predict(upper_bound) - self._model.predict(lower_bound)
+                
+                ale[i-1] = np.mean(effect)  
         
         # The accumulated effect      
         ale = ale.cumsum()
         mean_ale = ale.mean()
 
         # Now we have to center ALE function in order to obtain null expectation for ALE function
-        ALE -= mean_ale
+        ale -= mean_ale
 
-        return ALE, mean_ale, quantiles
+        return ale, mean_ale, quantiles
 
-    def calculate_second_order_ALE(self, feature=None, quantiles=None):
-
+    def calculate_second_order_ale(self, features=None, quantiles=None):
         """
             Computes second-order ALE function on two continuous features data.
 
@@ -377,33 +413,31 @@ class ModelClarify():
             quantiles : array
                 Quantiles of feature.
         """
-
         # make sure feature is set
-        if (feature is None): raise Exception('Specify a feature.')
+        if (features is None): raise Exception('Specify two features!')
 
         # convert quantiles to array if list
         if isinstance(quantiles, list): quantiles = np.array(quantiles)
 
         if (quantiles is None):
-            quantiles = np.linspace(np.percentile(self._examples,10), 
-                                    np.percentile(self._examples,90), num = 20)
+            quantiles = np.array( [ np.percentile(self._examples[f].values, np.arange(2.5,97.5+5,5)) for f in features])
 
         # define ALE function
-        ALE = np.zeros((quantiles.shape[1], quantiles.shape[1]))
+        ale = np.zeros((quantiles.shape[1]-1, quantiles.shape[1]-1))
 
         for i in range(1, len(quantiles[0])):
             for j in range(1, len(quantiles[1])):
                 # Select subset of training data that falls within subset
-                subset = train_set[(quantiles[0,i-1] <= self._examples[features[0]]) &
-                                   (quantiles[0,i] > self._examples[features[0]]) &
-                                   (quantiles[1,j-1] <= self._examples[features[1]]) &
-                                   (quantiles[1,j] > self._examples[features[1]])]
+                df_subset = self._examples[ (self._examples[features[0]]>= quantiles[0,i - 1]) &
+                                            (self._examples[features[0]] < quantiles[0,i]) &
+                                            (self._examples[features[1]]>= quantiles[1,j - 1]) &
+                                            (self._examples[features[1]] < quantiles[1,j])
+                                            ]
                 # Without any observation, local effect on splitted area is null
-                if (len(subset) != 0):
-                    
+                if (len(df_subset) != 0):
                     #get lower and upper bounds on accumulated grid
-                    z_low = [subset.copy() for _ in range(2)]
-                    z_up  = [subset.copy() for _ in range(2)]
+                    z_low = [df_subset.copy() for _ in range(2)]
+                    z_up  = [df_subset.copy() for _ in range(2)]
 
                     # The main ALE idea that compute prediction difference between 
                     # same data except feature's one
@@ -417,24 +451,19 @@ class ModelClarify():
                     z_up[1][features[1]] = quantiles[1, j]
 
                     if (self._classification is True):
-                        ALE[i,j] += (self._model.predict_proba(z_up[1])[:,1] - 
-                                     self._model.predict_proba(z_up[0])[:,1] - 
-                                    (self._model.predict_proba(z_low[1])[:,1] -
-                                     self._model.predict_proba(z_low[0])[:,1])).sum() / subset.shape[0]
-
+                        effect = 100.*( self._model.predict_proba(z_up[1])[:,1] - self._model.predict_proba(z_up[0])[:,1] - (self._model.predict_proba(z_low[1])[:,1] - self._model.predict_proba(z_low[0])[:,1]))
                     else:
-                        ALE[i,j] += (self._model.predict(z_up[1]) - 
-                                     self._model.predict(z_up[0]) - 
-                                    (self._model.predict(z_low[1]) -
-                                     self._model.predict(z_low[0]))).sum() / subset.shape[0]
+                        effect = self._model.predict(z_up[1]) - self._model.predict(z_up[0]) - (self._model.predict(z_low[1]) - self._model.predict(z_low[0]))    
+                    
+                    ale[i-1,j-1] = np.mean(effect)
 
         # The accumulated effect
-        ALE = np.cumsum(ALE, axis=0)
+        ale = np.cumsum(ale, axis=0)
 
         # Now we have to center ALE function in order to obtain null expectation for ALE function
-        ALE -= ALE.mean()  
+        ale -= ale.mean()  
 
-        return ALE, quantiles
+        return ale, quantiles
 
     def calculate_first_order_ALE_categorical(self, feature=None, 
                 features_classes=None):
@@ -520,6 +549,8 @@ class ModelClarify():
             evaluation_fn = average_precision_score
             scoring_strategy = 'argmin_of_mean'
 
+
+        print(evaluation_fn) 
         result = sklearn_permutation_importance( model = self._model,
                                                  scoring_data = (self._examples, self._targets),
                                                  evaluation_fn = evaluation_fn,

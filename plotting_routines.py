@@ -51,12 +51,12 @@ def _ax_quantiles(ax, quantiles, twin='x'):
         if twin == 'x':
                 ax_top = ax.twiny()
                 ax_top.set_xticks(quantiles)
-                ax_top.set_xticklabels(["{1:0.{0}f}%".format(int(i / (len(quantiles) - 1) * 90 % 1 > 0), i / (len(quantiles) - 1) * 90) for i in range(len(quantiles))], color="#545454", fontsize=7)
+                ax_top.set_xticklabels(["{1:0.{0}f}%".format(int(i / (len(quantiles) - 1) * 100 % 1 > 0), i / (len(quantiles) - 1) * 100) for i in range(len(quantiles))], color="#545454", fontsize=7)
                 ax_top.set_xlim(ax.get_xlim())
         elif twin =='y':
                 ax_right = ax.twinx()
                 ax_right.set_yticks(quantiles)
-                ax_right.set_yticklabels(["{1:0.{0}f}%".format(int(i / (len(quantiles) - 1) * 90 % 1 > 0), i / (len(quantiles) - 1) * 90) for i in range(len(quantiles))], color="#545454", fontsize=7)
+                ax_right.set_yticklabels(["{1:0.{0}f}%".format(int(i / (len(quantiles) - 1) * 100 % 1 > 0), i / (len(quantiles) - 1) * 100) for i in range(len(quantiles))], color="#545454", fontsize=7)
                 ax_right.set_ylim(ax.get_ylim())
 
 def _ax_scatter(ax, points):
@@ -70,8 +70,16 @@ def _ax_hist(ax, x, **kwargs):
         ax.hist( x, bins=10, alpha = 0.5, color = kwargs['facecolor'], density=True, edgecolor ='white')
         ax.set_ylabel('Relative Frequency', fontsize=15)
 
-def _first_order_quant_plot(ax, quantiles, ale_data, **kwargs):
-    ax.plot((quantiles[1:] + quantiles[:-1]) / 2, ale_data*100., color=kwargs['line_color'], alpha=0.7, linewidth=2.0)
+def _line_plot(ax, x, y, **kwargs):
+    ax.plot(
+        x,
+        y,
+        "ro--",
+        linewidth=2,
+        markersize=12,
+        mec="black",
+        alpha = 0.7
+    )
 
 def plot_first_order_ale(ale_data, quantiles, feature_name, examples, ax=None, **kwargs):
 
@@ -88,15 +96,15 @@ def plot_first_order_ale(ale_data, quantiles, feature_name, examples, ax=None, *
     ax_plt = ax.twinx()
 
     _ax_labels(ax_plt, "Feature '{}'".format(feature_name), "")
-    #_ax_title(ax_plt, "First-order ALE of '{}' ".format(feature_name))
     _ax_grid(ax_plt, True)
-    _ax_hist(ax, np.clip(examples[feature_name],quantiles[0], quantiles[-1]), **kwargs)
-    _first_order_quant_plot(ax_plt, quantiles, ale_data, color="black", **kwargs)
-    _ax_quantiles(ax_plt, quantiles)
+    _ax_hist(ax, np.clip(examples[feature_name].values, quantiles[0], quantiles[-1]), **kwargs)
+    centered_quantiles = 0.5*(quantiles[1:] + quantiles[:-1])
+    _line_plot(ax_plt, centered_quantiles, ale_data, color="black", **kwargs)
     ax_plt.set_ylabel('Accum. Local Effect (%)', fontsize=15)
+    ax.set_xlabel(feature_name, fontsize=15) 
     ax_plt.axhline(y=0.0, color='k', alpha=0.8)
 
-def plot_second_order_ale(ale_data, quantile_tuple, feature_names, **kwargs):
+def plot_second_order_ale(ale_data, quantile_tuple, feature_names, ax=None, **kwargs):
 
     """
 		Plots the second order ALE
@@ -104,9 +112,9 @@ def plot_second_order_ale(ale_data, quantile_tuple, feature_names, **kwargs):
 		ale_data: 2d numpy array of data
 		quantile_tuple: tuple of the quantiles/ranges
 		feature_names: tuple of feature names which should be strings
-	"""
-
-    fig, ax = plt.subplots()
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
 
     # get quantiles/ranges for both features
     x = quantile_tuple[0]
@@ -116,13 +124,11 @@ def plot_second_order_ale(ale_data, quantile_tuple, feature_names, **kwargs):
 
     # ALE_interp = scipy.interpolate.interp2d(quantiles[0], quantiles[1], ALE)
 
-    CF = ax.contourf(X, Y, ale_data, cmap="bwr", levels=30, alpha=0.7)
+    CF = ax.pcolormesh(X, Y, ale_data, cmap="bwr",alpha=0.7)
     plt.colorbar(CF)
 
-    ax.set_xlabel(f"Feature: {feature_name[0]}")
-    ax.set_ylabel(f"Feature: {feature_name[1]}")
-
-    plt.show()
+    ax.set_xlabel(f"Feature: {feature_names[0]}")
+    ax.set_ylabel(f"Feature: {feature_names[1]}")
 
 
 def plot_categorical_ale(ale_data, feature_values, feature_name, **kwargs):
