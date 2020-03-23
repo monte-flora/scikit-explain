@@ -552,7 +552,7 @@ class ModelClarify():
 
         print(evaluation_fn) 
         result = sklearn_permutation_importance( model = self._model,
-                                                 scoring_data = (self._examples, self._targets),
+                                                 scoring_data = (self._examples.values, self._targets.values),
                                                  evaluation_fn = evaluation_fn,
                                                  variable_names = self._feature_names,
                                                  scoring_strategy = scoring_strategy,
