@@ -414,7 +414,7 @@ class ModelClarify():
         if nbootstrap > 1: 
             quantiles = np.percentile(self._examples[feature].values, np.arange(2.5,97.5+5,5))
             ale_set = [ ]
-            for k, idx in bootstrap_replicates:
+            for _, idx in enumerate(bootstrap_replicates):
                 examples_temp = self._examples.iloc[idx,:]
                 ale, _ = self.calculate_first_order_ale(examples=examples_temp, feature=feature, quantiles=quantiles)
                 ale_set.append(ale)
