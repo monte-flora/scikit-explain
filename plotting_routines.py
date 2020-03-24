@@ -107,11 +107,11 @@ def _line_plot(ax, x, y, **kwargs):
     ax.plot(x, y, "ro--", linewidth=2, markersize=12, mec="black", alpha=0.7)
 
 
-def _ci_plot(ax, x, y_botttom, y_top):
+def _ci_plot(ax, x, y_bottom, y_top, **kwargs):
     """
     Plot Confidence Intervals
     """
-    ax.fill_between(x, y_bottom, y_top, facecolor=kwargs["line_color"], alpha=0.4)
+    ax.fill_between(x, y_bottom, y_top, facecolor='r', alpha=0.4)
 
 
 def plot_first_order_ale(
