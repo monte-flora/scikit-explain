@@ -337,7 +337,7 @@ class ModelClarify():
 
         return pdp_values, var1_range, var2_range
 
-    def calculate_first_order_ale(self, feature=None, quantiles=None):
+    def calculate_first_order_ale(self, examples, targets, feature=None, quantiles=None):
 
         """
             Computes first-order ALE function on single continuous feature data.
@@ -361,7 +361,7 @@ class ModelClarify():
         if (quantiles is None):
             # Find the ranges to calculate the local effects over
             # Using quantiles ensures each bin gets the same number of examples
-            quantiles = np.percentile(self._examples[feature].values, np.arange(2.5,97.5+5,5))
+            quantiles = np.percentile(examples[feature].values, np.arange(2.5,97.5+5,5))
 
         # define ALE function
         ale = np.zeros(len(quantiles) - 1)
@@ -370,8 +370,8 @@ class ModelClarify():
         for i in range(1, len(quantiles)):
     
             # get subset of data
-            df_subset = self._examples[ (self._examples[feature]>= quantiles[i - 1]) & 
-                                    (self._examples[feature] < quantiles[i])]
+            df_subset = examples[ (examples[feature]>= quantiles[i - 1]) & 
+                                    (examples[feature] < quantiles[i])]
 
             # Without any observation, local effect on splitted area is null
             if len(df_subset) != 0:
@@ -401,6 +401,30 @@ class ModelClarify():
         ale -= mean_ale
 
         return ale, quantiles
+
+
+    def calc_ale(feature, subsample=1.0, nbootstrap=100):
+        """
+        Computes first-order ALE function for a feature with bootstrap 
+        resampling for confidence intervals
+        """
+        n_examples = len(self._examples)
+        bootstrap_replicates = np.asarray([[np.random.choice(range(n_examples)) for _ in range(int(subsample * n_examples))] for _ in range(nbootstrap)])
+
+        if nbootstrap > 1: 
+            quantiles = np.percentile(self._examples[feature].values, np.arange(2.5,97.5+5,5))
+            ale_set = [ ]
+            for k, idx in bootstrap_replicates:
+                examples_temp = self._examples.iloc[idx,:]
+                ale, _ = self.calculate_first_order_ale(examples=examples_temp, feature=feature, quantiles=quantiles)
+                ale_set.append(ale)
+
+            return ale_set, quantiles
+        else:
+            ale, quantiles = self.calculate_first_order_ale(examples=self._examples, targets=self._targets, feature=feature)
+
+        return ale, quantiles
+
 
     def calculate_second_order_ale(self, features=None, quantiles=None):
         """
