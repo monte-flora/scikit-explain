@@ -255,8 +255,8 @@ class ModelClarify():
         column_of_data = self._examples[feature].to_numpy()
 
         # define bins based on 10th and 90th percentiles
-        variable_range = np.linspace(np.percentile(column_of_data, 10), 
-                                     np.percentile(column_of_data, 90), num = 20)
+        variable_range = np.linspace(np.percentile(column_of_data, 5), 
+                                     np.percentile(column_of_data, 95), num = 20)
 
         # define output array to store partial dependence values
         pdp_values = np.full(variable_range.shape[0], np.nan)
@@ -400,7 +400,7 @@ class ModelClarify():
         # Now we have to center ALE function in order to obtain null expectation for ALE function
         ale -= mean_ale
 
-        return ale, mean_ale, quantiles
+        return ale, quantiles
 
     def calculate_second_order_ale(self, features=None, quantiles=None):
         """

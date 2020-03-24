@@ -81,7 +81,7 @@ def _line_plot(ax, x, y, **kwargs):
         alpha = 0.7
     )
 
-def plot_first_order_ale(ale_data, quantiles, feature_name, examples, ax=None, **kwargs):
+def plot_first_order_ale(ale_data, quantiles, feature_name, examples=None, ax=None, **kwargs):
 
     """
 		Plots the first order ALE
@@ -97,7 +97,7 @@ def plot_first_order_ale(ale_data, quantiles, feature_name, examples, ax=None, *
 
     _ax_labels(ax_plt, "Feature '{}'".format(feature_name), "")
     _ax_grid(ax_plt, True)
-    _ax_hist(ax, np.clip(examples[feature_name].values, quantiles[0], quantiles[-1]), **kwargs)
+    #_ax_hist(ax, np.clip(examples[feature_name].values, quantiles[0], quantiles[-1]), **kwargs)
     centered_quantiles = 0.5*(quantiles[1:] + quantiles[:-1])
     _line_plot(ax_plt, centered_quantiles, ale_data, color="black", **kwargs)
     ax_plt.set_ylabel('Accum. Local Effect (%)', fontsize=15)
@@ -178,34 +178,27 @@ def plot_monte_carlo_ale(ale_data, quantiles, feature_name, **kwargs):
 
     plt.show()
 
-
-def plot_1d_partial_dependence(pdp_data, feature_name, variable_range, **kwargs):
+def plot_pdp_1d(pdp_data, quantiles, feature_name, examples, ax=None, **kwargs):
 
     """
-		Plots 1D partial dependence plot.
+                Plots the first order ALE
 
-		feature_name: name of the feature you are plotting (string)
-		variable_range: range of values your data takes on
+                ale_data: 1d numpy array of data
+                quantiles: range of values your data takes on
+                feature_name: name of the feature of type string
+        """
+    if ax is None:
+        fig, ax = plt.subplots()
 
-	"""
+    ax_plt = ax.twinx()
 
-    fig, ax = plt.subplots()
-
-    # Plot the mean PDP
-    ax.plot(
-        variable_range,
-        pdp_data * 100.0,
-        "ro--",
-        linewidth=2,
-        markersize=12,
-        mec="black",
-    )
-
+    _ax_labels(ax_plt, "Feature '{}'".format(feature_name), "")
+    _ax_grid(ax_plt, True)
+    _ax_hist(ax, np.clip(examples[feature_name].values, quantiles[0], quantiles[-1]), **kwargs)
+    _line_plot(ax_plt, quantiles, pdp_data*100., color="black", **kwargs)
+    ax_plt.set_ylabel('Mean Probability (%)', fontsize=15)
     ax.set_xlabel(feature_name, fontsize=15)
-    ax.set_ylabel("Mean Probabilitiy (%)", fontsize=12)
-
-    plt.show()
-
+    ax_plt.axhline(y=0.0, color='k', alpha=0.8)
 
 def plot_2d_partial_dependence(pdp_data, feature_names, variable_ranges, **kwargs):
 
