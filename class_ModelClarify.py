@@ -403,7 +403,7 @@ class ModelClarify():
         return ale, quantiles
 
 
-    def calc_ale(feature, subsample=1.0, nbootstrap=100):
+    def calc_ale(self, feature, subsample=1.0, nbootstrap=100):
         """
         Computes first-order ALE function for a feature with bootstrap 
         resampling for confidence intervals
