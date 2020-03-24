@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-from PermutationImportance.permutation_importance import sklearn_permutation_importance
+from .PermutationImportance.permutation_importance import sklearn_permutation_importance
 from sklearn.metrics import roc_auc_score, roc_curve, average_precision_score
-from treeinterpreter import treeinterpreter as ti
+from .treeinterpreter import treeinterpreter as ti
 
 list_of_acceptable_tree_models = ['RandomForestClassifier', 'RandomForestRegressor',
     'DecisionTreeClassifier', 'ExtraTreesClassifier', 'ExtraTreesRegressor']
@@ -33,7 +33,7 @@ class ModelClarify():
         if isinstance(self._examples, np.ndarray): 
             self._feature_names  = feature_names
         else:
-            self._feature_names  = examples_in.columns.to_list()
+            self._feature_names  = list(examples_in.columns)
 
         self._classification = classification
 
