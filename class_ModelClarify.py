@@ -337,7 +337,7 @@ class ModelClarify():
 
         return pdp_values, var1_range, var2_range
 
-    def calculate_first_order_ale(self, examples, targets, feature=None, quantiles=None):
+    def calculate_first_order_ale(self, examples, feature=None, quantiles=None):
 
         """
             Computes first-order ALE function on single continuous feature data.
@@ -421,7 +421,7 @@ class ModelClarify():
 
             return ale_set, quantiles
         else:
-            ale, quantiles = self.calculate_first_order_ale(examples=self._examples, targets=self._targets, feature=feature)
+            ale, quantiles = self.calculate_first_order_ale(examples=self._examples,feature=feature)
 
         return ale, quantiles
 
