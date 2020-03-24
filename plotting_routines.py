@@ -141,7 +141,7 @@ def plot_first_order_ale(
         # Plot error bars
         y_95 = np.percentile(ale_data, 97.5, axis=0)
         y_5 = np.percentile(ale_data, 2.5, axis=0)
-        _ci_plot(ax=ax_plt, x=centered_quantiles, y_botttom=y_5, y_top=y_95)
+        _ci_plot(ax=ax_plt, x=centered_quantiles, y_bottom=y_5, y_top=y_95)
     else:
         _line_plot(ax_plt, centered_quantiles, ale_data, **kwargs)
 
