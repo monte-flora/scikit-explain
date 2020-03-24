@@ -81,6 +81,12 @@ def _line_plot(ax, x, y, **kwargs):
         alpha = 0.7
     )
 
+def _ci_plot(ax, x, y_botttom, y_top):
+    """
+    Plot Confidence Intervals
+    """
+    ax.fill_between(x, y_bottom, y_top, facecolor = kwargs['line_color'], alpha = 0.4 )
+
 def plot_first_order_ale(ale_data, quantiles, feature_name, examples=None, ax=None, **kwargs):
 
     """
@@ -89,7 +95,7 @@ def plot_first_order_ale(ale_data, quantiles, feature_name, examples=None, ax=No
 		ale_data: 1d numpy array of data
 		quantiles: range of values your data takes on
 		feature_name: name of the feature of type string
-	"""
+    """
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -98,8 +104,18 @@ def plot_first_order_ale(ale_data, quantiles, feature_name, examples=None, ax=No
     _ax_labels(ax_plt, "Feature '{}'".format(feature_name), "")
     _ax_grid(ax_plt, True)
     #_ax_hist(ax, np.clip(examples[feature_name].values, quantiles[0], quantiles[-1]), **kwargs)
-    centered_quantiles = 0.5*(quantiles[1:] + quantiles[:-1])
-    _line_plot(ax_plt, centered_quantiles, ale_data, color="black", **kwargs)
+    centered_quantiles = 0.5*(quantiles[1:] + quantiles[:
+    if ale_data.shape[0] > 1:
+        mean_ale = np.mean( ale_data, axis=0)
+        _line_plot(ax_plt, centered_quantiles, mean_ale, **kwargs)
+
+        # Plot error bars
+        y_95 = np.percentile( ALE, 97.5, axis=0)
+        y_5 = np.percentile(ALE, 2.5, axis=0)
+        _ci_plot(ax=ax_plt, x=centered_quantiles, y_botttom=y_5, y_top=y_95)
+    else:
+        _line_plot(ax_plt, centered_quantiles, ale_data, **kwargs)
+    
     ax_plt.set_ylabel('Accum. Local Effect (%)', fontsize=15)
     ax.set_xlabel(feature_name, fontsize=15) 
     ax_plt.axhline(y=0.0, color='k', alpha=0.8)
