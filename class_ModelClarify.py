@@ -102,13 +102,13 @@ class ModelClarify:
 
         # store all resulting indicies in one dictionary
         adict = {
-            "hits": [sorted_diff_for_hits[i][1] for i in range(num_indices + 1)],
+            "hits": [sorted_diff_for_hits[i][1] for i in range(num_indices)],
             "false_alarms": [
-                sorted_diff_for_false_alarms[i][1] for i in range(num_indices + 1)
+                sorted_diff_for_false_alarms[i][1] for i in range(num_indices)
             ],
-            "misses": [sorted_diff_for_misses[i][1] for i in range(num_indices + 1)],
+            "misses": [sorted_diff_for_misses[i][1] for i in range(num_indices)],
             "corr_negs": [
-                sorted_diff_for_corr_negs[i][1] for i in range(num_indices + 1)
+                sorted_diff_for_corr_negs[i][1] for i in range(num_indices)
             ],
         }
 
