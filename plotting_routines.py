@@ -96,7 +96,7 @@ def _ax_hist(ax, x, **kwargs):
         x,
         bins=10,
         alpha=0.5,
-        color=kwargs["facecolor"],
+        color='lightblue',
         density=True,
         edgecolor="white",
     )
@@ -115,7 +115,7 @@ def _ci_plot(ax, x, y_bottom, y_top, **kwargs):
 
 
 def plot_first_order_ale(
-    ale_data, quantiles, feature_name, examples=None, ax=None, **kwargs
+    ale_data, quantiles, feature_name, feature_examples=None, ax=None, **kwargs
 ):
 
     """
@@ -132,9 +132,10 @@ def plot_first_order_ale(
 
     _ax_labels(ax_plt, "Feature '{}'".format(feature_name), "")
     _ax_grid(ax_plt, True)
-    # _ax_hist(ax, np.clip(examples[feature_name].values, quantiles[0], quantiles[-1]), **kwargs)
+    if feature_examples is not None:
+        _ax_hist(ax, np.clip(feature_examples, quantiles[0], quantiles[-1]), **kwargs)
     centered_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
-    if ale_data.shape[0] > 1:
+    if len(ale_data.shape) > 1:
         mean_ale = np.mean(ale_data, axis=0)
         _line_plot(ax_plt, centered_quantiles, mean_ale, **kwargs)
 
@@ -148,6 +149,7 @@ def plot_first_order_ale(
     ax_plt.set_ylabel("Accum. Local Effect (%)", fontsize=15)
     ax.set_xlabel(feature_name, fontsize=15)
     ax_plt.axhline(y=0.0, color="k", alpha=0.8)
+    ax_plt.set_ylim([-10, 10])
 
 
 def plot_second_order_ale(ale_data, quantile_tuple, feature_names, ax=None, **kwargs):
