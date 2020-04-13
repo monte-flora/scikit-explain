@@ -440,6 +440,11 @@ class ModelClarify:
                 lower_bound[feature] = quantiles[i - 1]
                 upper_bound[feature] = quantiles[i]
 
+
+                upper_bound = upper_bound.values
+                lower_bound = lower_bound.values
+
+
                 if self._classification:
                     effect = 100.0 * (
                         self._model.predict_proba(upper_bound)[:, 1]

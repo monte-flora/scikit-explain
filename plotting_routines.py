@@ -227,7 +227,7 @@ def plot_monte_carlo_ale(ale_data, quantiles, feature_name, **kwargs):
     plt.show()
 
 
-def plot_pdp_1d(pdp_data, quantiles, feature_name, examples, ax=None, **kwargs):
+def plot_pdp_1d(pdp_data, quantiles, feature_name, feature_examples, ax=None, **kwargs):
 
     """
                 Plots the first order ALE
@@ -245,15 +245,15 @@ def plot_pdp_1d(pdp_data, quantiles, feature_name, examples, ax=None, **kwargs):
     _ax_grid(ax_plt, True)
     _ax_hist(
         ax,
-        np.clip(examples[feature_name].values, quantiles[0], quantiles[-1]),
+        np.clip(feature_examples, quantiles[0], quantiles[-1]),
         **kwargs,
     )
     _line_plot(ax_plt, quantiles, pdp_data * 100.0, color="black", **kwargs)
     ax_plt.set_ylabel("Mean Probability (%)", fontsize=15)
     ax.set_xlabel(feature_name, fontsize=15)
-    ax_plt.axhline(y=0.0, color="k", alpha=0.8)
-
-
+    #ax_plt.axhline(y=0.0, color="k", alpha=0.8)
+    ax_plt.set_ylim([0,100])
+    
 def plot_2d_partial_dependence(pdp_data, feature_names, variable_ranges, **kwargs):
 
     """
