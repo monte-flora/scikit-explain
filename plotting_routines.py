@@ -114,10 +114,8 @@ def _ci_plot(ax, x, y_bottom, y_top, **kwargs):
     ax.fill_between(x, y_bottom, y_top, facecolor='r', alpha=0.4)
 
 
-def plot_first_order_ale(
-    ale_data, quantiles, feature_name, feature_examples=None, ax=None, **kwargs
-):
-
+def plot_first_order_ale(quantiles, 
+        feature_name, feature_examples=None, ax=None, **kwargs):
     """
 		Plots the first order ALE
 
@@ -135,21 +133,24 @@ def plot_first_order_ale(
     if feature_examples is not None:
         _ax_hist(ax, np.clip(feature_examples, quantiles[0], quantiles[-1]), **kwargs)
     centered_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
-    if len(ale_data.shape) > 1:
-        mean_ale = np.mean(ale_data, axis=0)
-        _line_plot(ax_plt, centered_quantiles, mean_ale, **kwargs)
-
+    #if len(ale_data.shape) > 1:
+    #    mean_ale = np.mean(ale_data, axis=0)
+    #    _line_plot(ax_plt, centered_quantiles, mean_ale, **kwargs)
+    #
         # Plot error bars
-        y_95 = np.percentile(ale_data, 97.5, axis=0)
-        y_5 = np.percentile(ale_data, 2.5, axis=0)
-        _ci_plot(ax=ax_plt, x=centered_quantiles, y_bottom=y_5, y_top=y_95)
-    else:
-        _line_plot(ax_plt, centered_quantiles, ale_data, **kwargs)
+    #    y_95 = np.percentile(ale_data, 97.5, axis=0)
+    #    y_5 = np.percentile(ale_data, 2.5, axis=0)
+    #    _ci_plot(ax=ax_plt, x=centered_quantiles, y_bottom=y_5, y_top=y_95)
+    #else:
+    #    _line_plot(ax_plt, centered_quantiles, ale_data, **kwargs)
 
     ax_plt.set_ylabel("Accum. Local Effect (%)", fontsize=15)
     ax.set_xlabel(feature_name, fontsize=15)
     ax_plt.axhline(y=0.0, color="k", alpha=0.8)
     ax_plt.set_ylim([-10, 10])
+
+    return ax_plt, centered_quantiles
+
 
 
 def plot_second_order_ale(ale_data, quantile_tuple, feature_names, ax=None, **kwargs):
