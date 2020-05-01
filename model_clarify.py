@@ -28,22 +28,25 @@ class ModelClarify:
         feature_names : defaults to None. Should only be set if examples_in is a 
             nd.numpy array. Make sure it's a list
     """
+    def __init__(self, model, examples_in, targets_in, classification=True, 
+            feature_names=None):
 
-    def __init__(
-        self, model, examples_in, targets_in, classification=True, feature_names=None
-    ):
-
-        self._model = model
+        self._model    = model
         self._examples = examples_in
-        self._targets = targets_in
+        self._targets  = targets_in
 
-        if isinstance(self._examples, np.ndarray):
-            self._feature_names = feature_names
+        # make sure data is the form of a pandas dataframe regardless of input type
+        if isinstance(self._examples, np.ndarray): 
+            if (feature_names is None): 
+                raise Exception('Feature names must be specified.')    
+            else:
+                self._feature_names  = feature_names
+                self._examples = pd.DataFrame(data=examples_in, columns=feature_names)
         else:
-            self._feature_names = list(examples_in.columns)
+            self._feature_names  = examples_in.columns.to_list()
 
         self._classification = classification
-
+     
     def get_indices_based_on_performance(self, num_indices=10):
 
         """
@@ -59,64 +62,39 @@ class ModelClarify:
                           Default is 10
         """
 
-        if isinstance(self._examples, pd.DataFrame):
-            examples_cp = self._examples.to_numpy()
-
-        # get indices for each binary class
+       #get indices for each binary class
         positive_idx = np.where(self._targets > 0)
         negative_idx = np.where(self._targets < 1)
 
-        # get targets for each binary class
+        #get targets for each binary class
         positive_class = self._targets[positive_idx[0]]
-        negative_class = self._targets[negative_idx[0]]
-
-        # compute forecast probabilities for each binary class
-        forecast_probabilities_on_pos_class = self._model.predict_proba(
-            examples_cp[positive_idx[0], :]
-        )[:, 1]
-        forecast_probabilities_on_neg_class = self._model.predict_proba(
-            examples_cp[negative_idx[0], :]
-        )[:, 1]
-
-        # compute the absolute difference
+        negative_class = self._targets[negative_idx[0]]    
+ 
+        #compute forecast probabilities for each binary class
+        forecast_probabilities_on_pos_class = self._model.predict_proba(self._examples.loc[positive_idx[0], :])[:,1]
+        forecast_probabilities_on_neg_class = self._model.predict_proba(self._examples.loc[negative_idx[0], :])[:,1]        
+    
+        #compute the absolute difference
         diff_from_pos = abs(positive_class - forecast_probabilities_on_pos_class)
         diff_from_neg = abs(negative_class - forecast_probabilities_on_neg_class)
+    
+        #sort based on difference and store in array
+        sorted_diff_for_hits = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0]))
+        sorted_diff_for_misses = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0], reverse=True ))
+        sorted_diff_for_false_alarms = np.array( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0], reverse=True )) 
 
-        # sort based on difference and store in array
-        sorted_diff_for_hits = np.array(
-            sorted(zip(diff_from_pos, positive_idx[0]), key=lambda x: x[0])
-        )
-        sorted_diff_for_misses = np.array(
-            sorted(
-                zip(diff_from_pos, positive_idx[0]), key=lambda x: x[0], reverse=True
-            )
-        )
-        sorted_diff_for_false_alarms = np.array(
-            sorted(
-                zip(diff_from_neg, negative_idx[0]), key=lambda x: x[0], reverse=True
-            )
-        )
-        sorted_diff_for_corr_negs = np.array(
-            sorted(zip(diff_from_neg, negative_idx[0]), key=lambda x: x[0])
-        )
-
-        # store all resulting indicies in one dictionary
-        adict = {
-            "hits": [sorted_diff_for_hits[i][1] for i in range(num_indices)],
-            "false_alarms": [
-                sorted_diff_for_false_alarms[i][1] for i in range(num_indices)
-            ],
-            "misses": [sorted_diff_for_misses[i][1] for i in range(num_indices)],
-            "corr_negs": [
-                sorted_diff_for_corr_negs[i][1] for i in range(num_indices)
-            ],
-        }
+        #store all resulting indicies in one dictionary
+        adict =  { 
+                    'hits': [ sorted_diff_for_hits[i][1] for i in range(num_indices+1) ],
+                    'false_alarms': [ sorted_diff_for_false_alarms[i][1] for i in range(num_indices+1) ],
+                    'misses': [ sorted_diff_for_misses[i][1] for i in range(num_indices+1) ]
+                    } 
 
         for key in list(adict.keys()):
             adict[key] = np.array(adict[key]).astype(int)
 
-        return adict
-
+        return adict  
+    
     def _sort_df(self, df):
         """
         sort a dataframe by the absolute value 
