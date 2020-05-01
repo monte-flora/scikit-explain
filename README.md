@@ -5,3 +5,8 @@ Methods include partial dependence, accumulated local effect, and treeinterprete
 The package is under active development and will likely contain bugs or errors. Feel free to raise issues!
 
 This package has original code, but is largely a compilation of preexisting packages into a single source. The goal is make a user-friendly python class for computing several machine learning interpretation methods. 
+
+### Computing partial dependence 
+```
+from model_clarify import ModelClarifier
+```
