@@ -660,9 +660,10 @@ class ModelClarify:
             scoring_strategy = "argmin_of_mean"
 
         print(evaluation_fn)
+        targets =pd.DataFrame(data=self._targets, columns=['Test'])
         result = sklearn_permutation_importance(
             model=self._model,
-            scoring_data=(self._examples.values, self._targets.values),
+            scoring_data=(self._examples, targets),
             evaluation_fn=evaluation_fn,
             variable_names=self._feature_names,
             scoring_strategy=scoring_strategy,
