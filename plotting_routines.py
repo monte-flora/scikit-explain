@@ -2,6 +2,56 @@ import numpy as np
 import matplotlib.pyplot as plt
 import waterfall_chart
 
+def _create_base_subplots(n_panels, **kwargs):
+    """
+    Create a series of subplots (MxN) based on the 
+    number of panels and number of columns (optionally)
+    """
+    n_columns = kwargs.get('n_columns', 3)
+    n_rows = int(n_panels / n_columns)
+    extra_row = 0 if (n_panels % n_columns) ==0 else 1
+
+    fig, ax_arr = plt.subplots(n_rows+extra_row, n_columns, sharex=True, sharey=True, figsize=(8,6))
+    
+    #TODO: Need to add space for the feature names on the X-axis of each panel
+    
+    n_axes_to_delete = len(ax_arr.flat) - n_panels
+
+    if n_axes_to_delete > 0:
+        for i in range(n_axes_to_delete):
+            fig.delaxes(ax_arr.flat[-(i+1)])
+    
+    return fig, ax_arr
+
+def _create_panel_labels(axes, **kwargs):
+    """
+    """
+    fontsize = kwargs.get('fontsize', 12)
+    alphabet_list = [chr(x) for x in range(ord('a'), ord('z') + 1)] 
+    n_panels = len(axes.flat)
+    for letter, panel in zip(alphabet_list[:n_panels], axes.flat):
+        panel.text(0.125, 0.9,f'({letter})', ha='center', va='center', 
+                   transform=panel.transAxes, fontsize=fontsize)
+    
+def _major_axis_labels(fig, xlabel=None, ylabel=None,**kwargs):
+    """
+    Generate a single X- and Y-axis labels for 
+    a series of subplot panels 
+    """
+    fontsize = kwargs.get('fontsize', 12)
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    plt.xlabel(xlabel, fontsize=fontsize)
+    plt.ylabel(ylabel, fontsize=fontsize)
+    
+def line_plot(ax, xdata, ydata, **kwargs):
+    """
+    """
+
+
+
 def _ax_title(ax, title, subtitle):
     """
         Prints title on figure.
