@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-from .PermutationImportance.permutation_importance import sklearn_permutation_importance
+from PermutationImportance.permutation_importance import sklearn_permutation_importance
 from sklearn.metrics import roc_auc_score, roc_curve, average_precision_score
-from .treeinterpreter import treeinterpreter as ti
+from treeinterpreter import treeinterpreter as ti
 
 list_of_acceptable_tree_models = [
     "RandomForestClassifier",
@@ -20,20 +20,20 @@ class ModelClarify:
 
     Args:
         model : a scikit-learn model
-        examples_in : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
+        examples : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
             to specify the feature names
-        targets_in: numpy array of targets/labels
+        targets: numpy array of targets/labels
         classification: defaults to True for classification problems. 
             Set to false otherwise.
-        feature_names : defaults to None. Should only be set if examples_in is a 
+        feature_names : defaults to None. Should only be set if examples is a 
             nd.numpy array. Make sure it's a list
     """
-    def __init__(self, model, examples_in, targets_in, classification=True, 
+    def __init__(self, model, examples, targets=None, classification=True, 
             feature_names=None):
 
         self._model    = model
-        self._examples = examples_in
-        self._targets  = targets_in
+        self._examples = examples
+        self._targets  = targets
 
         # make sure data is the form of a pandas dataframe regardless of input type
         if isinstance(self._examples, np.ndarray): 
@@ -41,13 +41,13 @@ class ModelClarify:
                 raise Exception('Feature names must be specified.')    
             else:
                 self._feature_names  = feature_names
-                self._examples = pd.DataFrame(data=examples_in, columns=feature_names)
+                self._examples = pd.DataFrame(data=examples, columns=feature_names)
         else:
-            self._feature_names  = examples_in.columns.to_list()
+            self._feature_names  = examples.columns.to_list()
 
         self._classification = classification
      
-    def get_indices_based_on_performance(self, num_indices=10):
+    def get_indices_based_on_performance(self, n_examples=10):
 
         """
         Determines the best 'hits' (forecast probabilties closest to 1)
@@ -58,7 +58,7 @@ class ModelClarify:
 
         Args:
         ------------------
-            num_indices : Integer representing the number of indices (examples) to return.
+            n_examples : Integer representing the number of indices (examples) to return.
                           Default is 10
         """
 
@@ -82,12 +82,19 @@ class ModelClarify:
         sorted_diff_for_hits = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0]))
         sorted_diff_for_misses = np.array( sorted( zip(diff_from_pos, positive_idx[0]), key = lambda x:x[0], reverse=True ))
         sorted_diff_for_false_alarms = np.array( sorted( zip(diff_from_neg, negative_idx[0]), key = lambda x:x[0], reverse=True )) 
+        sorted_diff_for_corr_negs = np.array(
+            sorted(zip(diff_from_neg, negative_idx[0]), key=lambda x: x[0])
+        )
 
         #store all resulting indicies in one dictionary
         adict =  { 
-                    'hits': [ sorted_diff_for_hits[i][1] for i in range(num_indices+1) ],
-                    'false_alarms': [ sorted_diff_for_false_alarms[i][1] for i in range(num_indices+1) ],
-                    'misses': [ sorted_diff_for_misses[i][1] for i in range(num_indices+1) ]
+                    'hits': [ sorted_diff_for_hits[i][1] for i in range(n_examples) ],
+                    'false_alarms': [ sorted_diff_for_false_alarms[i][1] for i in range(n_examples) ],
+                    'misses': [ sorted_diff_for_misses[i][1] for i in range(n_examples) ],
+                      "corr_negs": [
+                sorted_diff_for_corr_negs[i][1] for i in range(n_examples)
+            ],
+
                     } 
 
         for key in list(adict.keys()):
@@ -101,7 +108,7 @@ class ModelClarify:
         """
         return df.reindex(df.abs().sort_values(ascending=False).index)
 
-    def get_top_contributors(self, num_indices=100):
+    def get_top_contributors(self, n_examples=100):
         """
         Return the "num" number of top contributors (based on absolute value)
 
@@ -109,10 +116,10 @@ class ModelClarify:
             -----------
                 ncontributors: integer
                     number of top contributors to return 
-                num_indices: integer
+                n_examples: integer
                     see get_
         """
-        performance_dict = self.get_indices_based_on_performance(num_indices)
+        performance_dict = self.get_indices_based_on_performance(n_examples)
         dict_of_dfs = self.tree_interpreter_performance_based(
             performance_dict=performance_dict
         )
@@ -450,7 +457,7 @@ class ModelClarify:
 
         return ale, quantiles
 
-    def calc_ale(self, feature, quantiles=None, subsample=1.0, nbootstrap=100):
+    def calc_ale(self, feature, quantiles=None, subsample=1.0, nbootstrap=1):
         """
         Computes first-order ALE function for a feature with bootstrap 
         resampling for confidence intervals
