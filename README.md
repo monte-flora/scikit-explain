@@ -22,3 +22,12 @@ clf.fit(X_train, y_train)
 
 mc = ModelClarifier(model=clf, examples=X_train, targets=y_train)
 ```
+### Partial dependence 
+
+### Accumulated local effect 
+
+### Permutation Importance 
+
+### Feature Contributions (Tree-based Method Only)
+
+
