@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+import waterfall_chart
 
 def _ax_title(ax, title, subtitle):
     """
@@ -94,13 +94,13 @@ def _ax_grid(ax, status):
 def _ax_hist(ax, x, **kwargs):
     ax.hist(
         x,
-        bins=10,
-        alpha=0.5,
+        bins='auto',
+        alpha=0.3,
         color='lightblue',
         density=True,
         edgecolor="white",
     )
-    ax.set_ylabel("Relative Frequency", fontsize=15)
+    #ax.set_ylabel("Relative Frequency", fontsize=15)
 
 
 def _line_plot(ax, x, y, **kwargs):
@@ -144,14 +144,12 @@ def plot_first_order_ale(quantiles,
     #else:
     #    _line_plot(ax_plt, centered_quantiles, ale_data, **kwargs)
 
-    ax_plt.set_ylabel("Accum. Local Effect (%)", fontsize=15)
-    ax.set_xlabel(feature_name, fontsize=15)
+    #ax_plt.set_ylabel("Accum. Local Effect (%)", fontsize=15)
+    ax.set_xlabel(feature_name, fontsize=10)
     ax_plt.axhline(y=0.0, color="k", alpha=0.8)
-    ax_plt.set_ylim([-10, 10])
+    ax_plt.set_ylim([-7.5, 7.5])
 
     return ax_plt, centered_quantiles
-
-
 
 def plot_second_order_ale(ale_data, quantile_tuple, feature_names, ax=None, **kwargs):
 
@@ -275,3 +273,83 @@ def plot_2d_partial_dependence(pdp_data, feature_names, variable_ranges, **kwarg
 
     plt.colorbar(CF)
     plt.show()
+
+def get_highest_predictions(result,num):
+    """
+    Return "num" highest predictions from a treeinterpreter result
+    
+    """
+    highest_pred = result.sum(axis=1).values
+    idx = np.argsort(highest_pred)[-num:]
+
+    example = result.iloc[idx,:]
+
+    return example
+
+def combine_like_features(contrib, varnames):
+    """
+    Combine the contributions of like features. E.g., 
+    multiple statistics of a single variable
+    """
+    duplicate_vars = {}
+    for var in varnames:
+        duplicate_vars[var] = [idx for idx, v in enumerate(varnames) if v == var]
+
+    new_contrib = []
+    new_varnames = []
+    for var in list(duplicate_vars.keys()):
+        idxs = duplicate_vars[var]
+        new_varnames.append(var)
+        new_contrib.append(np.array(contrib)[idxs].sum())
+
+    return new_contrib, new_varnames
+
+def plot_treeinterpret(result, save_name, to_only_varname=None):
+    '''
+    Plot the results of tree interpret
+
+    Args:
+    ---------------
+        result : pandas.Dataframe
+            a single row/example from the 
+            result dataframe from tree_interpreter_simple
+        save_name : str
+            file path & name to save the figure
+        to_only_varname : callable
+            A function that would convert predictors to 
+            just their variable name. For example,
+            if using multiple statistcs (max, mean, min, etc)
+            of a single variable, to_only_varname, should convert
+            the name of those predictors to just the name of the 
+            single variable. This allows the results to combine 
+            contributions from the different statistics of a
+            single variable into a single variable. 
+    '''
+    contrib=[]
+    varnames=[]
+    for i, var in enumerate(list(result.keys())):
+        try:
+            contrib.append(result[var]["Mean Contribution"])
+        except:
+            contrib.append(result[var].values)
+        if to_only_varname is None:
+            varnames.append(var)
+        else:
+            varnames.append(to_only_varname(var))
+
+    print(contrib, varnames)
+    if to_only_varname is not None:
+        contrib, varnames = combine_like_features(contrib, varnames)
+
+    plt = waterfall_chart.plot(
+        varnames,
+        contrib,
+        rotation_value=90,
+        sorted_value=True,
+        threshold=0.02,
+        net_label="Final prediction",
+        other_label="Others",
+        y_lab="Probability",
+    )
+    plt.savefig(save_name, bbox_inches="tight", dpi=300)
+
