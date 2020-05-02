@@ -47,6 +47,30 @@ class ModelClarify:
 
         self._classification = classification
      
+
+    def calc_ale(self, feature, xdata=None, subsample=1.0, nbootstrap=1):
+        """
+            Calculates the Accumulated local effect.
+        """
+        self.subsample = subsample
+        self.nbootstrap = nbootstrap
+        compute_func = self.calculate_first_order_ale 
+        ale, xdata = self.compute_first_order_interpretation_curve(feature, compute_func, xdata=xdata)
+        
+        return ale, xdata
+
+    def calc_pdp(self, feature, xdata=None, subsample=1.0, nbootstrap=1):
+        """
+            Calculates the Accumulated local effect.
+        """
+        self.subsample = subsample
+        self.nbootstrap = nbootstrap
+        compute_func = self.compute_1d_partial_dependence                       
+        pdp, xdata = self.compute_first_order_interpretation_curve(feature, compute_func, xdata=xdata)
+        
+        return pdp, xdata
+
+
     def get_indices_based_on_performance(self, n_examples=10):
 
         """
@@ -131,10 +155,16 @@ class ModelClarify:
             idxs = performance_dict[key]
             top_vars = {}
             for var in list(sorted_df.index):
-                top_vars[var] = {
-                    "Mean Value": np.mean(self._examples[var].values[idxs]),
-                    "Mean Contribution": series[var],
-                }
+                if var == 'Bias':
+                    top_vars[var] = {
+                                    'Mean Value': None,
+                                    'Mean Contribution' : series[var]
+                                    }
+                else:
+                    top_vars[var] = {
+                        "Mean Value": np.mean(self._examples[var].values[idxs]),
+                        "Mean Contribution": series[var],
+                    }
             adict[key] = top_vars
 
         return adict
@@ -175,6 +205,7 @@ class ModelClarify:
                 self._model.predict_proba(tmp_examples)[:, 1] * 100.0
             )
             positive_class_contributions = contributions[:, :, 1]
+            positive_class_bias = bias[1][1]
 
             tmp_data = []
 
@@ -191,6 +222,8 @@ class ModelClarify:
                     key_list.append(feature)
                     var_list.append(round(100.0 * c, 2))
 
+                key_list.append('Bias')
+                var_list.append(round(100. * positive_class_bias, 2))
                 tmp_data.append(dict(zip(key_list, var_list)))
 
             # return a pandas DataFrame to do analysis on
@@ -200,7 +233,7 @@ class ModelClarify:
 
         return dict_of_dfs
 
-    def tree_interpreter_simple(self):
+    def tree_interpreter(self):
 
         """
         Method for intrepreting tree based ML models using treeInterpreter.
@@ -223,8 +256,6 @@ class ModelClarify:
         forecast_probabilities = self._model.predict_proba(self._examples)[:, 1] * 100.0
         positive_class_contributions = contributions[:, :, 1]
         positive_class_bias = bias[1][1]        
-
-        print(positive_class_bias)
 
         tmp_data = []
 
@@ -251,7 +282,7 @@ class ModelClarify:
 
         return contributions_dataframe
 
-    def compute_1d_partial_dependence(self, feature=None, **kwargs):
+    def compute_1d_partial_dependence(self, examples, feature=None, xdata=None, **kwargs):
 
         """
         Calculate the partial dependence.
@@ -277,33 +308,32 @@ class ModelClarify:
         if feature not in self._feature_names:
             raise Exception(f"Feature {feature} is not a valid feature")
 
-        print("Computing 1-D partial dependence...")
-
         # get data in numpy format
-        column_of_data = self._examples[feature].to_numpy()
+        column_of_data = examples[feature].to_numpy()
 
         # define bins based on 10th and 90th percentiles
-        variable_range = np.linspace(
+        xdata = np.linspace(
             np.percentile(column_of_data, 5), np.percentile(column_of_data, 95), num=20
         )
 
         # define output array to store partial dependence values
-        pdp_values = np.full(variable_range.shape[0], np.nan)
+        pdp_values = np.full(xdata.shape[0], np.nan)
 
         # for each value, set all indices to the value, make prediction, store mean prediction
-        for i, value in enumerate(variable_range):
+        for i, value in enumerate(xdata):
 
-            copy_df = self._examples.copy()
+            copy_df = examples.copy()
             copy_df.loc[:, feature] = value
 
             if self._classification is True:
-                predictions = self._model.predict_proba(copy_df)[:, 1]
+                # Convert to percentages
+                predictions = self._model.predict_proba(copy_df)[:, 1] * 100.
             else:
                 predictions = self._model.predict(copy_df)
 
             pdp_values[i] = np.mean(predictions)
 
-        return pdp_values, variable_range
+        return pdp_values, xdata
 
     def compute_2d_partial_dependence(self, features, **kwargs):
 
@@ -368,7 +398,7 @@ class ModelClarify:
                 copy_df.loc[features[1]] = value2
 
                 if self._classification is True:
-                    predictions = self._model.predict_proba(copy_df)[:, 1]
+                    predictions = self._model.predict_proba(copy_df)[:, 1] * 100.
                 else:
                     predictions = self._model.predict(copy_df)
 
@@ -376,7 +406,7 @@ class ModelClarify:
 
         return pdp_values, var1_range, var2_range
 
-    def calculate_first_order_ale(self, examples, feature=None, quantiles=None):
+    def calculate_first_order_ale(self, examples, feature=None, xdata=None):
 
         """
             Computes first-order ALE function on single continuous feature data.
@@ -385,7 +415,7 @@ class ModelClarify:
             ----------
             feature : string
                 The name of the feature to consider.
-            quantiles : array
+            xdata : array
                 Quantiles of feature.
         """
 
@@ -395,27 +425,27 @@ class ModelClarify:
         if feature is None:
             raise Exception("Specify a feature.")
 
-        # convert quantiles to array if list
-        if isinstance(quantiles, list):
-            quantiles = np.array(quantiles)
+        # convert xdata to array if list
+        if isinstance(xdata, list):
+            xdata = np.array(xdata)
 
-        if quantiles is None:
+        if xdata is None:
             # Find the ranges to calculate the local effects over
-            # Using quantiles ensures each bin gets the same number of examples
-            quantiles = np.percentile(
+            # Using xdata ensures each bin gets the same number of examples
+            xdata = np.percentile(
                 examples[feature].values, np.arange(2.5, 97.5 + 5, 5)
             )
 
         # define ALE function
-        ale = np.zeros(len(quantiles) - 1)
+        ale = np.zeros(len(xdata) - 1)
 
         # loop over all ranges
-        for i in range(1, len(quantiles)):
+        for i in range(1, len(xdata)):
 
             # get subset of data
-            df_subset = examples[
-                (examples[feature] >= quantiles[i - 1])
-                & (examples[feature] < quantiles[i])
+            df_subset = self._examples[
+                (examples[feature] >= xdata[i - 1])
+                & (examples[feature] < xdata[i])
             ]
 
             # Without any observation, local effect on splitted area is null
@@ -424,12 +454,12 @@ class ModelClarify:
                 upper_bound = df_subset.copy()
 
                 # The main ALE idea that compute prediction difference between same data except feature's one
-                lower_bound[feature] = quantiles[i - 1]
-                upper_bound[feature] = quantiles[i]
+                lower_bound[feature] = xdata[i - 1]
+                upper_bound[feature] = xdata[i]
 
                 # The main ALE idea that compute prediction difference between same data except feature's one
-                lower_bound[feature] = quantiles[i - 1]
-                upper_bound[feature] = quantiles[i]
+                lower_bound[feature] = xdata[i - 1]
+                upper_bound[feature] = xdata[i]
 
 
                 upper_bound = upper_bound.values
@@ -455,45 +485,70 @@ class ModelClarify:
         # Now we have to center ALE function in order to obtain null expectation for ALE function
         ale -= mean_ale
 
-        return ale, quantiles
+        return ale, xdata
 
-    def calc_ale(self, feature, quantiles=None, subsample=1.0, nbootstrap=1):
+    def compute_first_order_interpretation_curve(self, feature, compute_func, xdata):
         """
         Computes first-order ALE function for a feature with bootstrap 
-        resampling for confidence intervals
+        resampling for confidence intervals. Additional functionality for
+        bootstrap resampling to plot confidence intervals.
+    
+        Args:
+        --------------
+            feature : str
+                the feature name (in the pandas.DataFrame) to
+                compute the interpretation curve for.
+            compute_func : callable
+                Either the ALE or PDP computation functions 
+            xdata : array shape (N,)
+                The x values at which to compute the interpretation curves.
+                If None, the values are the percentile values from 2.5-97.5 every 5% 
+            subsample : float (0,1]
+                subsampling portion. Can be useful to reduce computational expensive
+                Examples are bootstrap resampled with replacement
+            nbootstrap : int [1,inf]
+                Number of bootstrapp resampling. Used to provided confidence intervals 
+                on the interpretation curves. 
+
+        Returns:
+        -----------------
+            ydata : array, shape (nboostrap, N,)
+                Values of the interpretation curve
+            xdata : array, shape (N)
+                Values of where the interpretation curves was calculated.
         """
         n_examples = len(self._examples)
         bootstrap_replicates = np.asarray(
             [
                 [
                     np.random.choice(range(n_examples))
-                    for _ in range(int(subsample * n_examples))
+                    for _ in range(int(self.subsample * n_examples))
                 ]
-                for _ in range(nbootstrap)
+                for _ in range(self.nbootstrap)
             ]
         )
 
-        if nbootstrap > 1:
-            quantiles = np.percentile(
+        if self.nbootstrap > 1:
+            xdata = np.percentile(
                 self._examples[feature].values, np.arange(2.5, 97.5 + 5, 5)
             )
-            ale_set = []
+            ydata_set = []
             for _, idx in enumerate(bootstrap_replicates):
                 examples_temp = self._examples.iloc[idx, :]
-                ale, _ = self.calculate_first_order_ale(
-                    examples=examples_temp, feature=feature, quantiles=quantiles
+                ydata, xdata = compute_func(
+                    examples=examples_temp, feature=feature, xdata=xdata
                 )
-                ale_set.append(ale)
+                ydata_set.append(ydata)
 
-            return ale_set, quantiles
+            return ydata_set, xdata
+
         else:
-            ale, quantiles = self.calculate_first_order_ale(
-                examples=self._examples, feature=feature, quantiles=quantiles
-            )
+            ydata, xdata = compute_func(examples=self._examples, feature=feature, xdata=xdata)
 
-        return ale, quantiles
+        return ydata, xdata
 
-    def calculate_second_order_ale(self, features=None, quantiles=None):
+
+    def calculate_second_order_ale(self, features=None, xdata=None):
         """
             Computes second-order ALE function on two continuous features data.
 
@@ -501,19 +556,19 @@ class ModelClarify:
             ----------
             feature : string
                 The name of the feature to consider.
-            quantiles : array
+            xdata : array
                 Quantiles of feature.
         """
         # make sure feature is set
         if features is None:
             raise Exception("Specify two features!")
 
-        # convert quantiles to array if list
-        if isinstance(quantiles, list):
-            quantiles = np.array(quantiles)
+        # convert xdata to array if list
+        if isinstance(xdata, list):
+            xdata = np.array(xdata)
 
-        if quantiles is None:
-            quantiles = np.array(
+        if xdata is None:
+            xdata = np.array(
                 [
                     np.percentile(self._examples[f].values, np.arange(2.5, 97.5 + 5, 5))
                     for f in features
@@ -521,16 +576,16 @@ class ModelClarify:
             )
 
         # define ALE function
-        ale = np.zeros((quantiles.shape[1] - 1, quantiles.shape[1] - 1))
+        ale = np.zeros((xdata.shape[1] - 1, xdata.shape[1] - 1))
 
-        for i in range(1, len(quantiles[0])):
-            for j in range(1, len(quantiles[1])):
+        for i in range(1, len(xdata[0])):
+            for j in range(1, len(xdata[1])):
                 # Select subset of training data that falls within subset
                 df_subset = self._examples[
-                    (self._examples[features[0]] >= quantiles[0, i - 1])
-                    & (self._examples[features[0]] < quantiles[0, i])
-                    & (self._examples[features[1]] >= quantiles[1, j - 1])
-                    & (self._examples[features[1]] < quantiles[1, j])
+                    (self._examples[features[0]] >= xdata[0, i - 1])
+                    & (self._examples[features[0]] < xdata[0, i])
+                    & (self._examples[features[1]] >= xdata[1, j - 1])
+                    & (self._examples[features[1]] < xdata[1, j])
                 ]
                 # Without any observation, local effect on splitted area is null
                 if len(df_subset) != 0:
@@ -540,14 +595,14 @@ class ModelClarify:
 
                     # The main ALE idea that compute prediction difference between
                     # same data except feature's one
-                    z_low[0][features[0]] = quantiles[0, i - 1]
-                    z_low[0][features[1]] = quantiles[1, j - 1]
-                    z_low[1][features[0]] = quantiles[0, i]
-                    z_low[1][features[1]] = quantiles[1, j - 1]
-                    z_up[0][features[0]] = quantiles[0, i - 1]
-                    z_up[0][features[1]] = quantiles[1, j]
-                    z_up[1][features[0]] = quantiles[0, i]
-                    z_up[1][features[1]] = quantiles[1, j]
+                    z_low[0][features[0]] = xdata[0, i - 1]
+                    z_low[0][features[1]] = xdata[1, j - 1]
+                    z_low[1][features[0]] = xdata[0, i]
+                    z_low[1][features[1]] = xdata[1, j - 1]
+                    z_up[0][features[0]] = xdata[0, i - 1]
+                    z_up[0][features[1]] = xdata[1, j]
+                    z_up[1][features[0]] = xdata[0, i]
+                    z_up[1][features[1]] = xdata[1, j]
 
                     if self._classification is True:
                         effect = 100.0 * (
@@ -576,63 +631,7 @@ class ModelClarify:
         # Now we have to center ALE function in order to obtain null expectation for ALE function
         ale -= ale.mean()
 
-        return ale, quantiles
-
-    def calculate_first_order_ALE_categorical(
-        self, feature=None, features_classes=None
-    ):
-
-        """
-            Computes first-order ALE function on single categorical feature data.
-
-            Parameters
-            ----------
-            feature : string
-                The name of the feature to consider.
-            features_classes : list or string
-                The values the feature can take.
-        """
-
-        # make sure feature is set
-        if feature is None:
-            raise Exception("Specify a feature.")
-
-        # get range of values of feature class if not set
-        if feature_classes is None:
-            features_classes = self._examples[feature].unique().to_list()
-
-        num_cat = len(features_classes)
-        ALE = np.zeros(num_cat)  # Final ALE function
-
-        for i in range(num_cat):
-            subset = self._examples[self._examples[feature] == features_classes[i]]
-
-            # Without any observation, local effect on splitted area is null
-            if len(subset) != 0:
-                z_low = subset.copy()
-                z_up = subset.copy()
-
-                # The main ALE idea that compute prediction difference between same data except feature's one
-                z_low[feature] = quantiles[i - 1]
-                z_up[feature] = quantiles[i]
-
-                if self._classification is True:
-                    ALE[i] += (
-                        self._model.predict_proba(z_up)[:, 1]
-                        - self._model.predict_proba(z_low)[:, 1]
-                    ).sum() / subset.shape[0]
-                else:
-                    ALE[i] += (
-                        self._model.predict(z_up) - self._model.predict(z_low)
-                    ).sum() / subset.shape[0]
-
-        # The accumulated effect
-        ALE = np.cumsum(ALE, axis=0)
-
-        # Now we have to center ALE function in order to obtain null expectation for ALE function
-        ALE -= ALE.mean()
-
-        return ALE
+        return ale, xdata
 
     def permutation_importance(
         self,
