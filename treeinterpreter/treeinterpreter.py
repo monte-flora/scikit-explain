@@ -2,7 +2,7 @@
 import numpy as np
 import sklearn
 
-from sklearn.ensemble import ForestClassifier, ForestRegressor
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, _tree
 from distutils.version import LooseVersion
 if LooseVersion(sklearn.__version__) < LooseVersion("0.17"):
@@ -116,7 +116,7 @@ def _predict_tree(model, X, joint_contribution=False):
 
 def _predict_forest(model, X, joint_contribution=False):
     """
-    For a given RandomForestRegressor, RandomForestClassifier,
+    For a given RandomRandomForestRegressor, RandomRandomForestClassifier,
     ExtraTreesRegressor, or ExtraTreesClassifier returns a triple of
     [prediction, bias and feature_contributions], such that prediction ≈ bias +
     feature_contributions.
@@ -174,7 +174,7 @@ def predict(model, X, joint_contribution=False):
     ----------
     model : DecisionTreeRegressor, DecisionTreeClassifier,
         ExtraTreeRegressor, ExtraTreeClassifier,
-        RandomForestRegressor, RandomForestClassifier,
+        RandomRandomForestRegressor, RandomRandomForestClassifier,
         ExtraTreesRegressor, ExtraTreesClassifier
     Scikit-learn model on which the prediction should be decomposed.
 
@@ -207,8 +207,8 @@ def predict(model, X, joint_contribution=False):
     if (isinstance(model, DecisionTreeClassifier) or
         isinstance(model, DecisionTreeRegressor)):
         return _predict_tree(model, X, joint_contribution=joint_contribution)
-    elif (isinstance(model, ForestClassifier) or
-          isinstance(model, ForestRegressor)):
+    elif (isinstance(model, RandomForestClassifier) or
+          isinstance(model, RandomForestRegressor)):
         return _predict_forest(model, X, joint_contribution=joint_contribution)
     else:
         raise ValueError("Wrong model type. Base learner needs to be a "
