@@ -16,10 +16,13 @@ list_of_acceptable_tree_models = [
 class ModelClarify:
 
     """
-    Class for computing various ML model interpretations...blah blah blah
+    ModelClarify is composed of various ML model interpretion methods. 
+    It includes permutation importance, partial dependence plots,
+    accumulated local effects, and random forest feature contributions. 
 
-    Args:
-        model : a scikit-learn model
+
+    Attributes:
+        model : a scikit-learn model or dict of models 
         examples : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
             to specify the feature names
         targets: numpy array of targets/labels
@@ -31,7 +34,11 @@ class ModelClarify:
     def __init__(self, model, examples, targets=None, classification=True, 
             feature_names=None):
 
-        self._model    = model
+        if not isinstance(model, dict):
+            self.model_set  = {type(model).__name__ : model}
+        else:
+            self.model_set = model
+        
         self._examples = examples
         self._targets  = targets
 
@@ -48,25 +55,31 @@ class ModelClarify:
         self._classification = classification
      
 
-    def calc_ale(self, feature, xdata=None, subsample=1.0, nbootstrap=1):
+    def calc_ale(self, feature, model=None, xdata=None, subsample=1.0, nbootstrap=1):
         """
             Calculates the Accumulated local effect.
         """
+        if model is None: 
+            model = self.model_set.items()
+
         self.subsample = subsample
         self.nbootstrap = nbootstrap
         compute_func = self.calculate_first_order_ale 
-        ale, xdata = self.compute_first_order_interpretation_curve(feature, compute_func, xdata=xdata)
+        ale, xdata = self.compute_first_order_interpretation_curve(feature, compute_func, model=model, xdata=xdata)
         
         return ale, xdata
 
-    def calc_pdp(self, feature, xdata=None, subsample=1.0, nbootstrap=1):
+    def calc_pdp(self, feature, model=None, xdata=None, subsample=1.0, nbootstrap=1):
         """
             Calculates the Accumulated local effect.
         """
+        if model is None:
+            model = self.model_set.items()
+
         self.subsample = subsample
         self.nbootstrap = nbootstrap
         compute_func = self.compute_1d_partial_dependence                       
-        pdp, xdata = self.compute_first_order_interpretation_curve(feature, compute_func, xdata=xdata)
+        pdp, xdata = self.compute_first_order_interpretation_curve(feature, compute_func, model=model, xdata=xdata)
         
         return pdp, xdata
 
@@ -282,7 +295,7 @@ class ModelClarify:
 
         return contributions_dataframe
 
-    def compute_1d_partial_dependence(self, examples, feature=None, xdata=None, **kwargs):
+    def compute_1d_partial_dependence(self, examples, model=None, feature=None, xdata=None, **kwargs):
 
         """
         Calculate the partial dependence.
@@ -299,6 +312,8 @@ class ModelClarify:
         Args: 
             feature : name of feature to compute PD for (string) 
         """
+        if model is None:
+            model = self.model_set.items()
 
         # check to make sure a feature is present...
         if feature is None:
@@ -327,9 +342,9 @@ class ModelClarify:
 
             if self._classification is True:
                 # Convert to percentages
-                predictions = self._model.predict_proba(copy_df)[:, 1] * 100.
+                predictions = model.predict_proba(copy_df)[:, 1] * 100.
             else:
-                predictions = self._model.predict(copy_df)
+                predictions = model.predict(copy_df)
 
             pdp_values[i] = np.mean(predictions)
 
@@ -406,7 +421,7 @@ class ModelClarify:
 
         return pdp_values, var1_range, var2_range
 
-    def calculate_first_order_ale(self, examples, feature=None, xdata=None):
+    def calculate_first_order_ale(self, examples, model=None, feature=None, xdata=None):
 
         """
             Computes first-order ALE function on single continuous feature data.
@@ -418,6 +433,8 @@ class ModelClarify:
             xdata : array
                 Quantiles of feature.
         """
+        if model is None:
+            model = self.model_set.items()
 
         # TODO: incorporate the monte carlo aspect into these routines in a clean way...
         nbins = 15
@@ -468,11 +485,11 @@ class ModelClarify:
 
                 if self._classification:
                     effect = 100.0 * (
-                        self._model.predict_proba(upper_bound)[:, 1]
-                        - self._model.predict_proba(lower_bound)[:, 1]
+                        model.predict_proba(upper_bound)[:, 1]
+                        - model.predict_proba(lower_bound)[:, 1]
                     )
                 else:
-                    effect = self._model.predict(upper_bound) - self._model.predict(
+                    effect = model.predict(upper_bound) - model.predict(
                         lower_bound
                     )
 
@@ -487,7 +504,7 @@ class ModelClarify:
 
         return ale, xdata
 
-    def compute_first_order_interpretation_curve(self, feature, compute_func, xdata):
+    def compute_first_order_interpretation_curve(self, feature, compute_func, model, xdata):
         """
         Computes first-order ALE function for a feature with bootstrap 
         resampling for confidence intervals. Additional functionality for
@@ -536,14 +553,14 @@ class ModelClarify:
             for _, idx in enumerate(bootstrap_replicates):
                 examples_temp = self._examples.iloc[idx, :]
                 ydata, xdata = compute_func(
-                    examples=examples_temp, feature=feature, xdata=xdata
+                    examples=examples_temp, feature=feature, xdata=xdata, model=model
                 )
                 ydata_set.append(ydata)
 
             return ydata_set, xdata
 
         else:
-            ydata, xdata = compute_func(examples=self._examples, feature=feature, xdata=xdata)
+            ydata, xdata = compute_func(examples=self._examples, feature=feature, xdata=xdata, model=model)
 
         return ydata, xdata
 

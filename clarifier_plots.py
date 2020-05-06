@@ -31,6 +31,8 @@ plt.rc('ytick', labelsize=TINY_FONT_SIZE)
 plt.rc('legend', fontsize=FONT_SIZE)
 plt.rc('figure', titlesize=BIG_FONT_SIZE)
 
+line_colors = ['orangered', 'darkviolet', 'darkslategray', 'darkorange', 'darkgreen']
+
 class ClarifierPlot(ModelClarify):
     """
     ClarifierPlot is a python class that uses the calculcations 
@@ -45,7 +47,7 @@ class ClarifierPlot(ModelClarify):
         self.subsample = subsample
         self.nbootstrap =nbootstrap
         ylim = [-7.5, 7.5]
-        fig, axes = self.plot_interpret_curve(features, compute_func, ylim, wspace=0.6)
+        fig, axes = self.plot_interpret_curve(features, compute_func, ylim, wspace=0.8)
         return fig, axes
 
     def plot_pdp(self, features, subsample=1.0, nbootstrap=1):
@@ -118,11 +120,16 @@ class ClarifierPlot(ModelClarify):
     def line_plot(self, ax, xdata, ydata, **kwargs):
         """
         """
-        linewidth = kwargs.get('linewidth', 2.0)    
+        linewidth = kwargs.get('linewidth', 2.5)    
         linestyle = kwargs.get('linestyle', '-')
+        color = kwargs.get('color', 'r')
+        label = kwargs.get('label', None)
+
         ax.plot(xdata,ydata, 
                 linewidth=linewidth,
-                linestyle=linestyle
+                linestyle=linestyle,
+                color=color,
+                label=label
                 )
 
     def _ax_hist(self, ax, x, **kwargs):
@@ -152,13 +159,15 @@ class ClarifierPlot(ModelClarify):
         Plot Confidence Intervals
         """
         facecolor = kwargs.get('facecolor', 'r')
+        linecolor = kwargs.get('linecolor', 'r')
+        label = kwargs.get('model_name', None)
 
         mean_ydata = np.mean(ydata,axis=0)
-        self.line_plot(ax, xdata, mean_ydata, **kwargs)
+        self.line_plot(ax, xdata, mean_ydata, color=color, label=label)
         uncertainty = np.percentile(ydata, [2.5, 97.5], axis=0)
         ax.fill_between(xdata, uncertainty[0], uncertainty[1], facecolor=facecolor, alpha=0.4)
 
-    def plot_interpret_curve(self,features, compute_func, ylim, **kwargs):
+    def plot_interpret_curve(self, features, compute_func, ylim, **kwargs):
         """
         Generic function for ALE & PDP
         """
@@ -166,21 +175,29 @@ class ClarifierPlot(ModelClarify):
             features=[features]
 
         hspace = kwargs.get('hspace', 0.5)
+        wspace = kwargs.get('wspace', 0.5)
 
-        fig,axes = fig, axes = self._create_base_subplots(n_panels=len(features), hspace=hspace, figsize=(8,6))
+        fig,axes = fig, axes = self._create_base_subplots(n_panels=len(features), 
+                                                          hspace=hspace,
+                                                          wspace=wspace,
+                                                          figsize=(8,6))
+        
         for ax, feature in zip(axes.flat,features):
-            feature_examples = self._examples[feature]
-            ydata, xdata = compute_func(feature=feature, subsample=self.subsample, nbootstrap=self.nbootstrap)
-            twin_ax = self._ax_hist(ax, np.clip(feature_examples, xdata[0], xdata[-1]))
-            if 'ale' in compute_func.__name__:
-                xdata = 0.5 * (xdata[1:] + xdata[:-1])
-            if np.array(ydata).ndim == 2:
-                self._ci_plot(twin_ax, xdata, ydata)
-            else:
-                self.line_plot(twin_ax, xdata, ydata)
-            ax.set_xlabel(feature, fontsize=10)
-            twin_ax.axhline(y=0.0, color="k", alpha=0.8)
-            twin_ax.set_ylim(ylim)
+            for i, model_name in enumerate(list(self.model_set.keys())):
+                feature_examples = self._examples[feature]
+                ydata, xdata = compute_func(model=self.model_set[model_name], feature=feature, subsample=self.subsample, nbootstrap=self.nbootstrap)
+                twin_ax = self._ax_hist(ax, np.clip(feature_examples, xdata[0], xdata[-1]))
+                if 'ale' in compute_func.__name__:
+                    xdata = 0.5 * (xdata[1:] + xdata[:-1])
+                if np.array(ydata).ndim == 2:
+                    self._ci_plot(twin_ax, xdata, ydata, color=line_colors[i], facecolor=line_colors[i], label=model_name)
+                else:
+                    self.line_plot(twin_ax, xdata, ydata, color=line_colors[i], label=model_name)
+                ax.set_xlabel(feature, fontsize=10)
+                twin_ax.axhline(y=0.0, color="k", alpha=0.8)
+                twin_ax.set_ylim(ylim)
+
+             #ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
 
         if 'ale' in compute_func.__name__:
             label = 'Accumulated Local Effect (%)'
