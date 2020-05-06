@@ -124,26 +124,18 @@ class ModelClarify:
         )
 
         #store all resulting indicies in one dictionary
-        adict =  { 
-                    'hits': [ sorted_diff_for_hits[i][1] for i in range(n_examples) ],
-                    'false_alarms': [ sorted_diff_for_false_alarms[i][1] for i in range(n_examples) ],
-                    'misses': [ sorted_diff_for_misses[i][1] for i in range(n_examples) ],
-                      "corr_negs": [
-                sorted_diff_for_corr_negs[i][1] for i in range(n_examples)
-            ],
-
-                    } 
+        adict = { 
+                'hits': [ sorted_diff_for_hits[i][1] for i in range(min(n_examples, sorted_diff_for_hits.shape[0])) ],
+                'false_alarms': [ sorted_diff_for_false_alarms[i][1] for i in range(min(n_examples, sorted_diff_for_false_alarms.shape[0])) ],
+                'misses': [ sorted_diff_for_misses[i][1] for i in range(min(n_examples, sorted_diff_for_misses.shape[0])) ],
+                "corr_negs": [sorted_diff_for_corr_negs[i][1] for i in range(min(n_examples, sorted_diff_for_corr_negs.shape[0])) ],
+                } 
 
         for key in list(adict.keys()):
             adict[key] = np.array(adict[key]).astype(int)
 
         return adict  
-    
-    def _sort_df(self, df):
-        """
-        sort a dataframe by the absolute value 
-        """
-        return df.reindex(df.abs().sort_values(ascending=False).index)
+
 
     def get_top_contributors(self, n_examples=100):
         """
@@ -164,7 +156,7 @@ class ModelClarify:
         for key in list(dict_of_dfs.keys()):
             df = dict_of_dfs[key]
             series = df.mean(axis=0)
-            sorted_df = self._sort_df(series)
+            sorted_df = series.reindex(series.abs().sort_values(ascending=False).index)
             idxs = performance_dict[key]
             top_vars = {}
             for var in list(sorted_df.index):
@@ -182,91 +174,35 @@ class ModelClarify:
 
         return adict
 
-    def tree_interpreter_performance_based(self, performance_dict=None):
+    def tree_interpreter(self, indices=None):
 
         """
         Method for intrepreting tree based ML models using treeInterpreter. 
-        Uses indices from dictionary returned by get_indices_based_on_performance()
-
         ADD REFERENCE HERE SOMEWHERE
 
-        """
+        Args:
+            indices: list of indices to perform interpretation over. If None, all indices
+                are used
 
-        # check to make sure model is of type Tree
-        if type(self._model).__name__ not in list_of_acceptable_tree_models:
-            raise Exception(f"{model_name} model is not accepted for this method.")
-
-        if performance_dict is None:
-            performance_dict = self.get_indices_based_on_performance()
-
-        # will be returned; a list of pandas dataframes, one for each performance dict key
-        dict_of_dfs = {}
-
-        for key, values in zip(performance_dict.keys(), performance_dict.values()):
-
-            print(key)
-            # number of examples
-            n_examples = values.shape[0]
-
-            # get examples for key
-            tmp_examples = self._examples.loc[values, :]
-
-            print(f"Interpreting {n_examples} examples from {key}")
-            prediction, bias, contributions = ti.predict(self._model, tmp_examples)
-
-            forecast_probabilities = (
-                self._model.predict_proba(tmp_examples)[:, 1] * 100.0
-            )
-            positive_class_contributions = contributions[:, :, 1]
-            positive_class_bias = bias[1][1]
-
-            tmp_data = []
-
-            # loop over each case appending each feature and value to a dictionary
-            for i in range(n_examples):
-
-                key_list = []
-                var_list = []
-
-                for c, feature in zip(
-                    positive_class_contributions[i, :], self._feature_names
-                ):
-
-                    key_list.append(feature)
-                    var_list.append(round(100.0 * c, 2))
-
-                key_list.append('Bias')
-                var_list.append(round(100. * positive_class_bias, 2))
-                tmp_data.append(dict(zip(key_list, var_list)))
-
-            # return a pandas DataFrame to do analysis on
-            contributions_dataframe = pd.DataFrame(data=tmp_data)
-
-            dict_of_dfs[key] = contributions_dataframe
-
-        return dict_of_dfs
-
-    def tree_interpreter(self):
-
-        """
-        Method for intrepreting tree based ML models using treeInterpreter.
-        Uses all data passed in to constructor
- 
-        ADD REFERENCE HERE SOMEWHERE
+        Return:
+    
+            contributions_dataframe: Pandas DataFrame 
 
         """
 
-        # check to make sure model is of type Tree
-        if type(self._model).__name__ not in list_of_acceptable_tree_models:
-            raise Exception(f"{model_name} model is not accepted for this method.")
+        # if indices to use is None, implies use all data
+        if (indices is None): indices = self._examples.index.to_list()
 
         # number of examples
-        n_examples = self._examples.shape[0]
+        n_examples = len(indices)
+
+        # get examples for key
+        examples = self._examples.loc[indices, :]
 
         print(f"Interpreting {n_examples} examples...")
-        prediction, bias, contributions = ti.predict(self._model, self._examples)
+        prediction, bias, contributions = ti.predict(self._model, examples)
 
-        forecast_probabilities = self._model.predict_proba(self._examples)[:, 1] * 100.0
+        forecast_probabilities = self._model.predict_proba(examples)[:, 1] * 100.0
         positive_class_contributions = contributions[:, :, 1]
         positive_class_bias = bias[1][1]        
 
@@ -278,9 +214,7 @@ class ModelClarify:
             key_list = []
             var_list = []
 
-            for c, feature in zip(
-                positive_class_contributions[i, :], self._feature_names
-            ):
+            for c, feature in zip( positive_class_contributions[i, :], self._feature_names):
 
                 key_list.append(feature)
                 var_list.append(round(100.0 * c, 2))
@@ -294,6 +228,47 @@ class ModelClarify:
         contributions_dataframe = pd.DataFrame(data=tmp_data)
 
         return contributions_dataframe
+
+    def run_tree_interpreter(self, performance_based=False, n_examples=10):
+
+        """
+        Method for running tree interpreter. This function is called by end user
+
+        Args:
+            performance_based: string of whether to use indices based on hits, misses,
+                false alarms, or correct negatives. Default is False (uses all examples 
+                provided during constructor call)
+            n_examples : int representing the number of examples to get if 
+                performance_based is True. Default is 10 examples.
+
+        Return:
+    
+            dict_of_dfs: dictionary of pandas DataFrames, one for each key
+        """
+
+        # check to make sure model is of type Tree
+        if type(self._model).__name__ not in list_of_acceptable_tree_models:
+            raise Exception(f"{model_name} model is not accepted for this method.")
+
+        # will be returned; a list of pandas dataframes, one for each performance dict key
+        dict_of_dfs = {}
+
+        # if performance based interpretor, run tree_interpretor for each metric
+        if performance_based is True:
+            performance_dict = self.get_indices_based_on_performance(n_examples=n_examples)
+
+            for key, values in zip(performance_dict.keys(), performance_dict.values()):
+                
+                print(f"Processing {key}...")
+
+                cont_df = self.tree_interpreter(indices=values)
+
+                dict_of_dfs[key] = cont_df
+        else:
+            cont_df = self.tree_interpreter()
+            dict_of_dfs['all_data'] = cont_df
+
+        return dict_of_dfs
 
     def compute_1d_partial_dependence(self, examples, model=None, feature=None, xdata=None, **kwargs):
 
@@ -436,8 +411,6 @@ class ModelClarify:
         if model is None:
             model = self.model_set.items()
 
-        # TODO: incorporate the monte carlo aspect into these routines in a clean way...
-        nbins = 15
         # make sure feature is set
         if feature is None:
             raise Exception("Specify a feature.")
@@ -460,10 +433,8 @@ class ModelClarify:
         for i in range(1, len(xdata)):
 
             # get subset of data
-            df_subset = self._examples[
-                (examples[feature] >= xdata[i - 1])
-                & (examples[feature] < xdata[i])
-            ]
+            df_subset = examples[(examples[feature] >= xdata[i - 1]) & 
+                                 (examples[feature] < xdata[i])]
 
             # Without any observation, local effect on splitted area is null
             if len(df_subset) != 0:
@@ -534,6 +505,8 @@ class ModelClarify:
             xdata : array, shape (N)
                 Values of where the interpretation curves was calculated.
         """
+        
+        # get bootstrap indices
         n_examples = len(self._examples)
         bootstrap_replicates = np.asarray(
             [
@@ -552,7 +525,7 @@ class ModelClarify:
             ydata_set = []
             for _, idx in enumerate(bootstrap_replicates):
                 examples_temp = self._examples.iloc[idx, :]
-                ydata, xdata = compute_func(
+                ydata, _ = compute_func(
                     examples=examples_temp, feature=feature, xdata=xdata, model=model
                 )
                 ydata_set.append(ydata)
@@ -683,16 +656,21 @@ class ModelClarify:
             scoring_strategy = "argmin_of_mean"
 
         print(evaluation_fn)
-        targets =pd.DataFrame(data=self._targets, columns=['Test'])
+
+        self.nbootstrap = nbootstrap
+
+        targets = pd.DataFrame(data=self._targets, columns=['Test'])
+
         result = sklearn_permutation_importance(
-            model=self._model,
-            scoring_data=(self._examples, targets),
-            evaluation_fn=evaluation_fn,
-            variable_names=self._feature_names,
-            scoring_strategy=scoring_strategy,
-            subsample=subsample,
-            nimportant_vars=n_multipass_vars,
-            njobs=njobs,
-            nbootstrap=nbootstrap,
+            model            = self._model,
+            scoring_data     = (self._examples, targets),
+            evaluation_fn    = evaluation_fn,
+            variable_names   = self._feature_names,
+            scoring_strategy = scoring_strategy,
+            subsample        = subsample,
+            nimportant_vars  = n_multipass_vars,
+            njobs            = njobs,
+            nbootstrap       = self.nbootstrap,
         )
+    
         return result
