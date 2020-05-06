@@ -7,13 +7,14 @@ from model_clarify import ModelClarify
 from matplotlib.ticker import FormatStrFormatter
 
 # Set up the font sizes for matplotlib
-FONT_SIZE = 16
+FONT_SIZE = 14
 BIG_FONT_SIZE = FONT_SIZE + 2
 LARGE_FONT_SIZE = FONT_SIZE + 4
 HUGE_FONT_SIZE = FONT_SIZE + 6
 SMALL_FONT_SIZE = FONT_SIZE - 2
 TINY_FONT_SIZE = FONT_SIZE - 4
-TEENSIE_FONT_SIZE = FONT_SIZE - 8
+TEENSIE_FONT_SIZE = FONT_SIZE - 6
+
 font_sizes = {
     'teensie': TEENSIE_FONT_SIZE,
     'tiny': TINY_FONT_SIZE,
@@ -26,10 +27,11 @@ font_sizes = {
 plt.rc('font', size=FONT_SIZE)
 plt.rc('axes', titlesize=FONT_SIZE)
 plt.rc('axes', labelsize=FONT_SIZE)
-plt.rc('xtick', labelsize=TINY_FONT_SIZE)
-plt.rc('ytick', labelsize=TINY_FONT_SIZE)
+plt.rc('xtick', labelsize=TEENSIE_FONT_SIZE)
+plt.rc('ytick', labelsize=TEENSIE_FONT_SIZE)
 plt.rc('legend', fontsize=FONT_SIZE)
 plt.rc('figure', titlesize=BIG_FONT_SIZE)
+plt.rcParams["font.family"] = "serif"
 
 line_colors = ['orangered', 'darkviolet', 'darkslategray', 'darkorange', 'darkgreen']
 
@@ -42,20 +44,35 @@ class ClarifierPlot(ModelClarify):
     def __init__(self, models, examples, targets=None, feature_names=None):
         super().__init__(model=models, examples=examples, targets=targets, feature_names=feature_names)
         
-    def plot_ale(self, features, subsample=1.0, nbootstrap=1):
+    def plot_ale(self, features, subsample=1.0, nbootstrap=1, to_readable_name=None, **kwargs):
+        """
+        Plot accumulate local effect from one or more features.
+
+        Args: 
+        --------------------------
+            features : str or list of strs
+                One or more features to compute ALE for
+            subsample : float
+            nbootstrap : int
+            to_readable_name : callable
+            kwargs : dict 
+                keyword arguments for plotting 
+        """
         compute_func = self.calc_ale
         self.subsample = subsample
         self.nbootstrap =nbootstrap
+        self.to_readable_name = to_readable_name
         ylim = [-7.5, 7.5]
-        fig, axes = self.plot_interpret_curve(features, compute_func, ylim, wspace=0.8)
+        fig, axes = self.plot_interpret_curve(features, compute_func, ylim, **kwargs)
         return fig, axes
 
-    def plot_pdp(self, features, subsample=1.0, nbootstrap=1):
+    def plot_pdp(self, features, subsample=1.0, nbootstrap=1, to_readable_name=None, **kwargs):
         compute_func = self.calc_pdp
         self.subsample = subsample
         self.nbootstrap =nbootstrap
+        self.to_readable_name = to_readable_name
         ylim = [0, 100.]
-        fig, axes = self.plot_interpret_curve(features, compute_func, ylim)
+        fig, axes = self.plot_interpret_curve(features, compute_func, ylim, **kwargs)
         return fig, axes
 
     def _create_base_subplots(self, n_panels, **kwargs):
@@ -63,9 +80,14 @@ class ClarifierPlot(ModelClarify):
         Create a series of subplots (MxN) based on the 
         number of panels and number of columns (optionally)
         """
-        n_columns = kwargs.get('n_columns', 3)
+        if n_panels <= 4:
+            n_columns = 2
+            wspace = 0.35
+        else:
+            n_columns = kwargs.get('n_columns', 3)
+            wspace = kwargs.get('wspace', 0.4)
+        
         figsize = kwargs.get('figsize', (6.4,4.8))
-        wspace = kwargs.get('wspace', 0.4)
         hspace = kwargs.get('hspace', 0.3)
         sharex = kwargs.get('sharex', False)
         sharey = kwargs.get('sharey', False)
@@ -73,7 +95,7 @@ class ClarifierPlot(ModelClarify):
         n_rows = int(n_panels / n_columns)
         extra_row = 0 if (n_panels % n_columns) ==0 else 1
 
-        fig, axes = plt.subplots(n_rows+extra_row, n_columns, sharex=sharex, sharey=sharey, figsize=figsize)
+        fig, axes = plt.subplots(n_rows+extra_row, n_columns, sharex=sharex, sharey=sharey, figsize=figsize, dpi=300)
         plt.subplots_adjust(wspace = wspace, hspace = hspace)
 
         n_axes_to_delete = len(axes.flat) - n_panels
@@ -92,7 +114,7 @@ class ClarifierPlot(ModelClarify):
         alphabet_list = [chr(x) for x in range(ord('a'), ord('z') + 1)] 
         n_panels = len(axes.flat)
         for letter, panel in zip(alphabet_list[:n_panels], axes.flat):
-            panel.text(0.125, 0.9,f'({letter})', ha='center', va='center', 
+            panel.text(0.075, 0.075,f'({letter})', ha='center', va='center', 
                    transform=panel.transAxes, fontsize=fontsize)
     
     def _major_axis_labels(self, fig, xlabel=None, ylabel_left=None, ylabel_right=None, **kwargs):
@@ -109,12 +131,13 @@ class ClarifierPlot(ModelClarify):
         ax.set_xlabel(xlabel, fontsize=fontsize, labelpad=labelpad)
         ax.set_ylabel(ylabel_left, fontsize=fontsize, labelpad=labelpad)
         
+        extrapad=20
         if ylabel_right is not None:
             axR = fig.add_subplot(1,1,1, sharex=ax, frameon=False)
             plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
             #axR.yaxis.tick_right()
             axR.yaxis.set_label_position("right")
-            axR.set_ylabel(ylabel_right, labelpad=labelpad, fontsize=fontsize)
+            axR.set_ylabel(ylabel_right, labelpad=labelpad+extrapad, fontsize=fontsize)
 
 
     def line_plot(self, ax, xdata, ydata, **kwargs):
@@ -167,6 +190,28 @@ class ClarifierPlot(ModelClarify):
         uncertainty = np.percentile(ydata, [2.5, 97.5], axis=0)
         ax.fill_between(xdata, uncertainty[0], uncertainty[1], facecolor=facecolor, alpha=0.4)
 
+
+    def _get_xlabel_fontsize(self, n_panels):
+        """
+        Return an appropriate X-label fontsize for the
+        ALE and PDP plot panels. 
+        """
+        if n_panels <= 4:
+            xlabel_fontsize = SMALL_FONT_SIZE
+        else:
+            xlabel_fontsize = TINY_FONT_SIZE
+
+        return xlabel_fontsize
+
+    def _get_xlabel(self, feature_name):
+        """
+        Return the X-label of the ALE and PDP panel plots.
+        """
+        if self.to_readable_name is None:
+            return feature_name
+        else:
+            return to_readable_name[feature_name]
+
     def plot_interpret_curve(self, features, compute_func, ylim, **kwargs):
         """
         Generic function for ALE & PDP
@@ -174,15 +219,16 @@ class ClarifierPlot(ModelClarify):
         if not isinstance(features, list):
             features=[features]
 
-        hspace = kwargs.get('hspace', 0.5)
-        wspace = kwargs.get('wspace', 0.5)
+        hspace = kwargs.get('hspace', 0.45)
+        wspace = kwargs.get('wspace', 0.4)
 
         fig,axes = fig, axes = self._create_base_subplots(n_panels=len(features), 
                                                           hspace=hspace,
                                                           wspace=wspace,
                                                           figsize=(8,6))
         
-        for ax, feature in zip(axes.flat,features):
+        xlabel_fontsize = self._get_xlabel_fontsize(len(features)) 
+        for ax, feature in zip(axes.flat , features):
             for i, model_name in enumerate(list(self.model_set.keys())):
                 feature_examples = self._examples[feature]
                 ydata, xdata = compute_func(model=self.model_set[model_name], feature=feature, subsample=self.subsample, nbootstrap=self.nbootstrap)
@@ -193,11 +239,9 @@ class ClarifierPlot(ModelClarify):
                     self._ci_plot(twin_ax, xdata, ydata, color=line_colors[i], facecolor=line_colors[i], label=model_name)
                 else:
                     self.line_plot(twin_ax, xdata, ydata, color=line_colors[i], label=model_name)
-                ax.set_xlabel(feature, fontsize=10)
+                ax.set_xlabel(self._get_xlabel(feature), fontsize=xlabel_fontsize)
                 twin_ax.axhline(y=0.0, color="k", alpha=0.8)
                 twin_ax.set_ylim(ylim)
-
-             #ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
 
         if 'ale' in compute_func.__name__:
             label = 'Accumulated Local Effect (%)'
@@ -205,6 +249,7 @@ class ClarifierPlot(ModelClarify):
             label = 'Mean Probability (%)'
 
         self._major_axis_labels(fig, xlabel=None, ylabel_left='Relative Frequency', ylabel_right=label, **kwargs)
+        self._create_panel_labels(axes)
 
         return fig, axes
 
