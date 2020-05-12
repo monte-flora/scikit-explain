@@ -32,18 +32,20 @@ plt.rc('legend', fontsize=FONT_SIZE)
 plt.rc('figure', titlesize=BIG_FONT_SIZE)
 
 class ClarifierPlot(ModelClarify):
+
     """
     ClarifierPlot is a python class that uses the calculcations 
     from ModelClarify to make publication-quality figures 
     from a variety of ML interpretation techniques.
     """
+
     def __init__(self, models, examples, targets=None, feature_names=None):
         super().__init__(model=models, examples=examples, targets=targets, feature_names=feature_names)
         
     def plot_ale(self, features, subsample=1.0, nbootstrap=1):
-        compute_func = self.calc_ale
-        self.subsample = subsample
-        self.nbootstrap =nbootstrap
+        compute_func    = self.calc_ale
+        self.subsample  = subsample
+        self.nbootstrap = nbootstrap
         ylim = [-7.5, 7.5]
         fig, axes = self.plot_interpret_curve(features, compute_func, ylim, wspace=0.6)
         return fig, axes
