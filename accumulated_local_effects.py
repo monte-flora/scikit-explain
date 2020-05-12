@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import joblib
+import concurrent.futures
 
 from utils import *
 
@@ -62,15 +62,18 @@ class AccumulatedLocalEffects:
                         bootstrapping).
         """
 
+
+        self.subsample  = subsample
+        self.nbootstrap = nbootstrap
+
         # get number of features we are processing
         n_feats = len(features)
 
         # check first element of feature and see if of type tuple; assume second-order calculations
         if isinstance(features[0], tuple): 
 
-            #parallelize routine... calculate ale.
-            tdict = joblib.Parallel(n_jobs=njobs)(joblib.delayed(self._parallelize_2d) 
-                (feature, subsample, nbootstrap) for feature in features)
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                tdict = executor.map(self._parallelize_2d, features)
 
             #convert list of dicts to dict
             for elem in tdict:
@@ -79,15 +82,14 @@ class AccumulatedLocalEffects:
         # else, single order calculations
         else:
 
-            #parallelize routine... calculate ale
-            tdict = joblib.Parallel(n_jobs=njobs)(joblib.delayed(self._parallelize_1d) 
-                (feature, subsample, nbootstrap) for feature in features)
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                tdict = executor.map(self._parallelize_1d, features)
 
             #convert list of dicts to dict
             for elem in tdict:
                 self._dict_out.update(elem)
         
-    def _parallelize_1d(self, feature, subsample, nbootstrap):
+    def _parallelize_1d(self, feature):
 
         temp_dict = {}
         temp_dict[feature] = {}
@@ -100,8 +102,10 @@ class AccumulatedLocalEffects:
 
             temp_dict[feature][model] = {}
 
-            self.calculate_first_order_ale(feature=feature, model=model,
-                                            subsample =subsample, nbootstrap=nbootstrap)
+            self.calculate_first_order_ale(feature=feature,
+                                            model=model,
+                                            subsample=self.subsample, 
+                                            nbootstrap=self.nbootstrap)
             
             #print(self._pdp_values)
 
@@ -113,7 +117,7 @@ class AccumulatedLocalEffects:
         return temp_dict
 
 
-    def _parallelize_2d(self, feature, subsample, nbootstrap):
+    def _parallelize_2d(self, feature):
 
         temp_dict = {}
         temp_dict[feature] = {}
@@ -126,8 +130,10 @@ class AccumulatedLocalEffects:
 
             temp_dict[feature][model] = {}
 
-            self.compute_second_order_ale(feature=feature, model=model,
-                                               subsample=subsample, nbootstrap=nbootstrap)
+            self.compute_second_order_ale(feature=feature, 
+                                          model=model,
+                                          subsample=self.subsample, 
+                                          nbootstrap=self.nbootstrap)
             
             #print(self._pdp_values)
 
@@ -199,7 +205,6 @@ class AccumulatedLocalEffects:
                     lower_bound = df_subset.copy()
                     upper_bound = df_subset.copy()
 
-                    # The main ALE idea that compute prediction difference between same data except feature's one
                     lower_bound[feature] = self._x1vals[i - 1]
                     upper_bound[feature] = self._x1vals[i]
 

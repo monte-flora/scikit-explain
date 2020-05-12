@@ -76,7 +76,7 @@ class InterpretabilityPlotting:
         number of panels and number of columns (optionally)
         """
 
-        n_columns = kwargs.get('n_columns', 1)
+        n_columns = kwargs.get('n_columns', 3)
         figsize   = kwargs.get('figsize', (6.4,4.8))
         wspace    = kwargs.get('wspace', 0.4)
         hspace    = kwargs.get('hspace', 0.3)
@@ -322,7 +322,10 @@ class InterpretabilityPlotting:
         contrib  = []
         varnames = []
 
-        for i, var in enumerate(list(dict_to_use.keys())):
+        # return nothing if dictionary is empty
+        if len(dict_to_use) == 0: return
+
+        for var in list(dict_to_use.keys()):
             try:
                 contrib.append(dict_to_use[var]["Mean Contribution"])
             except:
