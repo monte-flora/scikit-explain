@@ -33,9 +33,9 @@ plt.rc('figure', titlesize=BIG_FONT_SIZE)
 line_colors = ['orangered', 'darkviolet', 'darkslategray', 'darkorange', 'darkgreen']
 
 # class BasePlot():
-# 
+#
 #     def __init__(n_panels, **kwargs):
-# 
+#
 #         self._n_panels = n_panels
 #         self._n_columns = kwargs.get('n_columns', 3)
 #         self._figsize = kwargs.get('figsize', (6.4,4.8))
@@ -43,36 +43,36 @@ line_colors = ['orangered', 'darkviolet', 'darkslategray', 'darkorange', 'darkgr
 #         self._hspace = kwargs.get('hspace', 0.3)
 #         self._sharex = kwargs.get('sharex', False)
 #         self._sharey = kwargs.get('sharey', False)
-#         
+#
 #     def create_subplots(self):
-# 
+#
 #         """
-#         Create a series of subplots (MxN) based on the 
+#         Create a series of subplots (MxN) based on the
 #         number of panels and number of columns (optionally)
 #         """
-#         
+#
 #         n_rows    = int(self._n_panels / self._n_columns)
 #         extra_row = 0 if (self._n_panels % self._n_columns) == 0 else 1
-# 
-#         fig, axes = plt.subplots(self._n_rows+extra_row, self._n_columns, 
+#
+#         fig, axes = plt.subplots(self._n_rows+extra_row, self._n_columns,
 #                     sharex=self._sharex, sharey=self._sharey, figsize=self._figsize)
-# 
+#
 #         plt.subplots_adjust(wspace = self._wspace, hspace = self._hspace)
-# 
+#
 #         n_axes_to_delete = len(axes.flat) - self._n_panels
-# 
+#
 #         if (n_axes_to_delete > 0):
 #             for i in range(n_axes_to_delete):
 #                 fig.delaxes(axes.flat[-(i+1)])
-#     
+#
 #         return fig, axes
-    
+
 class InterpretabilityPlotting:
 
     def create_subplots(self, n_panels, **kwargs):
 
         """
-        Create a series of subplots (MxN) based on the 
+        Create a series of subplots (MxN) based on the
         number of panels and number of columns (optionally)
         """
 
@@ -82,11 +82,11 @@ class InterpretabilityPlotting:
         hspace    = kwargs.get('hspace', 0.3)
         sharex    = kwargs.get('sharex', False)
         sharey    = kwargs.get('sharey', False)
-        
+
         n_rows    = int(n_panels / n_columns)
         extra_row = 0 if (n_panels % n_columns) ==0 else 1
 
-        fig, axes = plt.subplots(n_rows+extra_row, n_columns, sharex=sharex, 
+        fig, axes = plt.subplots(n_rows+extra_row, n_columns, sharex=sharex,
                                     sharey=sharey, figsize=figsize)
         plt.subplots_adjust(wspace = wspace, hspace = hspace)
 
@@ -95,14 +95,14 @@ class InterpretabilityPlotting:
         if n_axes_to_delete > 0:
             for i in range(n_axes_to_delete):
                 fig.delaxes(axes.flat[-(i+1)])
-    
+
         return fig, axes
 
-    def set_major_axis_labels(self, fig, xlabel=None, ylabel_left=None, 
+    def set_major_axis_labels(self, fig, xlabel=None, ylabel_left=None,
                                 ylabel_right=None, **kwargs):
         """
-        Generate a single X- and Y-axis labels for 
-        a series of subplot panels 
+        Generate a single X- and Y-axis labels for
+        a series of subplot panels
         """
 
         fontsize = kwargs.get('fontsize', 15)
@@ -117,7 +117,7 @@ class InterpretabilityPlotting:
         # set axes labels
         ax.set_xlabel(xlabel,      fontsize=fontsize, labelpad=labelpad)
         ax.set_ylabel(ylabel_left, fontsize=fontsize, labelpad=labelpad)
-        
+
         if ylabel_right is not None:
             ax_right = fig.add_subplot(1,1,1, sharex=ax, frameon=False)
             plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
@@ -132,7 +132,7 @@ class InterpretabilityPlotting:
 
         cnt, bins, patches = ax.hist( data, bins='auto', alpha=0.3, color=color,
                                         density=True, edgecolor=edgecolor)
-        
+
         area = np.dot(cnt, np.diff(bins))
         hist_ax = ax.twinx()
         hist_ax.grid('off')
@@ -149,7 +149,7 @@ class InterpretabilityPlotting:
         Plots a curve of data
         """
 
-        linewidth = kwargs.get('linewidth', 2.0)    
+        linewidth = kwargs.get('linewidth', 2.0)
         linestyle = kwargs.get('linestyle', '-')
         color     = kwargs.get('color', 'blue')
 
@@ -162,12 +162,13 @@ class InterpretabilityPlotting:
         """
 
         facecolor = kwargs.get('facecolor', 'r')
+        color     = kwargs.get('color', 'blue')
 
         # get mean curve
         mean_ydata = np.mean(ydata, axis=0)
 
         # plot mean curve
-        self.line_plot(ax, xdata, mean_ydata, **kwargs)
+        self.line_plot(ax, xdata, mean_ydata, color=color)
 
         # get confidence interval bounds
         lower_bound, upper_bound = np.percentile(ydata, [2.5, 97.5], axis=0)
@@ -175,16 +176,17 @@ class InterpretabilityPlotting:
         # fill between CI bounds
         ax.fill_between(xdata, lower_bound, upper_bound, facecolor=facecolor, alpha=0.4)
 
-
-    def plot_1d_pd(self, feature_dict, **kwargs):
+    def plot_1d_curve(self, feature_dict, **kwargs):
 
         """
-        Generic function for 1-D PDP
+        Generic function for 1-D ALE and PD
         """
 
-        hspace = kwargs.get('hspace', 0.5)
-        ylim   = kwargs.get('ylim', [25,50])
-        color  = kwargs.get('color', 'blue')
+        ci_plot   = kwargs.get('ci_plot', False)
+        hspace    = kwargs.get('hspace', 0.5)
+        color     = kwargs.get('color', 'blue')
+        facecolor = kwargs.get('facecolor', 'gray')
+        ylim      = kwargs.get('ylim', [-10,60])
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(feature_dict.keys())
@@ -198,30 +200,30 @@ class InterpretabilityPlotting:
             for i, model in enumerate(feature_dict[feature].keys()):
 
                 xdata     = feature_dict[feature][model]['xdata1']
-                ydata     = feature_dict[feature][model]['pd_values']
+                ydata     = feature_dict[feature][model]['values']
                 hist_data = feature_dict[feature][model]['hist_data']
 
                 # add histogram
                 hist_ax = self.add_histogram_axis(ax, np.clip(hist_data, xdata[0], xdata[-1]))
-            
+
                 # depending on number of bootstrap examples, do CI plot or just mean
-                if (ydata.shape[0] > 1):
-                    self.confidence_interval_plot(hist_ax, xdata, ydata, **kwargs)
+                if (ci_plot is True and ydata.shape[0] > 1):
+                    self.confidence_interval_plot(hist_ax, xdata, ydata,
+                        color=color[i], facecolor=facecolor[i])
                 else:
-                    self.line_plot(hist_ax, xdata, ydata[0,:], **kwargs)
+                    self.line_plot(hist_ax, xdata, ydata[0,:],
+                        color=color[i])
 
                 ax.set_xlabel(feature, fontsize=10)
                 hist_ax.axhline(y=0.0, color="k", alpha=0.8)
-                hist_ax.set_ylim([ydata.min(), ydata.max()])
+                hist_ax.set_ylim(ylim)
 
         self.set_major_axis_labels(fig, xlabel=None, ylabel_left='Relative Frequency',
                                 ylabel_right='Mean Probability (%)', **kwargs)
 
-        plt.show()
-
         return fig, axes
 
-    def plot_2d_pd(self, feature_dict, **kwargs):
+    def plot_2d_field(self, feature_dict, **kwargs):
 
         """
         Generic function for 2-D PDP
@@ -245,15 +247,13 @@ class InterpretabilityPlotting:
             xdata2     = feature_dict[feature]['xdata2']
             ydata      = feature_dict[feature]['pd_values']
 
-            print(ydata[0,:,:])
-
             # can only do a contour plot with 2-d data
             x, y = np.meshgrid(xdata1, xdata2)
-        
+
             cf = ax.contourf(x, y, ydata[0,:,:], cmap=cmap, levels=levels, alpha=0.75)
-        
+
             fig.colorbar(cf, ax)
-      
+
             ax.set_xlabel(feature[0], fontsize=10)
             ax.set_ylabel(feature[1], fontsize=10)
 
@@ -262,57 +262,7 @@ class InterpretabilityPlotting:
         self.set_major_axis_labels(fig, xlabel=None, ylabel_left='Relative Frequency',
                                 ylabel_right='Mean Probability (%)', **kwargs)
 
-        plt.show()
-
         return fig, axes
-
-    def plot_ale(self, feature_dict, **kwargs):
-
-        """
-        Generic function for 1st order ALE
-        """
-
-        hspace = kwargs.get('hspace', 0.5)
-        ylim   = kwargs.get('ylim', [-15,15])
-        color  = kwargs.get('color', 'blue')
-
-        # get the number of panels which will be length of feature dictionary
-        n_panels = len(feature_dict.keys())
-
-        # create subplots, one for each feature
-        fig, axes = self.create_subplots(n_panels=n_panels, hspace=hspace, figsize=(8,6))
-
-        # loop over each feature and add relevant plotting stuff
-        for ax, feature in zip(axes.flat, feature_dict.keys()):
-
-            for i, model in enumerate(feature_dict[feature].keys()):
-
-                xdata     = feature_dict[feature][model]['xdata1']
-                xdata = 0.5 * (xdata[1:] + xdata[:-1])
-
-                ydata     = feature_dict[feature][model]['ale_values']
-                hist_data = feature_dict[feature][model]['hist_data']
-
-                # add histogram
-                hist_ax = self.add_histogram_axis(ax, np.clip(hist_data, xdata[0], xdata[-1]))
-            
-                # depending on number of bootstrap examples, do CI plot or just mean
-                if (ydata.shape[0] > 1):
-                    self.confidence_interval_plot(hist_ax, xdata, ydata, **kwargs)
-                else:
-                    self.line_plot(hist_ax, xdata, ydata[0,:], **kwargs)
-
-                ax.set_xlabel(feature, fontsize=10)
-                hist_ax.axhline(y=0.0, color="k", alpha=0.8)
-                hist_ax.set_ylim(ylim)
-
-        self.set_major_axis_labels(fig, xlabel=None, ylabel_left='Relative Frequency',
-                                ylabel_right='Mean Probability (%)', **kwargs)
-
-        plt.show()
-
-        return fig, axes
-
 
     def ti_plot(self, dict_to_use, ax=None):
 
@@ -343,7 +293,7 @@ class InterpretabilityPlotting:
             other_label="Others",
             y_lab="Probability",
         )
-    
+
         return fig
 
     def plot_treeinterpret(self, result_dict, **kwargs):
@@ -353,7 +303,7 @@ class InterpretabilityPlotting:
         Args:
         ---------------
             result : pandas.Dataframe
-                a single row/example from the 
+                a single row/example from the
                 result dataframe from tree_interpreter_simple
         '''
 
@@ -364,14 +314,14 @@ class InterpretabilityPlotting:
 
         # loop over each model creating one panel per model
         for model_name in result_dict.keys():
-    
+
             # try for all_data/average data
             if 'all_data' in result_dict[model_name].keys():
 
                 fig = self.ti_plot(result_dict[model_name]['all_data'])
-        
+
             # must be performanced based
-            else:   
+            else:
 
                 # create subplots, one for each feature
                 fig, sub_axes = self.create_subplots(n_panels=4, n_columns=2, hspace=hspace,                                                wspace =0.2,
@@ -384,7 +334,7 @@ class InterpretabilityPlotting:
 
         return fig
 
-    def plot_variable_importance(self, importance_dict, multipass=True, ax=None, filename=None, 
+    def plot_variable_importance(self, importance_dict, multipass=True, ax=None, filename=None,
                         readable_feature_names={}, feature_colors=None, metric = "Validation AUPRC",
                              relative=False, num_vars_to_plot=None, diagnostics=0, title='', **kwargs):
 
@@ -413,7 +363,7 @@ class InterpretabilityPlotting:
 
             rankings = importance_obj.retrieve_multipass(
                 ) if multipass else importance_obj.retrieve_singlepass()
-        
+
             if num_vars_to_plot is None and multipass:
                 num_vars_to_plot == len(list(rankings.keys()))
 
@@ -470,7 +420,7 @@ class InterpretabilityPlotting:
 
             if bootstrapped:
                 ax.barh(np.arange(len(scores_to_plot)),
-                     scores_to_plot, linewidth=1, edgecolor='black', color=colors_to_plot, 
+                     scores_to_plot, linewidth=1, edgecolor='black', color=colors_to_plot,
                      xerr=ci, capsize=4, ecolor='grey', error_kw=dict(alpha=0.4))
             else:
                 ax.barh(np.arange(len(scores_to_plot)),
@@ -496,6 +446,8 @@ class InterpretabilityPlotting:
 
             # make the horizontal plot go with the highest value at the top
             ax.invert_yaxis()
+
+        return fig, axes
 
     def save_figure(self, fig, fname, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """
