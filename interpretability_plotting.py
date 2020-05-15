@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import FormatStrFormatter
 
-import waterfall_chart
+# import waterfall_chart
 
 
 # Set up the font sizes for matplotlib
@@ -264,39 +264,75 @@ class InterpretabilityPlotting:
 
         return fig, axes
 
-    def ti_plot(self, dict_to_use, ax=None):
+    def ti_plot(self, dict_to_use, ax=None, threshold=1.0):
 
         if ax is None:
             fig, ax = plt.subplots()
 
+        # list storing contribution value
         contrib  = []
+        # list storing variable names
         varnames = []
+        # list stroing color of bar for each variable name
+        colors_to_plot = []
+        # list to store below threshold features
+        others = []
 
         # return nothing if dictionary is empty
         if len(dict_to_use) == 0: return
 
         for var in list(dict_to_use.keys()):
-            try:
-                contrib.append(dict_to_use[var]["Mean Contribution"])
-            except:
-                contrib.append(dict_to_use[var])
 
-            varnames.append(var)
+            # skip bias
+            if var == 'Bias':
+                bias_term = dict_to_use[var]["Mean Contribution"]
+                continue
 
-        fig = waterfall_chart.plot(ax,
-            varnames,
-            contrib,
-            rotation_value=90,
-            sorted_value=True,
-            threshold=0.02,
-            net_label="Final prediction",
-            other_label="Others",
-            y_lab="Probability",
-        )
+            # if contribution is small, skip
+            if (abs(dict_to_use[var]["Mean Contribution"]) < threshold):
+                others.append(dict_to_use[var]["Mean Contribution"])
+                continue
 
-        return fig
+            contrib.append(dict_to_use[var]["Mean Contribution"])
 
-    def plot_treeinterpret(self, result_dict, **kwargs):
+            if (dict_to_use[var]["Mean Contribution"] >= threshold):
+                colors_to_plot.append('lightgreen')
+            else:
+                colors_to_plot.append('red')
+
+            varnames.append(var.lower().replace('_', ' '))
+
+        # add the "not so important" other features at the end
+        varnames.append('others')
+        contrib.append(sum(others))
+
+        if (sum(others) > 0.0): colors_to_plot.append('lightgreen')
+        else: colors_to_plot.append('red')
+
+        # compute total contribution by summing
+        final_contribution = '{0:.2f}'.format(sum(contrib)+bias_term)
+
+        # make horizontal bar plot
+        bh = ax.barh(np.arange(len(contrib)),
+             contrib, linewidth=1, edgecolor='black', color=colors_to_plot)
+
+        # Put the variable names _into_ the plot
+        for bar, i in zip(bh, range(len(varnames))):
+            ax.text(0.1, i, varnames[i],
+                 va="center", ha="left", size=font_sizes['teensie'])
+
+        ax.set_yticks([])
+        vmax = np.ceil(round(max(contrib)/10.0))*10.0
+        vmin = min(contrib) - (min(contrib) % 10)
+#        ax.set_xticks(np.linspace(vmin, vmax, (vmax-vmin)/10+1))
+
+        # ax.text(10.0, len(varnames)-1, f"Final prediction: {final_contribution}",
+        #         va="center", ha="left", size=font_sizes['teensie'])
+
+        # make the horizontal plot go with the highest value at the top
+        ax.invert_yaxis()
+
+    def plot_treeinterpret(self, ti_dict, **kwargs):
         '''
         Plot the results of tree interpret
 
@@ -307,30 +343,42 @@ class InterpretabilityPlotting:
                 result dataframe from tree_interpreter_simple
         '''
 
+        output_fname = kwargs.get('output_fname', None)
+        threshold    = kwargs.get('threshold', 1.0)
+
+        n_models   = len(ti_dict.keys())
+        n_sub_keys = len(ti_dict[list(ti_dict.keys())[0]].keys())
+
+        if (n_sub_keys > 1):
+            n_panels  = n_sub_keys
+            n_columns = 2
+        else:
+            n_panels  = n_sub_keys
+            n_columns = 1
+
         hspace = kwargs.get('hspace', 0.5)
 
-        # get the number of panels which will be the number of ML models in dictionary
-        n_panels = len(result_dict.keys())
-
         # loop over each model creating one panel per model
-        for model_name in result_dict.keys():
+        for model_name in ti_dict.keys():
 
-            # try for all_data/average data
-            if 'all_data' in result_dict[model_name].keys():
+            if output_fname is None:
+                output_fname = model_name+'_TreeInterpreter.png'
 
-                fig = self.ti_plot(result_dict[model_name]['all_data'])
+            # create subplots, rows represent models, cols represent inner keys
+            fig, axes = self.create_subplots(n_panels=n_panels,
+                                             n_columns=n_columns, hspace=hspace,
+                                             wspace =0.2, sharex=False,
+                                             sharey=False, figsize=(8,6))
 
-            # must be performanced based
-            else:
+            # for each sub-axis created, plot!
+            for sub_axe, key in zip(axes.flat, ti_dict[model_name].keys()):
 
-                # create subplots, one for each feature
-                fig, sub_axes = self.create_subplots(n_panels=4, n_columns=2, hspace=hspace,                                                wspace =0.2,
-                                                     sharex=False, sharey=False, figsize=(8,6))
+                self.ti_plot(ti_dict[model_name][key], ax=sub_axe, threshold=threshold)
+                sub_axe.set_title(key.upper().replace('_', ' '), fontsize=15)
+                sub_axe.set_xlabel("Contribution (%)")
 
-                for sax, perf_key in zip(sub_axes.flat, list(result_dict[model_name].keys())):
-                    print(perf_key)
-                    self.ti_plot(result_dict[model_name][perf_key], ax=sax)
-                    sax.set_title(perf_key.upper().replace('_', ' '), fontsize=15)
+            # save a figure for each model
+            self.save_figure(fig, output_fname)
 
         return fig
 
@@ -451,7 +499,7 @@ class InterpretabilityPlotting:
 
     def save_figure(self, fig, fname, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """
-        return plt.savefig(fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
+        return fig.savefig(fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
 
 
     # You can fill this in by using a dictionary with {var_name: legible_name}

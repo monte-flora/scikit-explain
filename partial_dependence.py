@@ -91,7 +91,7 @@ class PartialDependence:
         # check first element of feature and see if of type tuple; assume second-order calculations
         if isinstance(features[0], tuple):
 
-            with concurrent.futures.ProcessPoolExecutor() as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
                 tdict = executor.map(self._parallelize_2d, features)
 
             #convert list of dicts to dict
@@ -102,7 +102,7 @@ class PartialDependence:
         else:
 
             #parallelize routine... calculate partial dependence for each feature.
-            with concurrent.futures.ProcessPoolExecutor() as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
                 tdict = executor.map(self._parallelize_1d, features)
 
             #convert list of dicts to dict

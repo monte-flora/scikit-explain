@@ -67,7 +67,7 @@ class AccumulatedLocalEffects:
 
         return self._dict_out
 
-    def run_ale(self, features=None, njobs=1, subsample=1.0, nbootstrap=1, **kwargs):
+    def run_ale(self, features=None, njobs=None, subsample=1.0, nbootstrap=1, **kwargs):
 
         """
             Runs the accumulated local effect calculation and returns a dictionary with all
@@ -90,7 +90,7 @@ class AccumulatedLocalEffects:
         # check first element of feature and see if of type tuple; assume second-order calculations
         if isinstance(features[0], tuple):
 
-            with concurrent.futures.ProcessPoolExecutor() as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
                 tdict = executor.map(self._parallelize_2d, features)
 
             #convert list of dicts to dict
@@ -100,7 +100,7 @@ class AccumulatedLocalEffects:
         # else, single order calculations
         else:
 
-            with concurrent.futures.ProcessPoolExecutor() as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
                 tdict = executor.map(self._parallelize_1d, features)
 
             #convert list of dicts to dict
