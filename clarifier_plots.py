@@ -36,14 +36,22 @@ plt.rcParams["font.family"] = "serif"
 line_colors = ['orangered', 'darkviolet', 'darkslategray', 'darkorange', 'darkgreen']
 
 class ClarifierPlot(ModelClarify):
+
     """
     ClarifierPlot is a python class that uses the calculcations 
     from ModelClarify to make publication-quality figures 
     from a variety of ML interpretation techniques.
     """
+
     def __init__(self, models, examples, targets=None, feature_names=None):
         super().__init__(model=models, examples=examples, targets=targets, feature_names=feature_names)
         
+<<<<<<< HEAD
+    def plot_ale(self, features, subsample=1.0, nbootstrap=1):
+        compute_func    = self.calc_ale
+        self.subsample  = subsample
+        self.nbootstrap = nbootstrap
+=======
     def plot_ale(self, features, subsample=1.0, nbootstrap=1, to_readable_name=None, **kwargs):
         """
         Plot accumulate local effect from one or more features.
@@ -62,6 +70,7 @@ class ClarifierPlot(ModelClarify):
         self.subsample = subsample
         self.nbootstrap =nbootstrap
         self.to_readable_name = to_readable_name
+>>>>>>> master
         ylim = [-7.5, 7.5]
         fig, axes = self.plot_interpret_curve(features, compute_func, ylim, **kwargs)
         return fig, axes
