@@ -2,27 +2,26 @@ import numpy as np
 import pandas as pd
 import concurrent.futures
 
-from utils import compute_bootstrap_samples
+from utils import *
 
 class PartialDependence:
 
     """
-    Class for computing partial dependence.
+    Class for computing various ML model interpretations...blah blah blah
 
     Args:
-        model : a trained single scikit-learn model, or list of scikit-learn models, or
-            dictionary of models where the key is a generic name and the value
-            is a train model.
+        model : a single (or multiple) scikit-learn models represented as a dictionary.
+            Create a dictionary such as { "RandomForest" : rf_sklearn_model }
         examples : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
             to specify the feature names
         targets: list or numpy array of targets/labels. List converted to numpy array
-        classification: defaults to True for classification problems.
+        classification: defaults to True for classification problems. 
             Set to false otherwise.
-        feature_names : defaults to None. Should only be set if examples is a
+        feature_names : defaults to None. Should only be set if examples is a 
             nd.numpy array. Make sure it's a list
     """
 
-    def __init__(self, model=None, examples=None, targets=None, classification=True,
+    def __init__(self, model=None, examples=None, targets=None, classification=True, 
             feature_names=None):
 
         # if model is of type list or single objection, convert to dictionary
@@ -31,24 +30,21 @@ class PartialDependence:
                 self._models = {type(m).__name__ : m for m in model}
             else:
                 self._models = {type(model).__name__ : model}
-        # user provided a dict
-        else:
-            self._models = model
 
         self._examples = examples
 
         # check that targets are assigned correctly
-        if isinstance(targets, list):
+        if isinstance(targets, list): 
             self._targets = np.array(targets)
-        elif isinstance(targets, np.ndarray):
+        elif isinstance(targets, np.ndarray): 
             self._targets = targets
         else:
             raise TypeError('Target variable must be numpy array.')
 
         # make sure data is the form of a pandas dataframe regardless of input type
-        if isinstance(self._examples, np.ndarray):
-            if (feature_names is None):
-                raise Exception('Feature names must be specified if using NumPy array.')
+        if isinstance(self._examples, np.ndarray): 
+            if (feature_names is None): 
+                raise Exception('Feature names must be specified if using NumPy array.')    
             else:
                 self._feature_names = feature_names
                 self._examples      = pd.DataFrame(data=examples, columns=feature_names)
@@ -65,8 +61,8 @@ class PartialDependence:
         self._dict_out = {}
 
 
-    def get_final_dict(self):
-
+    def get_final_dict(self):  
+        
         return self._dict_out
 
     def run_pd(self, features=None, njobs=1, subsample=1.0, nbootstrap=1, **kwargs):
@@ -74,7 +70,7 @@ class PartialDependence:
         """
             Runs the partial dependence calculation and returns a dictionary with all
             necessary inputs for plotting.
-
+        
             feature: List of strings for first-order partial dependence, or list of tuples
                      for second-order
             subsample: a float (between 0-1) for fraction of examples used in bootstrap
@@ -89,20 +85,20 @@ class PartialDependence:
         n_feats = len(features)
 
         # check first element of feature and see if of type tuple; assume second-order calculations
-        if isinstance(features[0], tuple):
+        if isinstance(features[0], tuple): 
 
-            with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
+            with concurrent.futures.ProcessPoolExecutor() as executor:
                 tdict = executor.map(self._parallelize_2d, features)
 
             #convert list of dicts to dict
             for elem in tdict:
                 self._dict_out.update(elem)
-
+                
         # else, single order calculations
         else:
-
-            #parallelize routine... calculate partial dependence for each feature.
-            with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
+ 
+            #parallelize routine... calculate partial dependence for each feature. 
+            with concurrent.futures.ProcessPoolExecutor() as executor:
                 tdict = executor.map(self._parallelize_1d, features)
 
             #convert list of dicts to dict
@@ -116,7 +112,7 @@ class PartialDependence:
 
         print(f"Processing feature {feature}...")
 
-        for model_name, model in self._models.items():
+        for model_name, model in zip(self._models.keys(), self._models.values()):
 
             #print(f"Processing model {model}...")
 
@@ -126,11 +122,11 @@ class PartialDependence:
                                                 model=model,
                                                 subsample =self.subsample,
                                                 nbootstrap=self.nbootstrap)
-
+            
             #print(self._pdp_values)
 
-            # add to a dict
-            temp_dict[feature][model_name]['values']    = self._pdp_values
+            # add to a dict 
+            temp_dict[feature][model_name]['pd_values'] = self._pdp_values
             temp_dict[feature][model_name]['xdata1']    = self._x1vals
             temp_dict[feature][model_name]['hist_data'] = self._hist_vals
 
@@ -143,7 +139,7 @@ class PartialDependence:
 
         print(f"Processing feature {feature}...")
 
-        for model_name, model in self._models.items():
+        for model_name, model in zip(self._models.keys(), self._models.values()):
 
             #print(f"Processing model {model}...")
 
@@ -153,13 +149,13 @@ class PartialDependence:
                                                 model=model,
                                                 subsample =self.subsample,
                                                 nbootstrap=self.nbootstrap)
-
+            
             #print(self._pdp_values)
 
-            # add to a dict
-            temp_dict[feature][model_name]['values'] = self._pdp_values
-            temp_dict[feature][model_name]['xdata1'] = self._x1vals
-            temp_dict[feature][model_name]['xdata2'] = self._x2vals
+            # add to a dict 
+            temp_dict[feature][model_name]['pd_values'] = self._pdp_values
+            temp_dict[feature][model_name]['xdata1']    = self._x1vals
+            temp_dict[feature][model_name]['xdata2']    = self._x2vals
 
         return temp_dict
 
@@ -170,17 +166,17 @@ class PartialDependence:
         # Friedman, J., 2001: Greedy function approximation: a gradient boosting machine.Annals of Statistics,29 (5), 1189–1232.
         ##########################################################################
         Partial dependence plots fix a value for one or more predictors
-        # for examples, passing these new data through a trained model,
+        # for examples, passing these new data through a trained model, 
         # and then averaging the resulting predictions. After repeating this process
         # for a range of values of X*, regions of non-zero slope indicates that
         # where the ML model is sensitive to X* (McGovern et al. 2019). Only disadvantage is
         # that PDP do not account for non-linear interactions between X and the other predictors.
         #########################################################################
 
-        Args:
-            feature : name of feature to compute PD for (string)
+        Args: 
+            feature : name of feature to compute PD for (string) 
         """
-
+    
         model      = kwargs.get('model', "")
         subsample  = kwargs.get('subsample', 1.0)
         nbootstrap = kwargs.get('nbootstrap', 1)
@@ -206,8 +202,8 @@ class PartialDependence:
 
         # get the bootstrap samples
         if nbootstrap > 1:
-            bootstrap_examples = compute_bootstrap_samples(self._examples,
-                                        subsample=subsample,
+            bootstrap_examples = compute_bootstrap_samples(self._examples, 
+                                        subsample=subsample, 
                                         nbootstrap=nbootstrap)
         else:
             bootstrap_examples = [self._examples.index.to_list()]
@@ -220,7 +216,7 @@ class PartialDependence:
 
             # get samples
             examples = self._examples.iloc[idx, :].copy()
-
+        
             # for each value, set all indices to the value, make prediction, store mean prediction
             for i, value in enumerate(self._x1vals):
 
@@ -239,7 +235,7 @@ class PartialDependence:
         """
         Calculate the partial dependence between two features.
 
-        Args:
+        Args: 
             feature : tuple or list of strings of predictor names
 
         """
@@ -251,31 +247,31 @@ class PartialDependence:
         assert(len(feature) == 2), "Size of features must be equal to 2."
 
         # check to make sure feature is valid
-        if (feature[0] not in self._feature_names):
+        if (feature[0] not in self._feature_names): 
             raise TypeError(f'Feature {feature[0]} is not a valid feature')
-        if (feature[1] not in self._feature_names):
+        if (feature[1] not in self._feature_names): 
             raise TypeError(f'Feature {feature[1]} is not a valid feature')
 
         if self._x1vals is None:
             # ensures each bin gets the same number of examples
-            self._x1vals = np.percentile(self._examples[feature[0]].values,
+            self._x1vals = np.percentile(self._examples[feature[0]].values, 
                                          np.arange(2.5, 97.5 + 5, 5))
 
         if self._x2vals is None:
             # ensures each bin gets the same number of examples
-            self._x2vals = np.percentile(self._examples[feature[1]].values,
+            self._x2vals = np.percentile(self._examples[feature[1]].values, 
                                          np.arange(2.5, 97.5 + 5, 5))
 
         # get the bootstrap samples
         if nbootstrap > 1:
-            bootstrap_examples = compute_bootstrap_samples(self._examples,
-                                        subsample=subsample,
+            bootstrap_examples = compute_bootstrap_samples(self._examples, 
+                                        subsample=subsample, 
                                         nbootstrap=nbootstrap)
         else:
             bootstrap_examples = [self._examples.index.to_list()]
 
         # define 2-D grid
-        self._pdp_values = np.full((nbootstrap, self._x1vals.shape[0],
+        self._pdp_values = np.full((nbootstrap, self._x1vals.shape[0], 
                                                 self._x2vals.shape[0]), np.nan)
 
         # for each bootstrap set

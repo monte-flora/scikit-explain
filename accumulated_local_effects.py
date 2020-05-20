@@ -2,26 +2,11 @@ import numpy as np
 import pandas as pd
 import concurrent.futures
 
-from utils import compute_bootstrap_samples
+from utils import *
 
 class AccumulatedLocalEffects:
-    """
-    Class for computing accumulated local effect.
 
-    Args:
-        model : a trained single scikit-learn model, or list of scikit-learn models, or
-            dictionary of models where the key is a generic name and the value
-            is a train model.
-        examples : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
-            to specify the feature names
-        targets: list or numpy array of targets/labels. List converted to numpy array
-        classification: defaults to True for classification problems.
-            Set to false otherwise.
-        feature_names : defaults to None. Should only be set if examples is a
-            nd.numpy array. Make sure it's a list
-    """
-
-    def __init__(self, model=None, examples=None, targets=None, classification=True,
+    def __init__(self, model=None, examples=None, targets=None, classification=True, 
             feature_names=None):
 
         # if model is of type list or single objection, convert to dictionary
@@ -30,24 +15,21 @@ class AccumulatedLocalEffects:
                 self._models = {type(m).__name__ : m for m in model}
             else:
                 self._models = {type(model).__name__ : model}
-        # user provided a dict
-        else:
-            self._models = model
 
         self._examples = examples
 
         # check that targets are assigned correctly
-        if isinstance(targets, list):
+        if isinstance(targets, list): 
             self._targets = np.array(targets)
-        elif isinstance(targets, np.ndarray):
+        elif isinstance(targets, np.ndarray): 
             self._targets = targets
         else:
             raise TypeError('Target variable must be numpy array.')
 
         # make sure data is the form of a pandas dataframe regardless of input type
-        if isinstance(self._examples, np.ndarray):
-            if (feature_names is None):
-                raise Exception('Feature names must be specified if using NumPy array.')
+        if isinstance(self._examples, np.ndarray): 
+            if (feature_names is None): 
+                raise Exception('Feature names must be specified if using NumPy array.')    
             else:
                 self._feature_names = feature_names
                 self._examples      = pd.DataFrame(data=examples, columns=feature_names)
@@ -63,16 +45,16 @@ class AccumulatedLocalEffects:
         # dictionary containing information for all each feature and model
         self._dict_out = {}
 
-    def get_final_dict(self):
+    def get_final_dict(self): 
 
         return self._dict_out
 
-    def run_ale(self, features=None, njobs=None, subsample=1.0, nbootstrap=1, **kwargs):
+    def run_ale(self, features=None, njobs=1, subsample=1.0, nbootstrap=1, **kwargs):
 
         """
             Runs the accumulated local effect calculation and returns a dictionary with all
             necessary inputs for plotting.
-
+        
             feature: List of strings for first-order partial dependence, or list of tuples
                      for second-order
             subsample: a float (between 0-1) for fraction of examples used in bootstrap
@@ -88,25 +70,25 @@ class AccumulatedLocalEffects:
         n_feats = len(features)
 
         # check first element of feature and see if of type tuple; assume second-order calculations
-        if isinstance(features[0], tuple):
+        if isinstance(features[0], tuple): 
 
-            with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
+            with concurrent.futures.ProcessPoolExecutor() as executor:
                 tdict = executor.map(self._parallelize_2d, features)
 
             #convert list of dicts to dict
             for elem in tdict:
                 self._dict_out.update(elem)
-
+                
         # else, single order calculations
         else:
 
-            with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
+            with concurrent.futures.ProcessPoolExecutor() as executor:
                 tdict = executor.map(self._parallelize_1d, features)
 
             #convert list of dicts to dict
             for elem in tdict:
                 self._dict_out.update(elem)
-
+        
     def _parallelize_1d(self, feature):
 
         temp_dict = {}
@@ -114,19 +96,23 @@ class AccumulatedLocalEffects:
 
         print(f"Processing feature {feature}...")
 
-        for model_name, model in self._models.items():
+        for model in self._models.values():
 
-            temp_dict[feature][model_name] = {}
+            #print(f"Processing model {model}...")
+
+            temp_dict[feature][model] = {}
 
             self.calculate_first_order_ale(feature=feature,
                                             model=model,
-                                            subsample=self.subsample,
+                                            subsample=self.subsample, 
                                             nbootstrap=self.nbootstrap)
+            
+            #print(self._pdp_values)
 
-            # add to a dict
-            temp_dict[feature][model_name]['values']    = self._ale
-            temp_dict[feature][model_name]['xdata1']    = 0.5 * (self._x1vals[1:] + self._x1vals[:-1])
-            temp_dict[feature][model_name]['hist_data'] = self._hist_vals
+            # add to a dict 
+            temp_dict[feature][model]['ale_values'] = self._ale
+            temp_dict[feature][model]['xdata1']     = self._x1vals
+            temp_dict[feature][model]['hist_data']  = self._hist_vals
 
         return temp_dict
 
@@ -138,23 +124,23 @@ class AccumulatedLocalEffects:
 
         print(f"Processing feature {feature}...")
 
-        for model_name, model in self._models.items():
+        for model in self._models.values():
 
             #print(f"Processing model {model}...")
 
-            temp_dict[feature][model_name] = {}
+            temp_dict[feature][model] = {}
 
-            self.compute_second_order_ale(feature=feature,
+            self.compute_second_order_ale(feature=feature, 
                                           model=model,
-                                          subsample=self.subsample,
+                                          subsample=self.subsample, 
                                           nbootstrap=self.nbootstrap)
-
+            
             #print(self._pdp_values)
 
-            # add to a dict
-            temp_dict[feature][model_name]['values'] = self._ale
-            temp_dict[feature][model_name]['xdata1'] = 0.5 * (self._x1vals[1:] + self._x1vals[:-1])
-            temp_dict[feature][model_name]['xdata2'] = 0.5 * (self._x2vals[1:] + self._x2vals[:-1])
+            # add to a dict 
+            temp_dict[feature][model]['ale_values'] = self._ale
+            temp_dict[feature][model]['xdata1']     = self._x1vals
+            temp_dict[feature][model]['xdata2']     = self._x2vals
 
         return temp_dict
 
@@ -189,11 +175,11 @@ class AccumulatedLocalEffects:
 
         # append examples for histogram use
         self._hist_vals = column_of_data
-
+ 
         # get the bootstrap samples
         if nbootstrap > 1:
-            bootstrap_examples = compute_bootstrap_samples(self._examples,
-                                        subsample=subsample,
+            bootstrap_examples = compute_bootstrap_samples(self._examples, 
+                                        subsample=subsample, 
                                         nbootstrap=nbootstrap)
         else:
             bootstrap_examples = [self._examples.index.to_list()]
@@ -211,7 +197,7 @@ class AccumulatedLocalEffects:
             for i in range(1, self._x1vals.shape[0]):
 
                 # get subset of data
-                df_subset = examples[(examples[feature] >= self._x1vals[i - 1]) &
+                df_subset = examples[(examples[feature] >= self._x1vals[i - 1]) & 
                                      (examples[feature] < self._x1vals[i])]
 
                 # Without any observation, local effect on splitted area is null
@@ -236,10 +222,10 @@ class AccumulatedLocalEffects:
             # The accumulated effect
             self._ale[k,:] = self._ale[k,:].cumsum()
             mean_ale       = self._ale[k,:].mean()
-
+ 
             # Now we have to center ALE function in order to obtain null expectation for ALE function
             self._ale[k,:] -= mean_ale
-
+   
 
     def calculate_second_order_ale(self, feature=None, **kwargs):
         """
@@ -256,23 +242,23 @@ class AccumulatedLocalEffects:
         assert(len(feature) == 2), "Size of features must be equal to 2."
 
         # check to make sure both features are valid
-        if (feature[0] not in self._feature_names):
+        if (feature[0] not in self._feature_names): 
             raise TypeError(f'Feature {features[0]} is not a valid feature')
 
-        if (feature[1] not in self._feature_names):
+        if (feature[1] not in self._feature_names): 
             raise TypeError(f'Feature {features[1]} is not a valid feature')
 
         # create bins for computation for both features
         if self._x1vals is None:
             self._x1vals = np.percentile(self._examples[feature[0]].values, np.arange(2.5, 97.5 + 5, 5))
-
-        if self._x2vals is None:
+          
+        if self._x2vals is None: 
             self._x2vals = np.percentile(self._examples[feature[1]].values, np.arange(2.5, 97.5 + 5, 5))
 
         # get the bootstrap samples
         if nbootstrap > 1:
-            bootstrap_examples = compute_bootstrap_samples(self._examples,
-                                        subsample=subsample,
+            bootstrap_examples = compute_bootstrap_samples(self._examples, 
+                                        subsample=subsample, 
                                         nbootstrap=nbootstrap)
         else:
             bootstrap_examples = [self._examples.index.to_list()]
@@ -330,3 +316,4 @@ class AccumulatedLocalEffects:
 
             # Now we have to center ALE function in order to obtain null expectation for ALE function
             self._ale[k,:,:] -= self._ale.mean()
+        
