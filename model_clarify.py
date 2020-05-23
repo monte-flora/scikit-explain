@@ -194,12 +194,12 @@ class ModelClarify:
 
         #get targets for each binary class
         positive_class = self._targets[positive_idx]
-        negative_class = self._targets[negative_idx]    
- 
+        negative_class = self._targets[negative_idx]
+
         #compute forecast probabilities for each binary class
         forecast_probs_pos_class = model.predict_proba(self._examples.iloc[positive_idx])[:,1]
-        forecast_probs_neg_class = model.predict_proba(self._examples.iloc[negative_idx])[:,1]        
-    
+        forecast_probs_neg_class = model.predict_proba(self._examples.iloc[negative_idx])[:,1]
+
         #compute the absolute difference
         diff_from_pos = abs(positive_class - forecast_probs_pos_class)
         diff_from_neg = abs(negative_class - forecast_probs_neg_class)
@@ -218,35 +218,6 @@ class ModelClarify:
                       }
 
         return sorted_dict
-
-
-
-
-
-
-        # # compute forecast probabilities
-        # forecast_prob = model.predict_proba(self._examples)[:,1]
-
-        # #get indices of hits, misses, false alrams, and correct negs
-        # ihit         = np.where((self._targets > 0) & (forecast_prob > ModelClarify.default_binary_threshold))[0]
-        # imiss        = np.where((self._targets > 0) & (forecast_prob < ModelClarify.default_binary_threshold))[0]
-        # ifalse_alarm = np.where((self._targets < 1) & (forecast_prob > ModelClarify.default_binary_threshold))[0]
-        # icorr_neg    = np.where((self._targets < 1) & (forecast_prob < ModelClarify.default_binary_threshold))[0]
-
-        # #sort based on forecast_prob
-        # sorted_hits = np.argsort(forecast_prob[ihit])[::-1]  #best hits
-        # sorted_miss = np.argsort(forecast_prob[imiss]) #worst misses
-        # sorted_fa   = np.argsort(forecast_prob[ifalse_alarm])[::-1] #worst false alarms
-        # sorted_cn   = np.argsort(forecast_prob[icorr_neg]) #best corr negs
-
-        # sorted_dict = {
-        #                 'hits': ihit[sorted_hits[:n_examples]].astype(int),
-        #                 'false_alarms': ifalse_alarm[sorted_fa[:n_examples]].astype(int),
-        #                 'misses': imiss[sorted_miss[:n_examples]].astype(int),
-        #                 'corr_negs': icorr_neg[sorted_cn[:n_examples]].astype(int)
-        #               }
-
-        # return sorted_dict
 
     def avg_and_sort_contributions(self, the_dict, performance_dict=None):
         """
