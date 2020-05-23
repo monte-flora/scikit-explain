@@ -130,7 +130,6 @@ class AccumulatedLocalEffects:
 
         return temp_dict
 
-
     def _parallelize_2d(self, feature):
 
         temp_dict = {}
