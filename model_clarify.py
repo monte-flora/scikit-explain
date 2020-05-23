@@ -1,7 +1,10 @@
-from partial_dependence import *
-from accumulated_local_effects import *
-from tree_interpreter import *
-from interpretability_plotting import *
+import numpy as np
+import pandas as pd
+
+from partial_dependence import PartialDependence
+from accumulated_local_effects import AccumulatedLocalEffects
+from tree_interpreter import TreeInterpreter
+from interpretability_plotting import InterpretabilityPlotting
 
 from PermutationImportance.permutation_importance import sklearn_permutation_importance
 from sklearn.metrics import roc_auc_score, roc_curve, average_precision_score
@@ -18,10 +21,12 @@ list_of_acceptable_tree_models = [
 class ModelClarify:
 
     """
-    Class for computing various ML model interpretations...blah blah blah
+    Class for running various ML model interpretations.
 
     Args:
-        model : a scikit-learn model
+        model : a trained single scikit-learn model, or list of scikit-learn models, or
+            dictionary of models where the key is a generic name and the value
+            is a train model.
         examples : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
             to specify the feature names
         targets: list or numpy array of targets/labels. List converted to numpy array
@@ -30,7 +35,6 @@ class ModelClarify:
         feature_names : defaults to None. Should only be set if examples is a
             nd.numpy array. Make sure it's a list
     """
-    default_binary_threshold = 0.50
 
     def __init__(self, model=None, examples=None, targets=None, classification=True,
             feature_names=None):
@@ -41,6 +45,9 @@ class ModelClarify:
                 self._models = {type(m).__name__ : m for m in model}
             else:
                 self._models = {type(model).__name__ : model}
+        # user provided a dict
+        else:
+            self._models = model
 
         self._examples = examples
 
@@ -82,11 +89,9 @@ class ModelClarify:
         return '{}'.format(self._models)
 
     def run_pd(self, features=None, **kwargs):
-
         """
             Runs the partial dependence calculation and populates a dictionary with all
-            necessary inputs for plotting. If you want this dictionary, call return_dict()
-            method
+            necessary inputs for plotting.
 
             feature: List of strings for first-order partial dependence, or list of tuples
                      for second-order
@@ -108,19 +113,21 @@ class ModelClarify:
         return self.pd_dict
 
     def plot_pd(self, **kwargs):
+        """
+            Plots the PD. If the first instance is a tuple, then a 2-D plot is
+            assumed, else 1-D.
+        """
 
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance(list(self.pd_dict.keys())[0], tuple):
-            return self._clarify_plot_obj.plot_2d_pd(self.pd_dict, **kwargs)
+            return self._clarify_plot_obj.plot_2d_field(self.pd_dict, **kwargs)
         else:
-            return self._clarify_plot_obj.plot_1d_pd(self.pd_dict, **kwargs)
+            return self._clarify_plot_obj.plot_1d_curve(self.pd_dict, **kwargs)
 
     def run_ale(self, features=None, **kwargs):
-
         """
             Runs the accumulated local effects calculation and populates a dictionary
-            with all necessary inputs for plotting. If you want this dictionary, call
-            return_dict() method
+            with all necessary inputs for plotting.
 
             feature: List of strings for first-order partial dependence, or list of tuples
                      for second-order
@@ -143,28 +150,33 @@ class ModelClarify:
 
 
     def plot_ale(self, **kwargs):
+        """
+            Plots the ALE. If the first instance is a tuple, then a 2-D plot is
+            assumed, else 1-D.
+        """
 
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance(list(self.ale_dict.keys())[0], tuple):
             #return self._clarify_plot_obj.plot_2d_ale(self.pd_dict, **kwargs)
             return print("No 2D ALE plotting functionality yet... sorry!")
         else:
-            return self._clarify_plot_obj.plot_ale(self.ale_dict, **kwargs)
+            return self._clarify_plot_obj.plot_1d_curve(self.ale_dict, **kwargs)
 
 
     def get_indices_based_on_performance(self, model, n_examples=None):
-
         """
-        Determines the best 'hits' (forecast probabilties closest to 1)
-        or false alarms (forecast probabilities furthest from 0 )
-        or misses (forecast probabilties furthest from 1 )
-
-        The returned dictionary below can be passed into interpert_tree_based_model()
+        Determines the best hits, worst false alarms, worst misses, and best
+        correct negatives using the data provided during initialization.
 
         Args:
         ------------------
-            n_examples : Integer representing the number of indices (examples) to return.
-                          Default is 10
+            model : The model to process
+            n_examples: number of "best/worst" examples to return. If None,
+                the routine uses the whole dataset
+
+        Return:
+            a dictionary containing the indices of each of the 4 categories
+            listed above
         """
 
         #default is to use all examples
@@ -174,40 +186,53 @@ class ModelClarify:
         #make sure user didn't goof the input
         if (n_examples <= 0):
             print("n_examples less than or equals 0. Defaulting back to all")
-            n_examples = 10
+            n_examples = self._examples.shape[0]
 
-        # compute forecast probabilities
-        forecast_prob = model.predict_proba(self._examples)[:,1]
+        #get indices for each binary class
+        positive_idx = np.where(self._targets > 0)[0]   #77
+        negative_idx = np.where(self._targets < 1)[0]   #173
 
-        #get indices of hits, misses, false alrams, and correct negs
-        ihit         = np.where((self._targets > 0) & (forecast_prob > default_binary_threshold))[0]
-        imiss        = np.where((self._targets > 0) & (forecast_prob < default_binary_threshold))[0]
-        ifalse_alarm = np.where((self._targets < 1) & (forecast_prob > default_binary_threshold))[0]
-        icorr_neg    = np.where((self._targets < 1) & (forecast_prob < default_binary_threshold))[0]
+        #get targets for each binary class
+        positive_class = self._targets[positive_idx]
+        negative_class = self._targets[negative_idx]
 
-        #sort based on forecast_prob
-        sorted_hits = np.argsort(forecast_prob[ihit])[::-1]  #best hits
-        sorted_miss = np.argsort(forecast_prob[imiss]) #worst misses
-        sorted_fa   = np.argsort(forecast_prob[ifalse_alarm])[::-1] #worst false alarms
-        sorted_cn   = np.argsort(forecast_prob[icorr_neg]) #best corr negs
+        #compute forecast probabilities for each binary class
+        forecast_probs_pos_class = model.predict_proba(self._examples.iloc[positive_idx])[:,1]
+        forecast_probs_neg_class = model.predict_proba(self._examples.iloc[negative_idx])[:,1]
+
+        #compute the absolute difference
+        diff_from_pos = abs(positive_class - forecast_probs_pos_class)
+        diff_from_neg = abs(negative_class - forecast_probs_neg_class)
+
+        #sort based on forecast probabilities (ascending order assumed by argsort)
+        sorted_hits = np.argsort(diff_from_pos) #best hits
+        sorted_miss = np.argsort(diff_from_pos)[::-1] #worst misses
+        sorted_fa   = np.argsort(diff_from_neg)[::-1] #worst false alarms
+        sorted_cn   = np.argsort(diff_from_neg) #best corr negs
 
         sorted_dict = {
-                        'hits': ihit[sorted_hits[:n_examples]].astype(int),
-                        'false_alarms': ifalse_alarm[sorted_fa[:n_examples]].astype(int),
-                        'misses': imiss[sorted_miss[:n_examples]].astype(int),
-                        'corr_negs': icorr_neg[sorted_cn[:n_examples]].astype(int)
+                        'hits':         positive_idx[sorted_hits[:n_examples]].astype(int),
+                        'misses':       positive_idx[sorted_miss[:n_examples]].astype(int),
+                        'false_alarms': negative_idx[sorted_fa[:n_examples]].astype(int),
+                        'corr_negs':    negative_idx[sorted_cn[:n_examples]].astype(int)
                       }
 
         return sorted_dict
 
     def avg_and_sort_contributions(self, the_dict, performance_dict=None):
         """
-        Get the mean value (of data for a predictory) and contribution from each predictor and sort"
-            Parameters:
-            -----------
-                the_dict: dictionary to process
-                performance_dict: if using performance based apporach, this should be
-                    the dictionary with corresponding indices
+        Get the mean value (of data for a predictory) and contribution from
+        each predictor and sort"
+
+        Args:
+        -----------
+            the_dict: dictionary to process
+            performance_dict: if using performance based apporach, this should be
+                the dictionary with corresponding indices
+
+        Return:
+
+            a dictionary of mean values and contributions
         """
 
         return_dict = {}
@@ -263,7 +288,7 @@ class ModelClarify:
             indices  = self._examples.index.to_list()
             examples = self._examples
         else:
-            examples = self._examples.loc[indices, :]
+            examples = self._examples.iloc[indices]
 
         # number of examples
         n_examples = len(indices)
@@ -329,7 +354,7 @@ class ModelClarify:
         if performance_based is True:
 
             # loop over each model
-            for model_name, model in zip(self._models.keys(), self._models.values()):
+            for model_name, model in self._models.items():
 
                 # check to make sure model is of type Tree
                 if type(model).__name__ not in list_of_acceptable_tree_models:
@@ -342,7 +367,7 @@ class ModelClarify:
                 # get the dictionary of hits, misses, correct neg, false alarms indices
                 performance_dict = self.get_indices_based_on_performance(model, n_examples=n_examples)
 
-                for key, values in zip(performance_dict.keys(), performance_dict.values()):
+                for key, values in performance_dict.items():
 
                     print(f"Processing {key}...")
 
@@ -359,7 +384,7 @@ class ModelClarify:
         else:
 
             # loop over each model
-            for model_name, model in zip(self._models.keys(), self._models.values()):
+            for model_name, model in self._models.items():
 
                 # check to make sure model is of type Tree
                 if type(model).__name__ not in list_of_acceptable_tree_models:
@@ -390,7 +415,7 @@ class ModelClarify:
             subsample=1.0, njobs=1, nbootstrap=1):
 
         """
-        Perform single or multipass permutation importance using Eli's code.
+        Performs multipass permutation importance using Eli's code.
 
             Parameters:
             -----------
@@ -421,7 +446,9 @@ class ModelClarify:
         self.pi_dict = {}
 
         # loop over each model
-        for model_name, model in zip(self._models.keys(), self._models.values()):
+        for model_name, model in self._models.items():
+
+            print(f"Processing {model_name}...")
 
             pi_result = sklearn_permutation_importance(
                 model            = model,
