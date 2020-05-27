@@ -87,7 +87,7 @@ class InterpretabilityPlotting:
         extra_row = 0 if (n_panels % n_columns) ==0 else 1
 
         fig, axes = plt.subplots(n_rows+extra_row, n_columns, sharex=sharex, 
-                                    sharey=sharey, figsize=figsize)
+                                    sharey=sharey, figsize=figsize, dpi=300)
         plt.subplots_adjust(wspace = wspace, hspace = hspace)
 
         n_axes_to_delete = len(axes.flat) - n_panels
@@ -314,11 +314,10 @@ class InterpretabilityPlotting:
         return fig, axes
 
 
-    def ti_plot(self, dict_to_use, ax=None):
-
-        if ax is None:
-            fig, ax = plt.subplots()
-
+    def ti_plot(self, dict_to_use, ax=None, n_vars=10, other_label='Other Predictors'):
+        """
+        Plot the tree interpreter.
+        """
         contrib  = []
         varnames = []
 
@@ -331,8 +330,8 @@ class InterpretabilityPlotting:
             except:
                 contrib.append(dict_to_use[var])
 
-            varnames.append(var)
-
+            varnames.append(var)         
+        """
         fig = waterfall_chart.plot(ax,
             varnames,
             contrib,
@@ -343,9 +342,56 @@ class InterpretabilityPlotting:
             other_label="Others",
             y_lab="Probability",
         )
-    
-        return fig
+        """
+        bias_index = varnames.index('Bias')
+        varnames.pop(bias_index)
+        contrib.pop(bias_index)
+        
+        varnames=np.array(varnames)
+        contrib=np.array(contrib)
+        
+        varnames = np.append(varnames[:n_vars], other_label)
+        contrib = np.append(contrib[:n_vars],sum(contrib[n_vars:]))
+        
+        
+        bar_colors = ['seagreen' if c > 0 else 'tomato' for c in contrib]
+        y_index = range(len(contrib))
+        ax.barh(y=y_index, 
+                width=contrib,
+                height=0.8,
+                alpha=0.8,
+                color = bar_colors,
+               )
+        ax.set_yticks(y_index)
+        ax.set_yticklabels(varnames)
+        
+        pos_extra = 0.5
+        neg_extra = 1.5
+           
+        if all(contrib>0):
+            neg_extra=0
+            
+        elif all(contrib<0):
+            pos_extra=0
+            extra=0
+        
+        for i, c in enumerate(np.round(contrib, 1)):
+            if c > 0:   
+                ax.text(c + pos_extra, i + .25, str(c), 
+                        color='k', 
+                        fontweight='bold', 
+                        alpha=0.8, fontsize=10)
+            else:
+                ax.text(c - neg_extra, i + .25, str(c), 
+                        color='k', 
+                        fontweight='bold', 
+                        alpha=0.8, fontsize=10)
+                
+        ax.set_xlim([np.min(contrib)-neg_extra-0.75, np.max(contrib)+pos_extra+1.5])
 
+        # make the horizontal plot go with the highest value at the top
+        ax.invert_yaxis()
+        
     def plot_treeinterpret(self, result_dict, **kwargs):
         '''
         Plot the results of tree interpret
@@ -358,6 +404,7 @@ class InterpretabilityPlotting:
         '''
 
         hspace = kwargs.get('hspace', 0.5)
+        wspace = kwargs.get('wspace', 0.8)
 
         # get the number of panels which will be the number of ML models in dictionary
         n_panels = len(result_dict.keys())
@@ -374,8 +421,11 @@ class InterpretabilityPlotting:
             else:   
 
                 # create subplots, one for each feature
-                fig, sub_axes = self.create_subplots(n_panels=4, n_columns=2, hspace=hspace,                                                wspace =0.2,
-                                                     sharex=False, sharey=False, figsize=(8,6))
+                fig, sub_axes = self.create_subplots(n_panels=4, n_columns=2, 
+                                                     hspace=hspace, 
+                                                     wspace=wspace,
+                                                     sharex=False, 
+                                                     sharey=False, figsize=(8,6))
 
                 for sax, perf_key in zip(sub_axes.flat, list(result_dict[model_name].keys())):
                     print(perf_key)
