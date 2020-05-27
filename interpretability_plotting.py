@@ -1,9 +1,10 @@
+import matplotlib 
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import FormatStrFormatter
-
-import waterfall_chart
-
+from .utils import combine_like_features
 
 # Set up the font sizes for matplotlib
 FONT_SIZE = 16
@@ -314,7 +315,10 @@ class InterpretabilityPlotting:
         return fig, axes
 
 
-    def ti_plot(self, dict_to_use, ax=None, n_vars=10, other_label='Other Predictors'):
+    def ti_plot(self, dict_to_use, ax=None, 
+            to_only_varname=None,
+            n_vars=10, 
+            other_label='Other Predictors'):
         """
         Plot the tree interpreter.
         """
@@ -330,19 +334,14 @@ class InterpretabilityPlotting:
             except:
                 contrib.append(dict_to_use[var])
 
-            varnames.append(var)         
-        """
-        fig = waterfall_chart.plot(ax,
-            varnames,
-            contrib,
-            rotation_value=90,
-            sorted_value=True,
-            threshold=0.02,
-            net_label="Final prediction",
-            other_label="Others",
-            y_lab="Probability",
-        )
-        """
+            if to_only_varname is None:
+                varnames.append(var)
+            else:
+                varnames.append(to_only_varname(var))
+
+        if to_only_varname is not None:
+            contrib, varnames = combine_like_features(contrib, varnames)
+        
         bias_index = varnames.index('Bias')
         varnames.pop(bias_index)
         contrib.pop(bias_index)
@@ -392,7 +391,7 @@ class InterpretabilityPlotting:
         # make the horizontal plot go with the highest value at the top
         ax.invert_yaxis()
         
-    def plot_treeinterpret(self, result_dict, **kwargs):
+    def plot_treeinterpret(self, result_dict, to_only_varname=None, **kwargs):
         '''
         Plot the results of tree interpret
 
@@ -429,7 +428,7 @@ class InterpretabilityPlotting:
 
                 for sax, perf_key in zip(sub_axes.flat, list(result_dict[model_name].keys())):
                     print(perf_key)
-                    self.ti_plot(result_dict[model_name][perf_key], ax=sax)
+                    self.ti_plot(result_dict[model_name][perf_key], ax=sax, to_only_varname=to_only_varname)
                     sax.set_title(perf_key.upper().replace('_', ' '), fontsize=15)
 
         return fig

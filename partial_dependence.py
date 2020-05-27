@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import concurrent.futures
 
-from utils import *
+from .utils import *
 
 class PartialDependence:
 
