@@ -327,7 +327,7 @@ class InterpretabilityPlotting:
 
     def _ti_plot(self, dict_to_use, key, ax=None, 
             to_only_varname=None,
-            n_vars=10, 
+            n_vars=12, 
             other_label='Other Predictors'):
         """
         Plot the tree interpreter.
@@ -350,15 +350,17 @@ class InterpretabilityPlotting:
                 varnames.append(to_only_varname(var))
 
         final_pred = np.sum(contrib)
-                
+        
         if to_only_varname is not None:
             contrib, varnames = combine_like_features(contrib, varnames)
         
         
         bias_index = varnames.index('Bias')
-        
         bias = contrib[bias_index] 
-        
+
+        # Remove the bias term (neccesary for cases where
+        # the data resampled to be balanced; the bias is 50% in that cases
+        # and will much higher than separate contributions of the other predictors)
         varnames.pop(bias_index)
         contrib.pop(bias_index)
         
@@ -371,7 +373,7 @@ class InterpretabilityPlotting:
         sorted_idx = np.argsort(contrib)[::-1]
         contrib = contrib[sorted_idx]
         varnames = varnames[sorted_idx]
-        
+
         bar_colors = ['seagreen' if c > 0 else 'tomato' for c in contrib]
         y_index = range(len(contrib))
         
@@ -408,15 +410,15 @@ class InterpretabilityPlotting:
                 ax.text(c + factor, i + .25, str(c), 
                         color='k', 
                         fontweight='bold', 
-                        alpha=0.8, fontsize=10)
+                        alpha=0.8, fontsize=8)
             else:
                 ax.text(c - neg_factor, i + .25, str(c), 
                         color='k', 
                         fontweight='bold', 
-                        alpha=0.8, fontsize=10)
+                        alpha=0.8, fontsize=8)
 
         ax.set_xlim([np.min(contrib)-neg_factor, np.max(contrib)+factor])
-       
+      
         
         ax.text(0.72, 0.09, f'Bias : {bias:.2f}', fontsize=7,
                           alpha=0.7, ha='center', va='center', ma='left', transform=ax.transAxes)
