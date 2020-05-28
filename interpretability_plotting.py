@@ -26,47 +26,12 @@ font_sizes = {
 plt.rc('font', size=FONT_SIZE)
 plt.rc('axes', titlesize=FONT_SIZE)
 plt.rc('axes', labelsize=FONT_SIZE)
-plt.rc('xtick', labelsize=TINY_FONT_SIZE)
+plt.rc('xtick', labelsize=TINY_FONT_SIZE-2)
 plt.rc('ytick', labelsize=TEENSIE_FONT_SIZE)
 plt.rc('legend', fontsize=FONT_SIZE)
 plt.rc('figure', titlesize=BIG_FONT_SIZE)
 
 line_colors = ['orangered', 'darkviolet', 'darkslategray', 'darkorange', 'darkgreen']
-
-# class BasePlot():
-# 
-#     def __init__(n_panels, **kwargs):
-# 
-#         self._n_panels = n_panels
-#         self._n_columns = kwargs.get('n_columns', 3)
-#         self._figsize = kwargs.get('figsize', (6.4,4.8))
-#         self._wspace = kwargs.get('wspace', 0.4)
-#         self._hspace = kwargs.get('hspace', 0.3)
-#         self._sharex = kwargs.get('sharex', False)
-#         self._sharey = kwargs.get('sharey', False)
-#         
-#     def create_subplots(self):
-# 
-#         """
-#         Create a series of subplots (MxN) based on the 
-#         number of panels and number of columns (optionally)
-#         """
-#         
-#         n_rows    = int(self._n_panels / self._n_columns)
-#         extra_row = 0 if (self._n_panels % self._n_columns) == 0 else 1
-# 
-#         fig, axes = plt.subplots(self._n_rows+extra_row, self._n_columns, 
-#                     sharex=self._sharex, sharey=self._sharey, figsize=self._figsize)
-# 
-#         plt.subplots_adjust(wspace = self._wspace, hspace = self._hspace)
-# 
-#         n_axes_to_delete = len(axes.flat) - self._n_panels
-# 
-#         if (n_axes_to_delete > 0):
-#             for i in range(n_axes_to_delete):
-#                 fig.delaxes(axes.flat[-(i+1)])
-#     
-#         return fig, axes
     
 class InterpretabilityPlotting:
 
@@ -125,6 +90,17 @@ class InterpretabilityPlotting:
 
             ax_right.yaxis.set_label_position("right")
             ax_right.set_ylabel(ylabel_right, labelpad=labelpad, fontsize=fontsize)
+
+    def add_alphabet_label(self,axes):
+        """
+        A alphabet character to each subpanel.
+        """
+        alphabet_list = [chr(x) for x in range(ord('a'), ord('z') + 1)] 
+        
+        for i, ax in enumerate(axes.flat):
+            ax.text(0.85, 0.09, f'({alphabet_list[i]})', fontsize=10,
+                alpha=0.8, ha='center', va='center', transform=ax.transAxes)
+
 
     def add_histogram_axis(self, ax, data, **kwargs):
 
@@ -430,10 +406,7 @@ class InterpretabilityPlotting:
                           alpha=0.7, ha='center', va='center', ma='left', transform=ax.transAxes)
             ax.text(0.25, 0.95, f'Final Pred. : {final_pred:.2f}', fontsize=7,
                           alpha=0.7, ha='center', va='center', ma='left', transform=ax.transAxes)
-                    
-
-
-
+                   
         # make the horizontal plot go with the highest value at the top
         ax.invert_yaxis()
         
@@ -480,9 +453,15 @@ class InterpretabilityPlotting:
 
         return fig
 
-    def plot_variable_importance(self, importance_dict, multipass=True, ax=None, filename=None, 
-                        readable_feature_names={}, feature_colors=None, metric = "Validation AUPRC",
-                             relative=False, num_vars_to_plot=None, diagnostics=0, title='', **kwargs):
+    def plot_variable_importance(self, 
+                importance_dict, 
+                multipass=True, 
+                readable_feature_names={}, 
+                feature_colors=None,
+                relative=False, 
+                num_vars_to_plot=None,
+                metric=None,
+                **kwargs):
 
         """Plots any variable importance method for a particular estimator
         :param importance_dict: Dictionary of ImportanceResult objects returned by PermutationImportance
@@ -495,15 +474,26 @@ class InterpretabilityPlotting:
         """
 
         hspace = kwargs.get('hspace', 0.5)
+        wspace = kwargs.get('wspace', 0.2)
+        xticks = kwargs.get('xticks', [0, 0.2, 0.4, 0.6, 0.8, 1.0])
 
         # get the number of panels which will be the number of ML models in dictionary
         n_panels = len(importance_dict.keys())
 
         # create subplots, one for each feature
-        fig, axes = self.create_subplots(n_panels=n_panels, hspace=hspace, figsize=(8,6))
+        fig, axes = self.create_subplots(n_panels=n_panels, 
+                hspace=hspace, wspace=wspace, figsize=(8,2))
 
         # loop over each model creating one panel per model
         for model_name, ax in zip(importance_dict.keys(), axes.flat):
+
+            ax.set_title(model_name.replace('Classifier', ''), fontsize=12, alpha=0.8) 
+
+            # Despine
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
 
             importance_obj = importance_dict[model_name]
 
@@ -557,25 +547,18 @@ class InterpretabilityPlotting:
                 ci = np.array([[0, 0]
                            for score in np.r_[[original_score, ], scores]]).transpose()
 
-            method = "%s Permutation Importance" % (
-                "Multipass" if multipass else "Singlepass")
-
-            # Actually make plot
-#             if ax is None:
-#                 fig, ax = plt.subplots(figsize=(8, 6))
-
             if bootstrapped:
                 ax.barh(np.arange(len(scores_to_plot)),
-                     scores_to_plot, linewidth=1, edgecolor='black', color=colors_to_plot, 
-                     xerr=ci, capsize=4, ecolor='grey', error_kw=dict(alpha=0.4))
+                     scores_to_plot, linewidth=1, alpha=0.8, color=colors_to_plot, 
+                     xerr=ci, capsize=2.5, ecolor='grey', error_kw=dict(alpha=0.4), zorder=2)
             else:
-                ax.barh(np.arange(len(scores_to_plot)),
-                     scores_to_plot, linewidth=1, edgecolor='black', color=colors_to_plot)
+                ax.barh(np.arange(len(scores_to_plot)), 
+                     scores_to_plot, alpha=0.8, linewidth=1, color=colors_to_plot, zorder=2)
 
             # Put the variable names _into_ the plot
             for i in range(len(variable_names_to_plot)):
                 ax.text(0, i, variable_names_to_plot[i],
-                     va="center", ha="left", size=font_sizes['teensie'])
+                     va="center", ha="left", size=font_sizes['teensie']-4, alpha=0.8)
             if relative:
                 ax.axvline(1, linestyle=':', color='grey')
                 ax.text(1, len(variable_names_to_plot) / 2, "original score = %0.3f" % original_score_mean,
@@ -585,13 +568,24 @@ class InterpretabilityPlotting:
             else:
                 ax.axvline(original_score_mean, linestyle=':', color='grey')
                 ax.text(original_score_mean, len(variable_names_to_plot) / 2, "original score",
-                     va='center', ha='left', size=font_sizes['teensie'], rotation=270)
+                     va='center', ha='left', size=font_sizes['teensie']-2, rotation=270)
 
+            ax.tick_params(axis=u'both', which=u'both', length=0)
             ax.set_yticks([])
-            ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+            ax.set_xticks(xticks)
+
+            upper_limit = min(1.05*np.amax(scores_to_plot), 1.0) 
+            ax.set_xlim([0, upper_limit])
 
             # make the horizontal plot go with the highest value at the top
             ax.invert_yaxis()
+            vals = ax.get_xticks()
+            for tick in vals:
+                ax.axvline(x=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
+
+            self.set_major_axis_labels(fig, xlabel=metric, ylabel_left='Predictor Ranking', labelpad=5, fontsize=10)
+            self.add_alphabet_label(axes)
+
 
     def save_figure(self, fig, fname, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """
@@ -618,7 +612,7 @@ class InterpretabilityPlotting:
         Returns the color for each variable.
         '''
         if var == 'Original Score':
-            return 'lightcoral'
+            return 'tomato'
         else:
             if VARIABLES_COLOR_DICT is None:
                 return 'lightgreen'
