@@ -383,8 +383,7 @@ class InterpretabilityPlotting:
         ax.spines['left'].set_visible(False)
         ax.spines['bottom'].set_visible(False)
         
-        
-        rects = ax.barh(y=y_index, 
+        ax.barh(y=y_index, 
                 width=contrib,
                 height=0.8,
                 alpha=0.8,
@@ -402,9 +401,9 @@ class InterpretabilityPlotting:
         ax.set_yticks(y_index)
         ax.set_yticklabels(varnames)
         
-        factor = 0.25
-        neg_factor = 1.75
-        
+        neg_factor = 1.75 if np.max(contrib) > 1.0 else 0.05
+        factor = 0.25 if np.max(contrib) > 1.0 else 0.01
+
         for i, c in enumerate(np.round(contrib, 2)):
             if c > 0:   
                 ax.text(c + factor, i + .25, str(c), 
@@ -420,10 +419,20 @@ class InterpretabilityPlotting:
         ax.set_xlim([np.min(contrib)-neg_factor, np.max(contrib)+factor])
       
         
-        ax.text(0.72, 0.09, f'Bias : {bias:.2f}', fontsize=7,
+        if key == 'hits' or key == 'false_alarms':
+            ax.text(0.685, 0.1, f'Bias : {bias:.2f}', fontsize=7,
                           alpha=0.7, ha='center', va='center', ma='left', transform=ax.transAxes)
-        ax.text(0.75, 0.155, f'Final Pred. : {final_pred:.2f}', fontsize=7,
+            ax.text(0.75, 0.15, f'Final Pred. : {final_pred:.2f}', fontsize=7,
                           alpha=0.7, ha='center', va='center', ma='left', transform=ax.transAxes)
+
+        if key == 'misses' or key == 'corr_negs':
+            ax.text(0.2, 0.90, f'Bias : {bias:.2f}', fontsize=7,
+                          alpha=0.7, ha='center', va='center', ma='left', transform=ax.transAxes)
+            ax.text(0.25, 0.95, f'Final Pred. : {final_pred:.2f}', fontsize=7,
+                          alpha=0.7, ha='center', va='center', ma='left', transform=ax.transAxes)
+                    
+
+
 
         # make the horizontal plot go with the highest value at the top
         ax.invert_yaxis()
@@ -439,8 +448,8 @@ class InterpretabilityPlotting:
                 result dataframe from tree_interpreter_simple
         '''
 
-        hspace = kwargs.get('hspace', 0.5)
-        wspace = kwargs.get('wspace', 0.7)
+        hspace = kwargs.get('hspace', 0.4)
+        wspace = kwargs.get('wspace', 1.0)
 
         # get the number of panels which will be the number of ML models in dictionary
         n_panels = len(result_dict.keys())
