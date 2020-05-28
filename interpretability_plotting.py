@@ -1,5 +1,5 @@
-import matplotlib 
-matplotlib.use('Agg')
+#import matplotlib 
+#matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -314,8 +314,18 @@ class InterpretabilityPlotting:
 
         return fig, axes
 
+    
+    def autolabel(self, rects, ax):
+        """
+        Attach a text label to the right/left of each bar
+        """
+        for rect in rects:
+            width = rect.get_width()
+            ax.text(rect.get_x() + rect.get_height()/2., 1.05*width,
+                    '%d' % int(width), ha ='center', va='bottom')
+    
 
-    def ti_plot(self, dict_to_use, ax=None, 
+    def _ti_plot(self, dict_to_use, key, ax=None, 
             to_only_varname=None,
             n_vars=12, 
             other_label='Other Predictors'):
@@ -340,9 +350,10 @@ class InterpretabilityPlotting:
                 varnames.append(to_only_varname(var))
 
         final_pred = np.sum(contrib)
-
+        
         if to_only_varname is not None:
             contrib, varnames = combine_like_features(contrib, varnames)
+        
         
         bias_index = varnames.index('Bias')
         bias = contrib[bias_index] 
@@ -365,39 +376,49 @@ class InterpretabilityPlotting:
 
         bar_colors = ['seagreen' if c > 0 else 'tomato' for c in contrib]
         y_index = range(len(contrib))
-        ax.barh(y=y_index, 
+        
+        # Despine
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        
+        
+        rects = ax.barh(y=y_index, 
                 width=contrib,
                 height=0.8,
                 alpha=0.8,
                 color = bar_colors,
+                zorder = 2
                )
+        
+        ax.tick_params(axis=u'both', which=u'both', length=0)
+        
+        vals = ax.get_xticks()
+        for tick in vals:
+            ax.axvline(x=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
+        
+        
         ax.set_yticks(y_index)
         ax.set_yticklabels(varnames)
         
-        pos_extra = 0.5
-        neg_extra = 0.25
+        factor = 0.25
+        neg_factor = 1.75
         
-        if all(contrib>0):
-            neg_extra=0
-        elif all(contrib<0):
-            pos_extra=0
-
-        min_value = np.min(contrib) - 0.5
-        max_value = np.max(contrib) + 1.5
-
-        for i, c in enumerate(np.round(contrib,2)):
+        for i, c in enumerate(np.round(contrib, 2)):
             if c > 0:   
-                ax.text(c + pos_extra, i + .25, str(c), 
+                ax.text(c + factor, i + .25, str(c), 
                         color='k', 
                         fontweight='bold', 
                         alpha=0.8, fontsize=8)
             else:
-                ax.text(c - neg_extra, i + .25, str(c), 
+                ax.text(c - neg_factor, i + .25, str(c), 
                         color='k', 
                         fontweight='bold', 
                         alpha=0.8, fontsize=8)
-                
-        ax.set_xlim([min_value, max_value])
+
+        ax.set_xlim([np.min(contrib)-neg_factor, np.max(contrib)+factor])
+      
         
         ax.text(0.72, 0.09, f'Bias : {bias:.2f}', fontsize=7,
                           alpha=0.7, ha='center', va='center', ma='left', transform=ax.transAxes)
@@ -419,7 +440,7 @@ class InterpretabilityPlotting:
         '''
 
         hspace = kwargs.get('hspace', 0.5)
-        wspace = kwargs.get('wspace', 0.8)
+        wspace = kwargs.get('wspace', 0.7)
 
         # get the number of panels which will be the number of ML models in dictionary
         n_panels = len(result_dict.keys())
@@ -430,7 +451,7 @@ class InterpretabilityPlotting:
             # try for all_data/average data
             if 'all_data' in result_dict[model_name].keys():
 
-                fig = self.ti_plot(result_dict[model_name]['all_data'])
+                fig = self._ti_plot(result_dict[model_name]['all_data'], to_only_varname=to_only_varname)
         
             # must be performanced based
             else:   
@@ -444,7 +465,8 @@ class InterpretabilityPlotting:
 
                 for sax, perf_key in zip(sub_axes.flat, list(result_dict[model_name].keys())):
                     print(perf_key)
-                    self.ti_plot(result_dict[model_name][perf_key], ax=sax, to_only_varname=to_only_varname)
+                    self._ti_plot(result_dict[model_name][perf_key], ax=sax, key = perf_key,
+                                  to_only_varname=to_only_varname)
                     sax.set_title(perf_key.upper().replace('_', ' '), fontsize=15)
 
         return fig
