@@ -27,7 +27,7 @@ plt.rc('font', size=FONT_SIZE)
 plt.rc('axes', titlesize=FONT_SIZE)
 plt.rc('axes', labelsize=FONT_SIZE)
 plt.rc('xtick', labelsize=TINY_FONT_SIZE)
-plt.rc('ytick', labelsize=TINY_FONT_SIZE)
+plt.rc('ytick', labelsize=TEENSIE_FONT_SIZE)
 plt.rc('legend', fontsize=FONT_SIZE)
 plt.rc('figure', titlesize=BIG_FONT_SIZE)
 
@@ -375,16 +375,16 @@ class InterpretabilityPlotting:
         ax.set_yticklabels(varnames)
         
         pos_extra = 0.5
-        neg_extra = 1.5
-           
+        neg_extra = 0.25
+        
         if all(contrib>0):
             neg_extra=0
-            
         elif all(contrib<0):
             pos_extra=0
-            extra=0
-        
-    
+
+        min_value = np.min(contrib) - 0.5
+        max_value = np.max(contrib) + 1.5
+
         for i, c in enumerate(np.round(contrib,2)):
             if c > 0:   
                 ax.text(c + pos_extra, i + .25, str(c), 
@@ -397,7 +397,7 @@ class InterpretabilityPlotting:
                         fontweight='bold', 
                         alpha=0.8, fontsize=8)
                 
-        ax.set_xlim([np.min(contrib)-neg_extra-0.75, np.max(contrib)+pos_extra+1.5])
+        ax.set_xlim([min_value, max_value])
         
         ax.text(0.72, 0.09, f'Bias : {bias:.2f}', fontsize=7,
                           alpha=0.7, ha='center', va='center', ma='left', transform=ax.transAxes)
@@ -419,7 +419,7 @@ class InterpretabilityPlotting:
         '''
 
         hspace = kwargs.get('hspace', 0.5)
-        wspace = kwargs.get('wspace', 1.2)
+        wspace = kwargs.get('wspace', 0.8)
 
         # get the number of panels which will be the number of ML models in dictionary
         n_panels = len(result_dict.keys())
