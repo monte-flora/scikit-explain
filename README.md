@@ -1,10 +1,11 @@
-# ModelClarifier
-Interpretable methods for traditional and deep learning machine model methods.
-Methods include partial dependence, accumulated local effect, and treeinterpreter.
+# MintPy (Model INTerpretability in Python) 
+Interpretability methods for traditional machine learning methods.
+Computations include partial dependence, accumulate local effect, feature contributions (random forest only),
+permutation importance. There are accompanying built-in plotting methods for each interpretability techinque desgined to be easy to use for end-users with limited experience with python and interpretability techniques. 
 
 The package is under active development and will likely contain bugs or errors. Feel free to raise issues!
 
-This package has original code, but is largely a compilation of preexisting packages into a single source. The goal is make a user-friendly python class for computing several machine learning interpretation methods. 
+This package is largely original code, but also includes preexisting packages into a single source. The goal is make a user-friendly python class for computing several machine learning interpretation methods. 
 
 ### Initializing ModelClarifier
 Let's show an example of ModelClarifier in action using the RandomForestClassifier on the scikit-learn breast cancer dataset. 
