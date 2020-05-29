@@ -18,7 +18,7 @@ list_of_acceptable_tree_models = [
 ]
 
 
-class ModelClarify:
+class InterpretToolkit:
 
     """
     Class for running various ML model interpretations.
