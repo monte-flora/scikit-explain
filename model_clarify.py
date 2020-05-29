@@ -56,8 +56,10 @@ class ModelClarify:
             self._targets = np.array(targets)
         elif isinstance(targets, np.ndarray):
             self._targets = targets
+        elif isinstance(targets, (pd.DataFrame, pd.Series)):
+            self._targets = targets.values
         else:
-            raise TypeError('Target variable must numpy array.')
+            raise TypeError('Target variable must be numpy array or pandas.DataFrame.')
 
         # make sure data is the form of a pandas dataframe regardless of input type
         if isinstance(self._examples, np.ndarray):
@@ -466,6 +468,10 @@ class ModelClarify:
 
         return self.pi_dict
 
-    def plot_importance(self, **kwargs):
+    def plot_importance(self, result_dict=None, **kwargs):
+        if hasattr(self, 'pi_dict'):
+            result = self.pi_dict
+        else:
+            result = result_dict
 
-        return self._clarify_plot_obj.plot_variable_importance(self.pi_dict, **kwargs)
+        return self._clarify_plot_obj.plot_variable_importance(result, **kwargs)
