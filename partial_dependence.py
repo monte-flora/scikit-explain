@@ -3,6 +3,7 @@ import pandas as pd
 import concurrent.futures
 
 from .utils import *
+from .multiprocessing_utils import run_parallel, to_iterator
 
 class PartialDependence:
 
@@ -68,7 +69,7 @@ class PartialDependence:
     def run_pd(self, features=None, njobs=1, subsample=1.0, nbootstrap=1, **kwargs):
 
         """
-            Runs the partial dependence calculation and returns a dictionary with all
+            Runs the accumulated local effect calculation and returns a dictionary with all
             necessary inputs for plotting.
         
             feature: List of strings for first-order partial dependence, or list of tuples
@@ -76,90 +77,35 @@ class PartialDependence:
             subsample: a float (between 0-1) for fraction of examples used in bootstrap
             nbootstrap: number of bootstrap iterations to perform. Defaults to 1 (no
                         bootstrapping).
-        """
-
-        self.subsample  = subsample
-        self.nbootstrap = nbootstrap
-
+        """    
+        models = [name for name in list(self._models.keys())]
+        
         # get number of features we are processing
         n_feats = len(features)
 
         # check first element of feature and see if of type tuple; assume second-order calculations
         if isinstance(features[0], tuple): 
-
-            with concurrent.futures.ProcessPoolExecutor() as executor:
-                tdict = executor.map(self._parallelize_2d, features)
-
-            #convert list of dicts to dict
-            for elem in tdict:
-                self._dict_out.update(elem)
-                
-        # else, single order calculations
+            func =  self.compute_2d_partial_dependence
         else:
+            func = self.compute_1d_partial_dependence
+            
+        args_iterator = to_iterator(models, features)
+        kwargs = {
+                      "subsample": subsample, 
+                      "nbootstrap": nbootstrap
+                     }
+        
+        results = run_parallel(
+                   func = func,
+                   args_iterator = args_iterator,
+                   kwargs = kwargs, 
+                   nprocs_to_use=njobs
+            )
+                
+        self._dict_out = results
+    
  
-            #parallelize routine... calculate partial dependence for each feature. 
-            with concurrent.futures.ProcessPoolExecutor() as executor:
-                tdict = executor.map(self._parallelize_1d, features)
-
-            #convert list of dicts to dict
-            for elem in tdict:
-                self._dict_out.update(elem)
-
-    def _parallelize_1d(self, feature):
-
-        temp_dict = {}
-        temp_dict[feature] = {}
-
-        print(f"Processing feature {feature}...")
-
-        for model_name, model in zip(self._models.keys(), self._models.values()):
-
-            #print(f"Processing model {model}...")
-
-            temp_dict[feature][model_name] = {}
-
-            self.compute_1d_partial_dependence(feature=feature,
-                                                model=model,
-                                                subsample =self.subsample,
-                                                nbootstrap=self.nbootstrap)
-            
-            #print(self._pdp_values)
-
-            # add to a dict 
-            temp_dict[feature][model_name]['pd_values'] = self._pdp_values
-            temp_dict[feature][model_name]['xdata1']    = self._x1vals
-            temp_dict[feature][model_name]['hist_data'] = self._hist_vals
-
-        return temp_dict
-
-    def _parallelize_2d(self, feature):
-
-        temp_dict = {}
-        temp_dict[feature] = {}
-
-        print(f"Processing feature {feature}...")
-
-        for model_name, model in zip(self._models.keys(), self._models.values()):
-
-            #print(f"Processing model {model}...")
-
-            temp_dict[feature][model_name] = {}
-
-            self.compute_2d_partial_dependence(feature=feature,
-                                                model=model,
-                                                subsample =self.subsample,
-                                                nbootstrap=self.nbootstrap)
-            
-            #print(self._pdp_values)
-
-            # add to a dict 
-            temp_dict[feature][model_name]['pd_values'] = self._pdp_values
-            temp_dict[feature][model_name]['xdata1']    = self._x1vals
-            temp_dict[feature][model_name]['xdata2']    = self._x2vals
-
-        return temp_dict
-
-    def compute_1d_partial_dependence(self, feature=None, **kwargs):
+    def compute_1d_partial_dependence(self, model_name, feature, **kwargs):
 
         """
         Calculate the partial dependence.
@@ -176,14 +122,9 @@ class PartialDependence:
         Args: 
             feature : name of feature to compute PD for (string) 
         """
-    
-        model      = kwargs.get('model', "")
         subsample  = kwargs.get('subsample', 1.0)
         nbootstrap = kwargs.get('nbootstrap', 1)
-
-        # check to make sure a feature is present...
-        if feature is None:
-            raise Exception("Specify a feature")
+        model =  self._models[model_name]
 
         # check to make sure feature is valid
         if feature not in self._feature_names:
@@ -208,7 +149,7 @@ class PartialDependence:
         else:
             bootstrap_examples = [self._examples.index.to_list()]
 
-        # define ALE array
+        # define PDP array
         self._pdp_values = np.full((nbootstrap, self._x1vals.shape[0]), np.nan)
 
         # for each bootstrap set
@@ -228,7 +169,17 @@ class PartialDependence:
                     predictions = model.predict(examples)
 
                 self._pdp_values[k,i] = np.mean(predictions)
-
+        
+        temp_dict = { }
+        temp_dict[feature] = {}
+        temp_dict[feature][model_name] = {}
+        temp_dict[feature][model_name]['pd_values'] = self._pdp_values
+        temp_dict[feature][model_name]['xdata1']     = self._x1vals
+        temp_dict[feature][model_name]['hist_data']  = self._hist_vals
+        
+        return temp_dict
+                
+                
 
     def compute_2d_partial_dependence(self, feature=None, **kwargs):
 

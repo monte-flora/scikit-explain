@@ -128,9 +128,13 @@ class InterpretabilityPlotting:
 
         linewidth = kwargs.get('linewidth', 2.0)    
         linestyle = kwargs.get('linestyle', '-')
-        color     = kwargs.get('color', 'blue')
+        
+        if 'color' not in kwargs:
+            kwargs['color'] = blue
+        
+        print(f'KWARGS: {kwargs}')
 
-        ax.plot(xdata, ydata, color=color, linewidth=linewidth, linestyle=linestyle)
+        ax.plot(xdata, ydata, linewidth=linewidth, linestyle=linestyle, **kwargs)
 
     def confidence_interval_plot(self, ax, xdata, ydata, **kwargs):
 
@@ -161,7 +165,6 @@ class InterpretabilityPlotting:
 
         hspace = kwargs.get('hspace', 0.5)
         ylim   = kwargs.get('ylim', [25,50])
-        color  = kwargs.get('color', 'blue')
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(feature_dict.keys())
@@ -182,6 +185,7 @@ class InterpretabilityPlotting:
                 hist_ax = self.add_histogram_axis(ax, np.clip(hist_data, xdata[0], xdata[-1]))
             
                 # depending on number of bootstrap examples, do CI plot or just mean
+                kwargs['color'] = line_colors[i]
                 if (ydata.shape[0] > 1):
                     self.confidence_interval_plot(hist_ax, xdata, ydata, **kwargs)
                 else:

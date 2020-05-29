@@ -3,6 +3,7 @@ import pandas as pd
 import concurrent.futures
 
 from .utils import *
+from .multiprocessing_utils import run_parallel, to_iterator
 
 class AccumulatedLocalEffects:
 
@@ -60,91 +61,34 @@ class AccumulatedLocalEffects:
             subsample: a float (between 0-1) for fraction of examples used in bootstrap
             nbootstrap: number of bootstrap iterations to perform. Defaults to 1 (no
                         bootstrapping).
-        """
-
-
-        self.subsample  = subsample
-        self.nbootstrap = nbootstrap
-
+        """    
+        models = [name for name in list(self._models.keys())]
+        
         # get number of features we are processing
         n_feats = len(features)
 
         # check first element of feature and see if of type tuple; assume second-order calculations
         if isinstance(features[0], tuple): 
-
-            with concurrent.futures.ProcessPoolExecutor() as executor:
-                tdict = executor.map(self._parallelize_2d, features)
-
-            #convert list of dicts to dict
-            for elem in tdict:
-                self._dict_out.update(elem)
-                
-        # else, single order calculations
+            func =  self.calculate_second_order_ale
         else:
-
-            with concurrent.futures.ProcessPoolExecutor() as executor:
-                tdict = executor.map(self._parallelize_1d, features)
-
-            #convert list of dicts to dict
-            for elem in tdict:
-                self._dict_out.update(elem)
+            func = self.calculate_first_order_ale
+            
+        args_iterator = to_iterator(models, features)
+        kwargs = {
+                      "subsample": subsample, 
+                      "nbootstrap": nbootstrap
+                     }
         
-    def _parallelize_1d(self, feature):
-
-        temp_dict = {}
-        temp_dict[feature] = {}
-
-        print(f"Processing feature {feature}...")
-
-        for model in self._models.values():
-
-            #print(f"Processing model {model}...")
-
-            temp_dict[feature][model] = {}
-
-            self.calculate_first_order_ale(feature=feature,
-                                            model=model,
-                                            subsample=self.subsample, 
-                                            nbootstrap=self.nbootstrap)
+        results = run_parallel(
+                   func = func,
+                   args_iterator = args_iterator,
+                   kwargs = kwargs, 
+                   nprocs_to_use=njobs
+            )
+                
+        self._dict_out = results
             
-            #print(self._pdp_values)
-
-            # add to a dict 
-            temp_dict[feature][model]['ale_values'] = self._ale
-            temp_dict[feature][model]['xdata1']     = self._x1vals
-            temp_dict[feature][model]['hist_data']  = self._hist_vals
-
-        return temp_dict
-
-    def _parallelize_2d(self, feature):
-
-        temp_dict = {}
-        temp_dict[feature] = {}
-
-        print(f"Processing feature {feature}...")
-
-        for model in self._models.values():
-
-            #print(f"Processing model {model}...")
-
-            temp_dict[feature][model] = {}
-
-            self.compute_second_order_ale(feature=feature, 
-                                          model=model,
-                                          subsample=self.subsample, 
-                                          nbootstrap=self.nbootstrap)
-            
-            #print(self._pdp_values)
-
-            # add to a dict 
-            temp_dict[feature][model]['ale_values'] = self._ale
-            temp_dict[feature][model]['xdata1']     = self._x1vals
-            temp_dict[feature][model]['xdata2']     = self._x2vals
-
-        return temp_dict
-
-
-    def calculate_first_order_ale(self, feature=None, **kwargs):
+    def calculate_first_order_ale(self, model_name, feature, **kwargs):
 
         """
             Computes first-order ALE function on single continuous feature data.
@@ -157,14 +101,14 @@ class AccumulatedLocalEffects:
                 Quantiles of feature.
         """
 
-        model      = kwargs.get('model', "")
         subsample  = kwargs.get('subsample', 1.0)
         nbootstrap = kwargs.get('nbootstrap', 1)
-
-        # make sure feature is set
-        if feature is None:
-            raise Exception("Specify a feature.")
-
+        model =  self._models[model_name]
+        
+        # check to make sure feature is valid
+        if feature not in self._feature_names:
+            raise Exception(f"Feature {feature} is not a valid feature")
+        
         # Find the ranges to calculate the local effects over
         # Using xdata ensures each bin gets the same number of examples
         self._x1vals = np.percentile(self._examples[feature].values, np.arange(2.5, 97.5 + 5, 5))
@@ -224,9 +168,17 @@ class AccumulatedLocalEffects:
  
             # Now we have to center ALE function in order to obtain null expectation for ALE function
             self._ale[k,:] -= mean_ale
-   
-
-    def calculate_second_order_ale(self, feature=None, **kwargs):
+        
+        temp_dict = { }
+        temp_dict[feature] = {}
+        temp_dict[feature][model_name] = {}
+        temp_dict[feature][model_name]['ale_values'] = self._ale
+        temp_dict[feature][model_name]['xdata1']     = self._x1vals
+        temp_dict[feature][model_name]['hist_data']  = self._hist_vals
+        
+        return temp_dict
+    
+    def calculate_second_order_ale(self, model_name, feature, **kwargs):
         """
             Computes second-order ALE function on two continuous features data.
 
@@ -237,6 +189,8 @@ class AccumulatedLocalEffects:
             xdata : array
                 Quantiles of feature.
         """
+        model =  self._models[model_name]
+        
         # make sure there are two features...
         assert(len(feature) == 2), "Size of features must be equal to 2."
 
@@ -315,4 +269,13 @@ class AccumulatedLocalEffects:
 
             # Now we have to center ALE function in order to obtain null expectation for ALE function
             self._ale[k,:,:] -= self._ale.mean()
+        
+        temp_dict = { }
+        temp_dict[feature] = {}
+        temp_dict[feature][model_name] = {}
+        temp_dict[feature][model_name]['ale_values'] = self._ale
+        temp_dict[feature][model_name]['xdata1']     = self._x1vals
+        temp_dict[feature][model_name]['hist_data']  = self._hist_vals
+        
+        return temp_dict
         
