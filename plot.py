@@ -157,50 +157,52 @@ class InterpretabilityPlotting:
         ax.fill_between(xdata, lower_bound, upper_bound, facecolor=facecolor, alpha=0.4)
 
 
-    def plot_1d_pd(self, feature_dict, **kwargs):
-
+    def plot_1d_curve(self, feature_dict, **kwargs):
         """
-        Generic function for 1-D PDP
+        Generic function for 1-D ALE and PD
         """
 
+        ci_plot = kwargs.get('ci_plot', False)
         hspace = kwargs.get('hspace', 0.5)
-        ylim   = kwargs.get('ylim', [25,50])
+        color = kwargs.get('color', 'blue')
+        facecolor = kwargs.get('facecolor', 'gray')
+        ylim = kwargs.get('ylim', [-10, 60])
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(feature_dict.keys())
 
         # create subplots, one for each feature
-        fig, axes = self.create_subplots(n_panels=n_panels, hspace=hspace, figsize=(8,6))
+        fig, axes = self.create_subplots(n_panels=n_panels, hspace=hspace, figsize=(8, 6))
 
         # loop over each feature and add relevant plotting stuff
         for ax, feature in zip(axes.flat, feature_dict.keys()):
 
             for i, model in enumerate(feature_dict[feature].keys()):
 
-                xdata     = feature_dict[feature][model]['xdata1']
-                ydata     = feature_dict[feature][model]['pd_values']
+                xdata = feature_dict[feature][model]['xdata1']
+                ydata = feature_dict[feature][model]['values']
                 hist_data = feature_dict[feature][model]['hist_data']
 
                 # add histogram
                 hist_ax = self.add_histogram_axis(ax, np.clip(hist_data, xdata[0], xdata[-1]))
-            
+
                 # depending on number of bootstrap examples, do CI plot or just mean
-                kwargs['color'] = line_colors[i]
-                if (ydata.shape[0] > 1):
-                    self.confidence_interval_plot(hist_ax, xdata, ydata, **kwargs)
+                if (ci_plot is True and ydata.shape[0] > 1):
+                    self.confidence_interval_plot(hist_ax, xdata, ydata,
+                                                  color=color[i], facecolor=facecolor[i])
                 else:
-                    self.line_plot(hist_ax, xdata, ydata[0,:], **kwargs)
+                    self.line_plot(hist_ax, xdata, ydata[0, :],
+                                   color=color[i])
 
                 ax.set_xlabel(feature, fontsize=10)
                 hist_ax.axhline(y=0.0, color="k", alpha=0.8)
-                hist_ax.set_ylim([ydata.min(), ydata.max()])
+                hist_ax.set_ylim(ylim)
 
         self.set_major_axis_labels(fig, xlabel=None, ylabel_left='Relative Frequency',
-                                ylabel_right='Mean Probability (%)', **kwargs)
-
-        plt.show()
+                                   ylabel_right='Mean Probability (%)', **kwargs)
 
         return fig, axes
+
 
     def plot_2d_pd(self, feature_dict, **kwargs):
 
@@ -246,54 +248,6 @@ class InterpretabilityPlotting:
         plt.show()
 
         return fig, axes
-
-    def plot_ale(self, feature_dict, **kwargs):
-
-        """
-        Generic function for 1st order ALE
-        """
-
-        hspace = kwargs.get('hspace', 0.5)
-        ylim   = kwargs.get('ylim', [-15,15])
-        color  = kwargs.get('color', 'blue')
-
-        # get the number of panels which will be length of feature dictionary
-        n_panels = len(feature_dict.keys())
-
-        # create subplots, one for each feature
-        fig, axes = self.create_subplots(n_panels=n_panels, hspace=hspace, figsize=(8,6))
-
-        # loop over each feature and add relevant plotting stuff
-        for ax, feature in zip(axes.flat, feature_dict.keys()):
-
-            for i, model in enumerate(feature_dict[feature].keys()):
-
-                xdata     = feature_dict[feature][model]['xdata1']
-                xdata = 0.5 * (xdata[1:] + xdata[:-1])
-
-                ydata     = feature_dict[feature][model]['ale_values']
-                hist_data = feature_dict[feature][model]['hist_data']
-
-                # add histogram
-                hist_ax = self.add_histogram_axis(ax, np.clip(hist_data, xdata[0], xdata[-1]))
-            
-                # depending on number of bootstrap examples, do CI plot or just mean
-                if (ydata.shape[0] > 1):
-                    self.confidence_interval_plot(hist_ax, xdata, ydata, **kwargs)
-                else:
-                    self.line_plot(hist_ax, xdata, ydata[0,:], **kwargs)
-
-                ax.set_xlabel(feature, fontsize=10)
-                hist_ax.axhline(y=0.0, color="k", alpha=0.8)
-                hist_ax.set_ylim(ylim)
-
-        self.set_major_axis_labels(fig, xlabel=None, ylabel_left='Relative Frequency',
-                                ylabel_right='Mean Probability (%)', **kwargs)
-
-        plt.show()
-
-        return fig, axes
-
     
     def autolabel(self, rects, ax):
         """

@@ -22,7 +22,7 @@ class PartialDependence:
             nd.numpy array. Make sure it's a list
     """
 
-    def __init__(self, model=None, examples=None, targets=None, classification=True, 
+    def __init__(self, model=None, examples=None, classification=True, 
             feature_names=None):
 
         # if model is of type list or single objection, convert to dictionary
@@ -33,14 +33,6 @@ class PartialDependence:
                 self._models = {type(model).__name__ : model}
 
         self._examples = examples
-
-        # check that targets are assigned correctly
-        if isinstance(targets, list): 
-            self._targets = np.array(targets)
-        elif isinstance(targets, np.ndarray): 
-            self._targets = targets
-        else:
-            raise TypeError('Target variable must be numpy array.')
 
         # make sure data is the form of a pandas dataframe regardless of input type
         if isinstance(self._examples, np.ndarray): 
@@ -53,10 +45,6 @@ class PartialDependence:
             self._feature_names  = examples.columns.to_list()
 
         self._classification = classification
-        self._pdp_values     = None
-        self._x1vals         = None
-        self._x2vals         = None
-        self._hist_vals      = None
 
         # dictionary containing information for all each feature and model
         self._dict_out = {}
@@ -85,7 +73,7 @@ class PartialDependence:
 
         # check first element of feature and see if of type tuple; assume second-order calculations
         if isinstance(features[0], tuple): 
-            func =  self.compute_2d_partial_dependence
+            func = self.compute_2d_partial_dependence
         else:
             func = self.compute_1d_partial_dependence
             
@@ -134,10 +122,10 @@ class PartialDependence:
         column_of_data = self._examples[feature].to_numpy()
 
         # append examples for histogram use
-        self._hist_vals = column_of_data
+        hist_vals = column_of_data
 
         # define bins based on 10th and 90th percentiles
-        self._x1vals = np.linspace(
+        x1vals = np.linspace(
             np.percentile(column_of_data, 5), np.percentile(column_of_data, 95), num=20
         )
 
@@ -150,7 +138,7 @@ class PartialDependence:
             bootstrap_examples = [self._examples.index.to_list()]
 
         # define PDP array
-        self._pdp_values = np.full((nbootstrap, self._x1vals.shape[0]), np.nan)
+        pdp_values = np.full((nbootstrap, x1vals.shape[0]), np.nan)
 
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_examples):
@@ -159,7 +147,7 @@ class PartialDependence:
             examples = self._examples.iloc[idx, :].copy()
         
             # for each value, set all indices to the value, make prediction, store mean prediction
-            for i, value in enumerate(self._x1vals):
+            for i, value in enumerate(x1vals):
 
                 examples.loc[:, feature] = value
 
@@ -168,20 +156,20 @@ class PartialDependence:
                 else:
                     predictions = model.predict(examples)
 
-                self._pdp_values[k,i] = np.mean(predictions)
+                pdp_values[k,i] = np.mean(predictions)
         
         temp_dict = { }
         temp_dict[feature] = {}
         temp_dict[feature][model_name] = {}
-        temp_dict[feature][model_name]['pd_values'] = self._pdp_values
-        temp_dict[feature][model_name]['xdata1']     = self._x1vals
-        temp_dict[feature][model_name]['hist_data']  = self._hist_vals
+        temp_dict[feature][model_name]['values'] = pdp_values
+        temp_dict[feature][model_name]['xdata1']     = x1vals
+        temp_dict[feature][model_name]['hist_data']  = hist_vals
         
         return temp_dict
                 
                 
 
-    def compute_2d_partial_dependence(self, feature=None, **kwargs):
+    def compute_2d_partial_dependence(self, model_name, feature=None, **kwargs):
 
         """
         Calculate the partial dependence between two features.
@@ -193,6 +181,7 @@ class PartialDependence:
 
         subsample  = kwargs.get('subsample', 1.0)
         nbootstrap = kwargs.get('nbootstrap', 1)
+        model =  self._models[model_name]
 
         # make sure there are two features...
         assert(len(feature) == 2), "Size of features must be equal to 2."
@@ -203,14 +192,14 @@ class PartialDependence:
         if (feature[1] not in self._feature_names): 
             raise TypeError(f'Feature {feature[1]} is not a valid feature')
 
-        if self._x1vals is None:
+        if x1vals is None:
             # ensures each bin gets the same number of examples
-            self._x1vals = np.percentile(self._examples[feature[0]].values, 
+            x1vals = np.percentile(self._examples[feature[0]].values, 
                                          np.arange(2.5, 97.5 + 5, 5))
 
-        if self._x2vals is None:
+        if x2vals is None:
             # ensures each bin gets the same number of examples
-            self._x2vals = np.percentile(self._examples[feature[1]].values, 
+            x2vals = np.percentile(self._examples[feature[1]].values, 
                                          np.arange(2.5, 97.5 + 5, 5))
 
         # get the bootstrap samples
@@ -222,8 +211,8 @@ class PartialDependence:
             bootstrap_examples = [self._examples.index.to_list()]
 
         # define 2-D grid
-        self._pdp_values = np.full((nbootstrap, self._x1vals.shape[0], 
-                                                self._x2vals.shape[0]), np.nan)
+        pdp_values = np.full((nbootstrap, x1vals.shape[0], 
+                                                x2vals.shape[0]), np.nan)
 
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_examples):
@@ -232,15 +221,24 @@ class PartialDependence:
             examples = self._examples.iloc[idx, :].copy()
 
             # similar concept as 1-D, but for 2-D
-            for i, value1 in enumerate(self._x1vals):
-                for j, value2 in enumerate(self._x2vals):
+            for i, value1 in enumerate(x1vals):
+                for j, value2 in enumerate(x2vals):
 
                     examples.loc[feature[0]] = value1
                     examples.loc[feature[1]] = value2
 
                     if self._classification is True:
-                        predictions = self._model.predict_proba(examples)[:, 1] * 100.
+                        predictions = model.predict_proba(examples)[:, 1] * 100.
                     else:
-                        predictions = self._model.predict(examples)
+                        predictions = model.predict(examples)
 
-                    self._pdp_values[k,i,j] = np.mean(predictions)
+                    pdp_values[k,i,j] = np.mean(predictions)
+
+        temp_dict = { }
+        temp_dict[feature] = {}
+        temp_dict[feature][model_name] = {}
+        temp_dict[feature][model_name]['values'] = pdp_values
+        temp_dict[feature][model_name]['xdata1'] = x1vals
+        temp_dict[feature][model_name]['xdata2'] = x2vals
+        
+        return temp_dict

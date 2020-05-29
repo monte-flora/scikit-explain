@@ -75,12 +75,12 @@ class InterpretToolkit:
 
         # initialize a PD object
         self._pdp_object = PartialDependence(model=model, examples=examples,
-                                targets=targets, classification=classification,
+                                classification=classification,
                                 feature_names=feature_names)
 
         # initialize a ALE object
         self._ale_object = AccumulatedLocalEffects(model=model, examples=examples,
-                                targets=targets, classification=classification,
+                                classification=classification,
                                 feature_names=feature_names)
 
         # initialize a plotting object
@@ -124,7 +124,7 @@ class InterpretToolkit:
         if isinstance(list(self.pd_dict.keys())[0], tuple):
             return self._clarify_plot_obj.plot_2d_field(self.pd_dict, **kwargs)
         else:
-            return self._clarify_plot_obj.plot_1d_pd(self.pd_dict, **kwargs)
+            return self._clarify_plot_obj.plot_1d_curve(self.pd_dict, **kwargs)
 
     def run_ale(self, features=None, **kwargs):
         """
@@ -162,7 +162,7 @@ class InterpretToolkit:
             #return self._clarify_plot_obj.plot_2d_ale(self.pd_dict, **kwargs)
             return print("No 2D ALE plotting functionality yet... sorry!")
         else:
-            return self._clarify_plot_obj.plot_ale(self.ale_dict, **kwargs)
+            return self._clarify_plot_obj.plot_1d_curve(self.ale_dict, **kwargs)
 
 
     def get_indices_based_on_performance(self, model, n_examples=None):

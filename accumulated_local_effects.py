@@ -7,7 +7,7 @@ from .multiprocessing_utils import run_parallel, to_iterator
 
 class AccumulatedLocalEffects:
 
-    def __init__(self, model=None, examples=None, targets=None, classification=True, 
+    def __init__(self, model=None, examples=None, classification=True, 
             feature_names=None):
 
         # if model is of type list or single objection, convert to dictionary
@@ -18,14 +18,6 @@ class AccumulatedLocalEffects:
                 self._models = {type(model).__name__ : model}
 
         self._examples = examples
-
-        # check that targets are assigned correctly
-        if isinstance(targets, list): 
-            self._targets = np.array(targets)
-        elif isinstance(targets, np.ndarray): 
-            self._targets = targets
-        else:
-            raise TypeError('Target variable must be numpy array.')
 
         # make sure data is the form of a pandas dataframe regardless of input type
         if isinstance(self._examples, np.ndarray): 
@@ -38,10 +30,6 @@ class AccumulatedLocalEffects:
             self._feature_names  = examples.columns.to_list()
 
         self._classification = classification
-        self._ale            = None
-        self._x1vals         = None
-        self._x2vals         = None
-        self._hist_vals      = None
 
         # dictionary containing information for all each feature and model
         self._dict_out = {}
@@ -111,13 +99,13 @@ class AccumulatedLocalEffects:
         
         # Find the ranges to calculate the local effects over
         # Using xdata ensures each bin gets the same number of examples
-        self._x1vals = np.percentile(self._examples[feature].values, np.arange(2.5, 97.5 + 5, 5))
+        x1vals = np.percentile(self._examples[feature].values, np.arange(2.5, 97.5 + 5, 5))
 
         # get data in numpy format
         column_of_data = self._examples[feature].to_numpy()
 
         # append examples for histogram use
-        self._hist_vals = column_of_data
+        hist_vals = column_of_data
  
         # get the bootstrap samples
         if nbootstrap > 1:
@@ -128,7 +116,7 @@ class AccumulatedLocalEffects:
             bootstrap_examples = [self._examples.index.to_list()]
 
         # define ALE array
-        self._ale = np.zeros((nbootstrap, self._x1vals.shape[0]-1))
+        ale = np.zeros((nbootstrap, x1vals.shape[0]-1))
 
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_examples):
@@ -137,19 +125,19 @@ class AccumulatedLocalEffects:
             examples = self._examples.iloc[idx, :]
 
             # loop over all ranges
-            for i in range(1, self._x1vals.shape[0]):
+            for i in range(1, x1vals.shape[0]):
 
                 # get subset of data
-                df_subset = examples[(examples[feature] >= self._x1vals[i - 1]) & 
-                                     (examples[feature] < self._x1vals[i])]
+                df_subset = examples[(examples[feature] >= x1vals[i - 1]) & 
+                                     (examples[feature] < x1vals[i])]
 
                 # Without any observation, local effect on splitted area is null
                 if len(df_subset) != 0:
                     lower_bound = df_subset.copy()
                     upper_bound = df_subset.copy()
 
-                    lower_bound[feature] = self._x1vals[i - 1]
-                    upper_bound[feature] = self._x1vals[i]
+                    lower_bound[feature] = x1vals[i - 1]
+                    upper_bound[feature] = x1vals[i]
 
                     upper_bound = upper_bound.values
                     lower_bound = lower_bound.values
@@ -160,21 +148,21 @@ class AccumulatedLocalEffects:
                     else:
                         effect = model.predict(upper_bound) - model.predict(lower_bound)
 
-                    self._ale[k,i - 1] = np.mean(effect)
+                    ale[k,i - 1] = np.mean(effect)
 
             # The accumulated effect
-            self._ale[k,:] = self._ale[k,:].cumsum()
-            mean_ale       = self._ale[k,:].mean()
+            ale[k,:] = ale[k,:].cumsum()
+            mean_ale = ale[k,:].mean()
  
             # Now we have to center ALE function in order to obtain null expectation for ALE function
-            self._ale[k,:] -= mean_ale
+            ale[k,:] -= mean_ale
         
         temp_dict = { }
         temp_dict[feature] = {}
         temp_dict[feature][model_name] = {}
-        temp_dict[feature][model_name]['ale_values'] = self._ale
-        temp_dict[feature][model_name]['xdata1']     = self._x1vals
-        temp_dict[feature][model_name]['hist_data']  = self._hist_vals
+        temp_dict[feature][model_name]['values'] = ale
+        temp_dict[feature][model_name]['xdata1']     = 0.5 * (x1vals[1:] + x1vals[:-1])
+        temp_dict[feature][model_name]['hist_data']  = hist_vals
         
         return temp_dict
     
@@ -202,11 +190,11 @@ class AccumulatedLocalEffects:
             raise TypeError(f'Feature {features[1]} is not a valid feature')
 
         # create bins for computation for both features
-        if self._x1vals is None:
-            self._x1vals = np.percentile(self._examples[feature[0]].values, np.arange(2.5, 97.5 + 5, 5))
+        if x1vals is None:
+            x1vals = np.percentile(self._examples[feature[0]].values, np.arange(2.5, 97.5 + 5, 5))
           
-        if self._x2vals is None: 
-            self._x2vals = np.percentile(self._examples[feature[1]].values, np.arange(2.5, 97.5 + 5, 5))
+        if x2vals is None: 
+            x2vals = np.percentile(self._examples[feature[1]].values, np.arange(2.5, 97.5 + 5, 5))
 
         # get the bootstrap samples
         if nbootstrap > 1:
@@ -217,7 +205,7 @@ class AccumulatedLocalEffects:
             bootstrap_examples = [self._examples.index.to_list()]
 
         # define ALE array as 3D
-        self._ale = np.zeros((nbootstrap, self._x1vals.shape[1] - 1, self._x1vals.shape[1] - 1))
+        ale = np.zeros((nbootstrap, x1vals.shape[1] - 1, x1vals.shape[1] - 1))
 
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_examples):
@@ -226,14 +214,14 @@ class AccumulatedLocalEffects:
             examples = self._examples.iloc[idx, :]
 
             # compute calculation over 2-d space
-            for i in range(1, self._x1vals.shape[0]):
-                for j in range(1, self._x1vals.shape[1]):
+            for i in range(1, x1vals.shape[0]):
+                for j in range(1, x1vals.shape[1]):
 
                     # Select subset of training data that falls within subset
-                    df_subset = examples[ (examples[features[0]] >= self._x1vals[i - 1])
-                                        & (examples[features[0]] <  self._x1vals[i])
-                                        & (examples[features[1]] >= self._x2vals[j - 1])
-                                        & (examples[features[1]] <  self._x2vals[j]) ]
+                    df_subset = examples[ (examples[features[0]] >= x1vals[i - 1])
+                                        & (examples[features[0]] <  x1vals[i])
+                                        & (examples[features[1]] >= x2vals[j - 1])
+                                        & (examples[features[1]] <  x2vals[j]) ]
 
                     # Without any observation, local effect on splitted area is null
                     if len(df_subset) != 0:
@@ -244,14 +232,14 @@ class AccumulatedLocalEffects:
 
                         # The main ALE idea that compute prediction difference between
                         # same data except feature's one
-                        z_low[0][features[0]] = self._x1vals[i - 1]
-                        z_low[0][features[1]] = self._x2vals[j - 1]
-                        z_low[1][features[0]] = self._x1vals[i]
-                        z_low[1][features[1]] = self._x2vals[j - 1]
-                        z_up[0][features[0]]  = self._x1vals[i - 1]
-                        z_up[0][features[1]]  = self._x2vals[j]
-                        z_up[1][features[0]]  = self._x1vals[i]
-                        z_up[1][features[1]]  = self._x2vals[j]
+                        z_low[0][features[0]] = x1vals[i - 1]
+                        z_low[0][features[1]] = x2vals[j - 1]
+                        z_low[1][features[0]] = x1vals[i]
+                        z_low[1][features[1]] = x2vals[j - 1]
+                        z_up[0][features[0]]  = x1vals[i - 1]
+                        z_up[0][features[1]]  = x2vals[j]
+                        z_up[1][features[0]]  = x1vals[i]
+                        z_up[1][features[1]]  = x2vals[j]
 
                         if self._classification is True:
                             effect = 100.0 * ( (model.predict_proba(z_up[1])[:, 1]
@@ -262,20 +250,20 @@ class AccumulatedLocalEffects:
                             effect = (model.predict(z_up[1]) - model.predict(z_up[0])
                                    - (model.predict(z_low[1]) - model.predict(z_low[0])))
 
-                        self._ale[i - 1, j - 1] = np.mean(effect)
+                        ale[i - 1, j - 1] = np.mean(effect)
 
             # The accumulated effect
-            self._ale[k,:,:] = np.cumsum(self._ale, axis=0)
+            ale[k,:,:] = np.cumsum(ale, axis=0)
 
             # Now we have to center ALE function in order to obtain null expectation for ALE function
-            self._ale[k,:,:] -= self._ale.mean()
+            ale[k,:,:] -= ale.mean()
         
         temp_dict = { }
         temp_dict[feature] = {}
         temp_dict[feature][model_name] = {}
-        temp_dict[feature][model_name]['ale_values'] = self._ale
-        temp_dict[feature][model_name]['xdata1']     = self._x1vals
-        temp_dict[feature][model_name]['hist_data']  = self._hist_vals
+        temp_dict[feature][model_name]['values'] = ale
+        temp_dict[feature][model_name]['xdata1']  = 0.5 * (x1vals[1:] + x1vals[:-1])
+        temp_dict[feature][model_name]['xdata2']  = 0.5 * (x2vals[1:] + x2vals[:-1])
         
         return temp_dict
         
