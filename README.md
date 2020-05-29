@@ -7,6 +7,12 @@ The package is under active development and will likely contain bugs or errors. 
 This package is largely original code, but also includes preexisting packages into a single source. The goal is make a user-friendly python class for computing several machine learning interpretation methods. 
 ### Dependencies 
 MintPy is designed to be use 
+```
+numpy 
+pandas
+scikit-learn
+matplotlib
+```
 
 
 ### Initializing ModelClarifier
