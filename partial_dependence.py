@@ -31,6 +31,9 @@ class PartialDependence:
                 self._models = {type(m).__name__ : m for m in model}
             else:
                 self._models = {type(model).__name__ : model}
+        # passed in a dict
+        else: 
+            self._models = model
 
         self._examples = examples
 
@@ -67,7 +70,7 @@ class PartialDependence:
                         bootstrapping).
         """    
         models = [name for name in list(self._models.keys())]
-        
+
         # get number of features we are processing
         n_feats = len(features)
 
@@ -78,6 +81,7 @@ class PartialDependence:
             func = self.compute_1d_partial_dependence
             
         args_iterator = to_iterator(models, features)
+
         kwargs = {
                       "subsample": subsample, 
                       "nbootstrap": nbootstrap

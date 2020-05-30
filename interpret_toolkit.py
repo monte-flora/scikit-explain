@@ -4,7 +4,7 @@ import pandas as pd
 from .partial_dependence import PartialDependence
 from .accumulated_local_effects import AccumulatedLocalEffects
 from .tree_interpreter import TreeInterpreter
-from .interpretability_plotting import InterpretabilityPlotting
+from .plot import InterpretabilityPlotting
 
 from .PermutationImportance.permutation_importance import sklearn_permutation_importance
 from sklearn.metrics import roc_auc_score, roc_curve, average_precision_score

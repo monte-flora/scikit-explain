@@ -16,6 +16,9 @@ class AccumulatedLocalEffects:
                 self._models = {type(m).__name__ : m for m in model}
             else:
                 self._models = {type(model).__name__ : model}
+        # passed in a dict
+        else: 
+            self._models = model
 
         self._examples = examples
 

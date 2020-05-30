@@ -104,7 +104,7 @@ class InterpretabilityPlotting:
 
     def add_histogram_axis(self, ax, data, **kwargs):
 
-        color     = kwargs.get('color', 'lightblue')
+        color = kwargs.get('color', 'lightblue')
         edgecolor = kwargs.get('color', 'white')
 
         cnt, bins, patches = ax.hist( data, bins='auto', alpha=0.3, color=color,
@@ -121,34 +121,29 @@ class InterpretabilityPlotting:
         return hist_ax
 
     def line_plot(self, ax, xdata, ydata, **kwargs):
-
         """
         Plots a curve of data
         """
 
-        linewidth = kwargs.get('linewidth', 2.0)    
+        linewidth = kwargs.get('linewidth', 2.0)
         linestyle = kwargs.get('linestyle', '-')
-        
-        if 'color' not in kwargs:
-            kwargs['color'] = blue
-        
-        print(f'KWARGS: {kwargs}')
+        color = kwargs.get('color', 'blue')
 
-        ax.plot(xdata, ydata, linewidth=linewidth, linestyle=linestyle, **kwargs)
+        ax.plot(xdata, ydata, color=color, linewidth=linewidth, linestyle=linestyle)
 
     def confidence_interval_plot(self, ax, xdata, ydata, **kwargs):
-
         """
         Plot Confidence Intervals
         """
 
         facecolor = kwargs.get('facecolor', 'r')
+        color = kwargs.get('color', 'blue')
 
         # get mean curve
         mean_ydata = np.mean(ydata, axis=0)
 
         # plot mean curve
-        self.line_plot(ax, xdata, mean_ydata, **kwargs)
+        self.line_plot(ax, xdata, mean_ydata, color=color)
 
         # get confidence interval bounds
         lower_bound, upper_bound = np.percentile(ydata, [2.5, 97.5], axis=0)
@@ -227,8 +222,6 @@ class InterpretabilityPlotting:
             xdata1     = feature_dict[feature]['xdata1']
             xdata2     = feature_dict[feature]['xdata2']
             ydata      = feature_dict[feature]['pd_values']
-
-            print(ydata[0,:,:])
 
             # can only do a contour plot with 2-d data
             x, y = np.meshgrid(xdata1, xdata2)

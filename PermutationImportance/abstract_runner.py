@@ -60,7 +60,7 @@ def abstract_variable_importance(training_data, scoring_data, scoring_fn, scorin
     njobs = mp.cpu_count() if njobs <= 0 else njobs
     njobs = int(njobs*mp.cpu_count()) if (njobs < 1 and njobs >= 0) else njobs
 
-    print('Using {} of processors to compute importance...'.format(njobs))
+    print(f'Using {njobs} of processors to compute importance...')
 
     important_vars = list()
     num_vars = len(variable_names)
@@ -69,7 +69,7 @@ def abstract_variable_importance(training_data, scoring_data, scoring_fn, scorin
     original_score = scoring_fn(training_data, scoring_data)
     result_obj = ImportanceResult(method, variable_names, original_score)
     for i, _ in enumerate(range(nimportant_vars)):
-        print('Starting on the important variable {} out of {}...'.format(i, nimportant_vars))
+        print('Starting on the important variable {} out of {}...'.format(i+1, nimportant_vars))
         selection_iter = selection_strategy(
             training_data, scoring_data, num_vars, important_vars)
         if njobs == 1:

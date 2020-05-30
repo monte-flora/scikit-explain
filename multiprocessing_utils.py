@@ -62,7 +62,6 @@ def run_parallel( func, args_iterator, kwargs, nprocs_to_use, ):
     
     print(f'Using {nprocs_to_use} processors...')
 
-    print("\n Start Time:", datetime.now().time())
     pool = Pool(processes=nprocs_to_use)
     
     # Initialize an empty results dictionary to store the 
@@ -81,10 +80,11 @@ def run_parallel( func, args_iterator, kwargs, nprocs_to_use, ):
                 
     pool.close()
     pool.join()
-    print("End Time: ", datetime.now().time())
     
+    # ... something is wrong here ... #
+    # list of dicts
     results = [result.get() for result in result_objects]
-    
+
     results = dict(ChainMap(*results))
     
     return results
