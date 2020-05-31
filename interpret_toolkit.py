@@ -119,7 +119,8 @@ class InterpretToolkit:
             Plots the PD. If the first instance is a tuple, then a 2-D plot is
             assumed, else 1-D.
         """
-
+        kwargs['right_yaxis_label'] = 'Mean Probability (%)'
+        kwargs['wspace'] = 0.6
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance(list(self.pd_dict.keys())[0], tuple):
             return self._clarify_plot_obj.plot_2d_field(self.pd_dict, **kwargs)
@@ -156,7 +157,9 @@ class InterpretToolkit:
             Plots the ALE. If the first instance is a tuple, then a 2-D plot is
             assumed, else 1-D.
         """
-
+        kwargs['right_yaxis_label'] = 'Accumulated Local Effect (%)'
+        kwargs['wspace'] = 0.6
+        kwargs['add_zero_line'] = True
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance(list(self.ale_dict.keys())[0], tuple):
             #return self._clarify_plot_obj.plot_2d_ale(self.pd_dict, **kwargs)
@@ -413,7 +416,7 @@ class InterpretToolkit:
 
         return self._clarify_plot_obj.plot_treeinterpret(self.ti_dict, **kwargs)
 
-    def permutation_importance(self, n_multipass_vars=5, evaluation_fn="auprc",
+    def permutation_importance(self, n_vars=5, evaluation_fn="auprc",
             subsample=1.0, njobs=1, nbootstrap=1):
 
         """
@@ -440,7 +443,10 @@ class InterpretToolkit:
         elif evaluation_fn.lower() == "auprc":
             evaluation_fn = average_precision_score
             scoring_strategy = "argmin_of_mean"
-
+        elif evaluation_fn.lower() == 'bss':
+            evaluation_fn = None 
+            scoring_strategy = "argmin_of_mean"
+            
         self.nbootstrap = nbootstrap
 
         targets = pd.DataFrame(data=self._targets, columns=['Test'])
@@ -459,7 +465,7 @@ class InterpretToolkit:
                 variable_names   = self._feature_names,
                 scoring_strategy = scoring_strategy,
                 subsample        = subsample,
-                nimportant_vars  = n_multipass_vars,
+                nimportant_vars  = n_vars,
                 njobs            = njobs,
                 nbootstrap       = self.nbootstrap,
             )

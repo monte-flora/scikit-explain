@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-import concurrent.futures
+import multiprocessing
 
-from .utils import *
+from .utils import compute_bootstrap_samples, merge_nested_dict
 from .multiprocessing_utils import run_parallel, to_iterator
 
 class AccumulatedLocalEffects:
@@ -55,6 +55,8 @@ class AccumulatedLocalEffects:
         """    
         models = [name for name in list(self._models.keys())]
         
+        print(f'Models for ALE: {models}')
+        
         # get number of features we are processing
         n_feats = len(features)
 
@@ -77,6 +79,8 @@ class AccumulatedLocalEffects:
                    nprocs_to_use=njobs
             )
                 
+        results = merge_nested_dict(results)
+            
         self._dict_out = results
             
     def calculate_first_order_ale(self, model_name, feature, **kwargs):
@@ -160,14 +164,12 @@ class AccumulatedLocalEffects:
             # Now we have to center ALE function in order to obtain null expectation for ALE function
             ale[k,:] -= mean_ale
         
-        temp_dict = { }
-        temp_dict[feature] = {}
-        temp_dict[feature][model_name] = {}
-        temp_dict[feature][model_name]['values'] = ale
-        temp_dict[feature][model_name]['xdata1']     = 0.5 * (x1vals[1:] + x1vals[:-1])
-        temp_dict[feature][model_name]['hist_data']  = hist_vals
+        results = {feature : {model_name :{}}}
+        results[feature][model_name]['values'] = ale
+        results[feature][model_name]['xdata1'] = 0.5 * (x1vals[1:] + x1vals[:-1])
+        results[feature][model_name]['hist_data'] = hist_vals
         
-        return temp_dict
+        return results
     
     def calculate_second_order_ale(self, model_name, feature, **kwargs):
         """
@@ -261,12 +263,10 @@ class AccumulatedLocalEffects:
             # Now we have to center ALE function in order to obtain null expectation for ALE function
             ale[k,:,:] -= ale.mean()
         
-        temp_dict = { }
-        temp_dict[feature] = {}
-        temp_dict[feature][model_name] = {}
-        temp_dict[feature][model_name]['values'] = ale
-        temp_dict[feature][model_name]['xdata1']  = 0.5 * (x1vals[1:] + x1vals[:-1])
-        temp_dict[feature][model_name]['xdata2']  = 0.5 * (x2vals[1:] + x2vals[:-1])
+        temp_dict = {model_name : {feature :{}}}
+        temp_dict[model_name][feature]['values'] = ale
+        temp_dict[model_name][feature]['xdata1']  = 0.5 * (x1vals[1:] + x1vals[:-1])
+        temp_dict[model_name][feature]['xdata2']  = 0.5 * (x2vals[1:] + x2vals[:-1])
         
         return temp_dict
         

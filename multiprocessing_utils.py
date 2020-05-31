@@ -74,19 +74,15 @@ def run_parallel( func, args_iterator, kwargs, nprocs_to_use, ):
             key = '__'.join(args)
         else:
             key = args
-        print(args, key)
         result = pool.apply_async(LogExceptions(func), args, kwargs)
         result_objects.append(result)
                 
     pool.close()
     pool.join()
-    
-    # ... something is wrong here ... #
+
     # list of dicts
     results = [result.get() for result in result_objects]
 
-    results = dict(ChainMap(*results))
-    
     return results
 
 
