@@ -40,4 +40,18 @@ def combine_like_features(contrib, varnames):
 
         return new_contrib, new_varnames
 
+def merge_nested_dict(dicts):
+    """
+    Merge a list of nested dicts into a single dict
+    """
+    merged_dict = {}
+    for d in dicts:
+        key = list(d.keys())[0]
+        subkey = list(d[key].keys())[0]
+        if key not in list(merged_dict.keys()):
+            merged_dict[key] = {subkey: {}}
+        merged_dict[key][subkey] = d[key][subkey]
+    return merged_dict
+
+
 

@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
-import concurrent.futures
 
-from .utils import *
+from .utils import compute_bootstrap_samples, merge_nested_dict
 from .multiprocessing_utils import run_parallel, to_iterator
 
 class PartialDependence:
@@ -89,6 +88,8 @@ class PartialDependence:
                    kwargs = kwargs, 
                    nprocs_to_use=njobs
             )
+        
+        results = merge_nested_dict(results)
                 
         self._dict_out = results
     
@@ -158,17 +159,14 @@ class PartialDependence:
 
                 pdp_values[k,i] = np.mean(predictions)
         
-        temp_dict = { }
-        temp_dict[feature] = {}
-        temp_dict[feature][model_name] = {}
-        temp_dict[feature][model_name]['values'] = pdp_values
-        temp_dict[feature][model_name]['xdata1']     = x1vals
-        temp_dict[feature][model_name]['hist_data']  = hist_vals
+        results = {feature : {model_name :{}}}
+        results[feature][model_name]['values'] = pdp_values
+        results[feature][model_name]['xdata1']     = x1vals
+        results[feature][model_name]['hist_data']  = hist_vals
         
-        return temp_dict
+        return results
                 
-                
-
+            
     def compute_2d_partial_dependence(self, model_name, feature=None, **kwargs):
 
         """

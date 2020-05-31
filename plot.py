@@ -49,6 +49,8 @@ class InterpretabilityPlotting:
         sharex    = kwargs.get('sharex', False)
         sharey    = kwargs.get('sharey', False)
         
+        print(wspace)
+        
         n_rows    = int(n_panels / n_columns)
         extra_row = 0 if (n_panels % n_columns) ==0 else 1
 
@@ -72,7 +74,7 @@ class InterpretabilityPlotting:
         """
 
         fontsize = kwargs.get('fontsize', 15)
-        labelpad = kwargs.get('labelpad', 25)
+        labelpad = kwargs.get('labelpad', 30)
 
         # add a big axis, hide frame
         ax = fig.add_subplot(111, frameon=False)
@@ -110,16 +112,14 @@ class InterpretabilityPlotting:
         cnt, bins, patches = ax.hist( data, bins='auto', alpha=0.3, color=color,
                                         density=True, edgecolor=edgecolor)
         
-        area = np.dot(cnt, np.diff(bins))
-        hist_ax = ax.twinx()
-        hist_ax.grid('off')
-
+        #area = np.dot(cnt, np.diff(bins))
+        
+        self.plotted_histogram=True
         # align the twinx axis
-        lb, ub = ax.get_ylim()
-        hist_ax.set_ylim(lb / area, ub / area)
-
-        return hist_ax
-
+        #lb, ub = ax.get_ylim()
+        #self.lowbound_hist = lb
+        #self.upperbound_hist = ub 
+        
     def line_plot(self, ax, xdata, ydata, **kwargs):
 
         """
@@ -131,9 +131,7 @@ class InterpretabilityPlotting:
         
         if 'color' not in kwargs:
             kwargs['color'] = blue
-        
-        print(f'KWARGS: {kwargs}')
-
+    
         ax.plot(xdata, ydata, linewidth=linewidth, linestyle=linestyle, **kwargs)
 
     def confidence_interval_plot(self, ax, xdata, ydata, **kwargs):
@@ -156,50 +154,86 @@ class InterpretabilityPlotting:
         # fill between CI bounds
         ax.fill_between(xdata, lower_bound, upper_bound, facecolor=facecolor, alpha=0.4)
 
+        
+    def calculate_ticks(self, ax, ticks, round_to=0.1, center=False):
+        upperbound = np.ceil(ax.get_ybound()[1]/round_to)
+        lowerbound = np.floor(ax.get_ybound()[0]/round_to)
+        dy = upperbound - lowerbound
+        fit = np.floor(dy/(ticks - 1)) + 1
+        dy_new = (ticks - 1)*fit
+        if center:
+            offset = np.floor((dy_new - dy)/2)
+            lowerbound = lowerbound - offset
+        values = np.linspace(lowerbound, lowerbound + dy_new, ticks)
+       
+        return values*round_to    
+    
+    def make_twin_ax(self, ax):
+        """
+        Create a twin axis on an existing axis with a shared x-axis
+        """
+        # align the twinx axis
+        #lb, ub = ax.get_ylim()
+        #self.lowbound_hist = lb
+        #self.upperbound_hist = up 
+        
+        twin_ax = ax.twinx()
+        twin_ax.grid(False)
+
+        # align the twinx axis
+        #lb, ub = ax.get_ylim()
+        #twin_ax.set_ylim(lb / area, ub / area)
+        return twin_ax
+
 
     def plot_1d_curve(self, feature_dict, **kwargs):
         """
         Generic function for 1-D ALE and PD
         """
-
         ci_plot = kwargs.get('ci_plot', False)
         hspace = kwargs.get('hspace', 0.5)
-        color = kwargs.get('color', 'blue')
         facecolor = kwargs.get('facecolor', 'gray')
-        ylim = kwargs.get('ylim', [-10, 60])
+        right_yaxis_label = kwargs.get('right_yaxis_label')
+        add_zero_line = kwargs.get('add_zero_line', False)
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(feature_dict.keys())
 
         # create subplots, one for each feature
-        fig, axes = self.create_subplots(n_panels=n_panels, hspace=hspace, figsize=(8, 6))
+        fig, axes = self.create_subplots(n_panels=n_panels, hspace=hspace, figsize=(8, 6), **kwargs)
 
         # loop over each feature and add relevant plotting stuff
         for ax, feature in zip(axes.flat, feature_dict.keys()):
+            
+            model_names = list(feature_dict[feature].keys())
+            lineplt_ax = self.make_twin_ax(ax)
+            xdata = feature_dict[feature][model_names[0]]['xdata1']
+            hist_data = feature_dict[feature][model_names[0]]['hist_data']
+            # add histogram
+            self.add_histogram_axis(ax, np.clip(hist_data, xdata[0], xdata[-1]))
+            # Set x-axis label as the feature name 
+            ax.set_xlabel(feature, fontsize=10)
+            
+            for i, model_name in enumerate(model_names):
 
-            for i, model in enumerate(feature_dict[feature].keys()):
-
-                xdata = feature_dict[feature][model]['xdata1']
-                ydata = feature_dict[feature][model]['values']
-                hist_data = feature_dict[feature][model]['hist_data']
-
-                # add histogram
-                hist_ax = self.add_histogram_axis(ax, np.clip(hist_data, xdata[0], xdata[-1]))
+                ydata = feature_dict[feature][model_name]['values']
 
                 # depending on number of bootstrap examples, do CI plot or just mean
                 if (ci_plot is True and ydata.shape[0] > 1):
-                    self.confidence_interval_plot(hist_ax, xdata, ydata,
-                                                  color=color[i], facecolor=facecolor[i])
+                    self.confidence_interval_plot(lineplt_ax, xdata, ydata,
+                                                  color=line_colors[i], facecolor=facecolor[i])
                 else:
-                    self.line_plot(hist_ax, xdata, ydata[0, :],
-                                   color=color[i])
-
-                ax.set_xlabel(feature, fontsize=10)
-                hist_ax.axhline(y=0.0, color="k", alpha=0.8)
-                hist_ax.set_ylim(ylim)
+                    self.line_plot(lineplt_ax, xdata, ydata[0,:],
+                                   color=line_colors[i])
+            
+            ax.set_xlabel(feature, fontsize=10)
+            if add_zero_line:
+                lineplt_ax.axhline(y=0.0, color="k", alpha=0.8)
+            lineplt_ax.set_yticks(self.calculate_ticks(lineplt_ax, 10))
+            #lineplt_ax.set_ylim([-10, 60])
 
         self.set_major_axis_labels(fig, xlabel=None, ylabel_left='Relative Frequency',
-                                   ylabel_right='Mean Probability (%)', **kwargs)
+                                   ylabel_right=right_yaxis_label, **kwargs)
 
         return fig, axes
 
@@ -231,7 +265,7 @@ class InterpretabilityPlotting:
             print(ydata[0,:,:])
 
             # can only do a contour plot with 2-d data
-            x, y = np.meshgrid(xdata1, xdata2)
+            x, y = np.mesh(xdata1, xdata2)
         
             cf = ax.contourf(x, y, ydata[0,:,:], cmap=cmap, levels=levels, alpha=0.75)
         
@@ -249,16 +283,6 @@ class InterpretabilityPlotting:
 
         return fig, axes
     
-    def autolabel(self, rects, ax):
-        """
-        Attach a text label to the right/left of each bar
-        """
-        for rect in rects:
-            width = rect.get_width()
-            ax.text(rect.get_x() + rect.get_height()/2., 1.05*width,
-                    '%d' % int(width), ha ='center', va='bottom')
-    
-
     def _ti_plot(self, dict_to_use, key, ax=None, 
             to_only_varname=None,
             n_vars=12, 
@@ -541,6 +565,8 @@ class InterpretabilityPlotting:
             for tick in vals:
                 ax.axvline(x=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
 
+		
+           
             self.set_major_axis_labels(fig, xlabel=metric, ylabel_left='Predictor Ranking', labelpad=5, fontsize=10)
             self.add_alphabet_label(axes)
 
