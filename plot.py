@@ -4,7 +4,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import FormatStrFormatter
-from .utils import combine_like_features
+from .utils import combine_like_features, is_outlier
 
 # Set up the font sizes for matplotlib
 FONT_SIZE = 16
@@ -104,11 +104,15 @@ class InterpretabilityPlotting:
                 alpha=0.8, ha='center', va='center', transform=ax.transAxes)
 
 
-    def add_histogram_axis(self, ax, data, **kwargs):
+    def add_histogram_axis(self, ax, data, remove_outliers=True, **kwargs):
 
         color = kwargs.get('color', 'lightblue')
         edgecolor = kwargs.get('color', 'white')
 
+        if remove_outliers:
+            data[data<data[0]] = np.nan
+            data[data>data[-1]] = np.nan
+        
         cnt, bins, patches = ax.hist( data, bins='auto', alpha=0.3, color=color,
                                         density=True, edgecolor=edgecolor)
         
@@ -209,7 +213,7 @@ class InterpretabilityPlotting:
             xdata = feature_dict[feature][model_names[0]]['xdata1']
             hist_data = feature_dict[feature][model_names[0]]['hist_data']
             # add histogram
-            self.add_histogram_axis(ax, np.clip(hist_data, xdata[0], xdata[-1]))
+            self.add_histogram_axis(ax, xdata)
             # Set x-axis label as the feature name 
             ax.set_xlabel(feature, fontsize=10)
             
