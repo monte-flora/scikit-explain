@@ -1,6 +1,6 @@
 # MintPy (Model INTerpretability in Python) 
 
-![MintPyLogo](https://github.com/monte-flora/MintPy/blob/master/MintPyLogo.png)
+![MintPyLogo](https://github.com/monte-flora/MintPy/blob/master/MintPyLogo.png=250x)
 
 MintPy is designed to be a user-friendly package for computing and plotting machine learning interpretation output. Current computation includes partial dependence (PD), accumulated local effects (ALE), feature contributions (random forest only), and permutation importance. All of these methods are discussed at length in Christoph Molnar's interpretable ML book (https://christophm.github.io/interpretable-ml-book/). The calculations for PDP and ALE can be performed in parallel when multi-core processing is available. The accompanying built-in plotting methods are desgined to be easy to use and publication-level quality 
 
