@@ -79,16 +79,10 @@ def run_parallel( func, args_iterator, kwargs, nprocs_to_use, ):
                 
     pool.close()
     pool.join()
-    
-    # ... something is wrong here ... #
+
     # list of dicts
     results = [result.get() for result in result_objects]
 
-<<<<<<< HEAD
-=======
-    results = dict(ChainMap(*results))
-    
->>>>>>> 3afc26645a06a7f82f062ea5e1edd03cc8d702ef
     return results
 
 

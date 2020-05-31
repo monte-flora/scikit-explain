@@ -127,17 +127,11 @@ class InterpretabilityPlotting:
 
         linewidth = kwargs.get('linewidth', 2.0)
         linestyle = kwargs.get('linestyle', '-')
-<<<<<<< HEAD
-        
+
         if 'color' not in kwargs:
             kwargs['color'] = blue
     
         ax.plot(xdata, ydata, linewidth=linewidth, linestyle=linestyle, **kwargs)
-=======
-        color = kwargs.get('color', 'blue')
-
-        ax.plot(xdata, ydata, color=color, linewidth=linewidth, linestyle=linestyle)
->>>>>>> 3afc26645a06a7f82f062ea5e1edd03cc8d702ef
 
     def confidence_interval_plot(self, ax, xdata, ydata, **kwargs):
         """
