@@ -1,5 +1,34 @@
 import numpy as np
+import pickle
 
+
+def load_pickle(fname):
+    """
+    Load data from a pickle file.
+    """
+    with open(fname,'rb') as pkl_file:
+        data = pickle.load(pkl_file)
+        
+    return data
+    
+def save_pickle(fname,data):
+    """
+    Save data to a pickle file.
+    """
+    with open(fname,'wb') as pkl_file:
+        pickle.load(data, pkl_file)
+        
+def combine_top_features(results_dict,nvars):
+    """
+    """
+    combined_features = []
+    for model_name in results_dict.keys():
+        features = results_dict[model_name][:nvars]
+        combined_features.extend(features)
+    unique_features = list(set(combined_features))
+    
+    return unique_features
+    
 def compute_bootstrap_samples(examples, subsample=1.0, nbootstrap=None):
 
     """

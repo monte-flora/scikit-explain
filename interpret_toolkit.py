@@ -70,7 +70,7 @@ class InterpretToolkit:
                 self._examples      = pd.DataFrame(data=examples, columns=feature_names)
         else:
             self._feature_names  = examples.columns.to_list()
-
+            
         self._classification = classification
 
         # initialize a PD object
@@ -89,7 +89,39 @@ class InterpretToolkit:
     def __str__(self):
 
         return '{}'.format(self._models)
+    
+    def get_top_feature(self, results, multipass=True):
+        """
+        Return a list of the important features stored in the 
+        ImportanceObject 
+        
+        Args:
+        -------------------
+            results : python object
+                ImportanceObject from PermutationImportance
+            multipass : boolean
+                if True, returns the multipass permutation importance results
+                else returns the singlepass permutation importance results
+                
+        Returns:
+            top_features : list
+                a list of features with order determined by 
+                the permutation importance method
+        """
+        important_vars_dict = {}
+        for model_name in results.keys():
+            perm_imp_obj = results[model_name]
+            rankings = (
+                perm_imp_obj.retrieve_multipass()
+                if multipass
+                else perm_imp_obj.retrieve_singlepass()
+            )
+            features = list(rankings.keys())
+            important_vars_dict[model_name] = features
+            
+        return important_vars_dict
 
+        
     def run_pd(self, features=None, **kwargs):
         """
             Runs the partial dependence calculation and populates a dictionary with all
@@ -114,7 +146,7 @@ class InterpretToolkit:
 
         return self.pd_dict
 
-    def plot_pd(self, **kwargs):
+    def plot_pd(self, readable_feature_names={}, feature_units={}, **kwargs):
         """
             Plots the PD. If the first instance is a tuple, then a 2-D plot is
             assumed, else 1-D.
@@ -123,9 +155,15 @@ class InterpretToolkit:
         kwargs['wspace'] = 0.6
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance(list(self.pd_dict.keys())[0], tuple):
-            return self._clarify_plot_obj.plot_2d_field(self.pd_dict, **kwargs)
+            return self._clarify_plot_obj.plot_2d_field(self.pd_dict, 
+                                                        readable_feature_names=readable_feature_names, 
+                                                        feature_units=feature_units, 
+                                                        **kwargs)
         else:
-            return self._clarify_plot_obj.plot_1d_curve(self.pd_dict, **kwargs)
+            return self._clarify_plot_obj.plot_1d_curve(self.pd_dict, 
+                                                        readable_feature_names=readable_feature_names, 
+                                                        feature_units=feature_units, 
+                                                        **kwargs)
 
     def run_ale(self, features=None, **kwargs):
         """
@@ -152,7 +190,7 @@ class InterpretToolkit:
         return self.ale_dict
 
 
-    def plot_ale(self, **kwargs):
+    def plot_ale(self, readable_feature_names={}, feature_units={}, **kwargs):
         """
             Plots the ALE. If the first instance is a tuple, then a 2-D plot is
             assumed, else 1-D.
@@ -165,7 +203,10 @@ class InterpretToolkit:
             #return self._clarify_plot_obj.plot_2d_ale(self.pd_dict, **kwargs)
             return print("No 2D ALE plotting functionality yet... sorry!")
         else:
-            return self._clarify_plot_obj.plot_1d_curve(self.ale_dict, **kwargs)
+            return self._clarify_plot_obj.plot_1d_curve(self.ale_dict, 
+                                                        readable_feature_names=readable_feature_names, 
+                                                        feature_units=feature_units, 
+                                                        **kwargs)
 
 
     def get_indices_based_on_performance(self, model, n_examples=None):
