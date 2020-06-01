@@ -289,7 +289,6 @@ class InterpretabilityPlotting:
             xdata = feature_dict[feature][model_names[1]]["xdata1"]
             hist_data = feature_dict[feature][model_names[1]]["hist_data"]
             # add histogram
-            #self.add_histogram_axis(ax, hist_data)
             hist_ax = self.make_twin_ax(lineplt_ax)
             twin_yaxis_label=self.add_histogram_axis(hist_ax, hist_data)
     
@@ -317,7 +316,6 @@ class InterpretabilityPlotting:
             if add_zero_line:
                 lineplt_ax.axhline(y=0.0, color="k", alpha=0.8)
             lineplt_ax.set_yticks(self.calculate_ticks(lineplt_ax, 5))
-            # lineplt_ax.set_ylim([-10, 60])
 
         self.set_legend(n_panels, fig, lineplt_ax)
         kwargs['fontsize'] = majoraxis_fontsize
@@ -484,7 +482,9 @@ class InterpretabilityPlotting:
 
         ax.set_xlim([np.min(contrib) - neg_factor, np.max(contrib) + factor])
 
-        if key == "hits" or key == "false_alarms":
+        pos_contrib_ratio = float(sum(contrib[contrib>0])) / len(contrib)
+        
+        if pos_contrib_ratio > 0.5:
             ax.text(
                 0.685,
                 0.1,
@@ -508,7 +508,7 @@ class InterpretabilityPlotting:
                 transform=ax.transAxes,
             )
 
-        if key == "misses" or key == "corr_negs":
+        else:
             ax.text(
                 0.2,
                 0.90,
