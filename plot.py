@@ -256,9 +256,10 @@ class InterpretabilityPlotting:
         ax.yaxis.set_major_locator(MaxNLocator(5))
         ax.yaxis.set_major_locator(MaxNLocator(4))
         
-    def plot_1d_curve(self, feature_dict, readable_feature_names={}, feature_units={}, **kwargs):
+    def plot_1d_curve(self, feature_dict, readable_feature_names={}, 
+                      feature_units={}, unnormalize=None, **kwargs):
         """
-        Generic function for 1-D ALE and PD
+        Generic function for 1-D ALE and PD.
         """
         self.readable_feature_names = readable_feature_names
         self.feature_units = feature_units
@@ -286,8 +287,10 @@ class InterpretabilityPlotting:
         for lineplt_ax, feature in zip(axes.flat, feature_dict.keys()):
 
             model_names = list(feature_dict[feature].keys())
-            xdata = feature_dict[feature][model_names[1]]["xdata1"]
-            hist_data = feature_dict[feature][model_names[1]]["hist_data"]
+            xdata = feature_dict[feature][model_names[0]]["xdata1"]
+            hist_data = feature_dict[feature][model_names[0]]["hist_data"]
+            if unnormalize:
+                hist_data = unnormalize(hist_data)
             # add histogram
             hist_ax = self.make_twin_ax(lineplt_ax)
             twin_yaxis_label=self.add_histogram_axis(hist_ax, hist_data)
@@ -455,7 +458,7 @@ class InterpretabilityPlotting:
         ax.set_yticks(y_index)
         ax.set_yticklabels(varnames)
 
-        neg_factor = 1.75 if np.max(contrib) > 1.0 else 0.05
+        neg_factor = 1.75 if np.max(contrib) > 1.0 else 1.75
         factor = 0.25 if np.max(contrib) > 1.0 else 0.01
 
         for i, c in enumerate(np.round(contrib, 2)):

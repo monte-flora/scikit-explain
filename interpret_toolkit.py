@@ -17,7 +17,6 @@ list_of_acceptable_tree_models = [
     "ExtraTreesRegressor",
 ]
 
-
 class InterpretToolkit:
 
     """
