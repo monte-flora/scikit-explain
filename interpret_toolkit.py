@@ -151,7 +151,7 @@ class InterpretToolkit:
             Plots the PD. If the first instance is a tuple, then a 2-D plot is
             assumed, else 1-D.
         """
-        kwargs['right_yaxis_label'] = 'Mean Probability (%)'
+        kwargs['left_yaxis_label'] = 'Mean Probability (%)'
         kwargs['wspace'] = 0.6
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance(list(self.pd_dict.keys())[0], tuple):
@@ -195,7 +195,7 @@ class InterpretToolkit:
             Plots the ALE. If the first instance is a tuple, then a 2-D plot is
             assumed, else 1-D.
         """
-        kwargs['right_yaxis_label'] = 'Accumulated Local Effect (%)'
+        kwargs['left_yaxis_label'] = 'Accumulated Local Effect (%)'
         kwargs['wspace'] = 0.6
         kwargs['add_zero_line'] = True
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)

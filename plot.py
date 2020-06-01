@@ -3,8 +3,15 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import (MaxNLocator, FormatStrFormatter,
+                               AutoMinorLocator)
+from matplotlib import rcParams
+
 from .utils import combine_like_features, is_outlier
+
+
+# Setting the font style to serif
+rcParams['font.family'] = 'serif'
 
 # Set up the font sizes for matplotlib
 FONT_SIZE = 16
@@ -28,7 +35,7 @@ plt.rc("axes", titlesize=FONT_SIZE)
 plt.rc("axes", labelsize=FONT_SIZE)
 plt.rc("xtick", labelsize=TINY_FONT_SIZE - 2)
 plt.rc("ytick", labelsize=TEENSIE_FONT_SIZE)
-plt.rc("legend", fontsize=TEENSIE_FONT_SIZE)
+plt.rc("legend", fontsize=TEENSIE_FONT_SIZE+2)
 plt.rc("figure", titlesize=BIG_FONT_SIZE)
 
 line_colors = ["orangered", "darkviolet", "darkslategray", "darkorange", "darkgreen"]
@@ -48,8 +55,6 @@ class InterpretabilityPlotting:
         hspace = kwargs.get("hspace", 0.3)
         sharex = kwargs.get("sharex", False)
         sharey = kwargs.get("sharey", False)
-
-        print(wspace)
 
         n_rows = int(n_panels / n_columns)
         extra_row = 0 if (n_panels % n_columns) == 0 else 1
@@ -122,7 +127,7 @@ class InterpretabilityPlotting:
                 transform=ax.transAxes,
             )
 
-    def add_histogram_axis(self, ax, data,**kwargs):
+    def add_histogram_axis(self, ax, data, density=False, **kwargs):
         """
         Adds a background histogram of data for a given feature. 
         """
@@ -133,18 +138,23 @@ class InterpretabilityPlotting:
         min_value = np.percentile(data, 2.5)
         max_value = np.percentile(data, 97.5)
         
-        data = np.ma.masked_where(data<min_value, data)
-        data = np.ma.masked_where(data>max_value, data)
+        data = np.clip(data, a_min=min_value, a_max=max_value)
         
         cnt, bins, patches = ax.hist(
             data,
             bins="auto",
             alpha=0.3,
             color=color,
-            density=True,
+            density=density,
             edgecolor=edgecolor,
+            zorder=1
         )
-        self.plotted_histogram = True
+        ax.set_yscale("log")
+        ax.set_yticks([1e0, 1e1, 1e2])
+        if density:
+            return "Relative Frequency"
+        
+        return "Frequency"
 
     def line_plot(self, ax, xdata, ydata, label, **kwargs):
         """
@@ -157,7 +167,8 @@ class InterpretabilityPlotting:
         if "color" not in kwargs:
             kwargs["color"] = blue
 
-        ax.plot(xdata, ydata, linewidth=linewidth, linestyle=linestyle, label=label, **kwargs)
+        ax.plot(xdata, ydata, linewidth=linewidth, linestyle=linestyle, 
+                label=label, alpha=0.8, **kwargs, zorder=2)
 
     def confidence_interval_plot(self, ax, xdata, ydata, label, **kwargs):
         """
@@ -198,8 +209,18 @@ class InterpretabilityPlotting:
         """
         # align the twinx axis
         twin_ax = ax.twinx()
+        
+        # Turn twin_ax grid off.
         twin_ax.grid(False)
 
+        # Set ax's patch invisible
+        ax.patch.set_visible(False)
+        # Set axtwin's patch visible and colorize it in grey
+        twin_ax.patch.set_visible(True)
+
+        # move ax in front
+        ax.set_zorder(twin_ax.get_zorder() + 1)
+        
         return twin_ax
     
     def set_xlabel(self, ax, feature_name):
@@ -208,7 +229,7 @@ class InterpretabilityPlotting:
         """
         xaxis_label = self.readable_feature_names.get(feature_name, feature_name)
         units = self.feature_units.get(feature_name, '')
-        xaxis_label_with_units = f'{xaxis_label} ({units})'
+        xaxis_label_with_units = fr'{xaxis_label} ({units})'
         
         ax.set_xlabel(xaxis_label_with_units, fontsize=10)
         
@@ -218,9 +239,22 @@ class InterpretabilityPlotting:
         """
         handles, labels = ax.get_legend_handles_labels()
         # Put a legend below current axis
-        fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 0.05),
+        fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 0.06),
           fancybox=True, shadow=True, ncol=3)
  
+    def set_minor_ticks(self, ax):
+        """
+        Adds minor ticks to the x- and y-axis. 
+        """
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        
+    def set_n_ticks(self, ax):
+        """
+        Set the max number of ticks per x- and y-axis.
+        """
+        ax.yaxis.set_major_locator(MaxNLocator(5))
+        ax.yaxis.set_major_locator(MaxNLocator(4))
         
     def plot_1d_curve(self, feature_dict, readable_feature_names={}, feature_units={}, **kwargs):
         """
@@ -231,7 +265,7 @@ class InterpretabilityPlotting:
         ci_plot = kwargs.get("ci_plot", False)
         hspace = kwargs.get("hspace", 0.5)
         facecolor = kwargs.get("facecolor", "gray")
-        right_yaxis_label = kwargs.get("right_yaxis_label")
+        left_yaxis_label = kwargs.get("left_yaxis_label")
         add_zero_line = kwargs.get("add_zero_line", False)
 
         # get the number of panels which will be length of feature dictionary
@@ -249,15 +283,16 @@ class InterpretabilityPlotting:
         )
 
         # loop over each feature and add relevant plotting stuff
-        for ax, feature in zip(axes.flat, feature_dict.keys()):
+        for lineplt_ax, feature in zip(axes.flat, feature_dict.keys()):
 
             model_names = list(feature_dict[feature].keys())
             xdata = feature_dict[feature][model_names[1]]["xdata1"]
             hist_data = feature_dict[feature][model_names[1]]["hist_data"]
             # add histogram
-            self.add_histogram_axis(ax, hist_data)
-            lineplt_ax = self.make_twin_ax(ax)
-
+            #self.add_histogram_axis(ax, hist_data)
+            hist_ax = self.make_twin_ax(lineplt_ax)
+            twin_yaxis_label=self.add_histogram_axis(hist_ax, hist_data)
+    
             for i, model_name in enumerate(model_names):
 
                 ydata = feature_dict[feature][model_name]["values"]
@@ -273,12 +308,15 @@ class InterpretabilityPlotting:
                         label=model_name
                     )
                 else:
-                    self.line_plot(lineplt_ax, xdata, ydata[0, :], color=line_colors[i], label=model_name)
+                    self.line_plot(lineplt_ax, xdata, ydata[0, :], 
+                                   color=line_colors[i], label=model_name.replace('Classifier',''))
 
-            self.set_xlabel(ax, feature)
+            self.set_n_ticks(lineplt_ax)
+            self.set_minor_ticks(lineplt_ax)
+            self.set_xlabel(lineplt_ax, feature)
             if add_zero_line:
                 lineplt_ax.axhline(y=0.0, color="k", alpha=0.8)
-            lineplt_ax.set_yticks(self.calculate_ticks(lineplt_ax, 10))
+            lineplt_ax.set_yticks(self.calculate_ticks(lineplt_ax, 5))
             # lineplt_ax.set_ylim([-10, 60])
 
         self.set_legend(n_panels, fig, lineplt_ax)
@@ -286,8 +324,8 @@ class InterpretabilityPlotting:
         self.set_major_axis_labels(
             fig,
             xlabel=None,
-            ylabel_left="Relative Frequency",
-            ylabel_right=right_yaxis_label,
+            ylabel_left=left_yaxis_label,
+            ylabel_right=twin_yaxis_label,
             **kwargs,
         )
 
