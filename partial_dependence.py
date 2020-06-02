@@ -131,7 +131,7 @@ class PartialDependence:
 
         # define bins based on 10th and 90th percentiles
         x1vals = np.linspace(
-            np.percentile(column_of_data, 5), np.percentile(column_of_data, 95), num=20
+            np.percentile(column_of_data, 2.5), np.percentile(column_of_data, 97.5), num=20
         )
 
         # get the bootstrap samples
@@ -171,7 +171,7 @@ class PartialDependence:
         return results
                 
             
-    def compute_2d_partial_dependence(self, model_name, feature=None, **kwargs):
+    def compute_2d_partial_dependence(self, model_name, feature_tuple, **kwargs):
 
         """
         Calculate the partial dependence between two features.
@@ -184,26 +184,30 @@ class PartialDependence:
         subsample  = kwargs.get('subsample', 1.0)
         nbootstrap = kwargs.get('nbootstrap', 1)
         model =  self._models[model_name]
+        
+        print(f'model name : {model_name}')
+        print(f'feature tuple : {feature_tuple}')
 
         # make sure there are two features...
-        assert(len(feature) == 2), "Size of features must be equal to 2."
+        assert(len(feature_tuple) == 2), "Size of features must be equal to 2."
 
         # check to make sure feature is valid
-        if (feature[0] not in self._feature_names): 
-            raise TypeError(f'Feature {feature[0]} is not a valid feature')
-        if (feature[1] not in self._feature_names): 
-            raise TypeError(f'Feature {feature[1]} is not a valid feature')
+        if (feature_tuple[0] not in self._feature_names): 
+            raise TypeError(f'Feature {feature_tuple[0]} is not a valid feature')
+        if (feature_tuple[1] not in self._feature_names): 
+            raise TypeError(f'Feature {feature_tuple[1]} is not a valid feature')
 
-        if x1vals is None:
-            # ensures each bin gets the same number of examples
-            x1vals = np.percentile(self._examples[feature[0]].values, 
-                                         np.arange(2.5, 97.5 + 5, 5))
 
-        if x2vals is None:
-            # ensures each bin gets the same number of examples
-            x2vals = np.percentile(self._examples[feature[1]].values, 
-                                         np.arange(2.5, 97.5 + 5, 5))
+        # ensures each bin gets the same number of examples
+        x1vals = np.percentile(self._examples[feature_tuple[0]].values, 
+                                         np.arange(2.5, 97.5 + 5, 15))
 
+        # ensures each bin gets the same number of examples
+        x2vals = np.percentile(self._examples[feature_tuple[1]].values, 
+                                         np.arange(2.5, 97.5 + 5, 15))
+
+        
+        
         # get the bootstrap samples
         if nbootstrap > 1:
             bootstrap_examples = compute_bootstrap_samples(self._examples, 
@@ -226,8 +230,8 @@ class PartialDependence:
             for i, value1 in enumerate(x1vals):
                 for j, value2 in enumerate(x2vals):
 
-                    examples.loc[feature[0]] = value1
-                    examples.loc[feature[1]] = value2
+                    examples.loc[feature_tuple[0]] = value1
+                    examples.loc[feature_tuple[1]] = value2
 
                     if self._classification is True:
                         predictions = model.predict_proba(examples)[:, 1] * 100.
@@ -235,12 +239,11 @@ class PartialDependence:
                         predictions = model.predict(examples)
 
                     pdp_values[k,i,j] = np.mean(predictions)
-
-        temp_dict = { }
-        temp_dict[feature] = {}
-        temp_dict[feature][model_name] = {}
-        temp_dict[feature][model_name]['values'] = pdp_values
-        temp_dict[feature][model_name]['xdata1'] = x1vals
-        temp_dict[feature][model_name]['xdata2'] = x2vals
+           
+        results = {feature_tuple : {model_name :{}}}
+        results[feature_tuple][model_name]['values'] = pdp_values
+        results[feature_tuple][model_name]['xdata1'] = x1vals
+        results[feature_tuple][model_name]['xdata2'] = x2vals
         
-        return temp_dict
+        return results
+    

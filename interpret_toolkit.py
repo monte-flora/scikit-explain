@@ -20,17 +20,27 @@ list_of_acceptable_tree_models = [
 class InterpretToolkit:
 
     """
-    Class for running various ML model interpretations.
+    InterpretToolkit contains computations for various machine learning model 
+    interpretations and plotting subroutines for producing publication-quality 
+    figures. InterpretToolkit initialize companion classes for the computation 
+    and plotting. 
 
-    Args:
-        model : a trained single scikit-learn model, or list of scikit-learn models, or
-            dictionary of models where the key is a generic name and the value
-            is a train model.
-        examples : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
-            to specify the feature names
-        targets: list or numpy array of targets/labels. List converted to numpy array
+    Attributes:
+        model : object, list, or dict
+            a trained single scikit-learn model, or list of scikit-learn models, or
+            dictionary of models where the key-value pairs are the model name as 
+            a string and prefit model object.
+            
+        examples : pandas.DataFrame or ndnumpy.array; shape = (n_examples, n_features)
+            training or validation examples to evaluate.
+            If ndnumpy array, make sure to specify the feature names
+            
+        targets: list or numpy.array 
+            Target values.  
+            
         classification: defaults to True for classification problems.
             Set to false otherwise.
+            
         feature_names : defaults to None. Should only be set if examples is a
             nd.numpy array. Make sure it's a list
     """
@@ -38,39 +48,14 @@ class InterpretToolkit:
     def __init__(self, model=None, examples=None, targets=None, classification=True,
             feature_names=None):
 
-        # if model is of type list or single objection, convert to dictionary
-        if not isinstance(model, dict):
-            if isinstance(model, list):
-                self._models = {type(m).__name__ : m for m in model}
-            else:
-                self._models = {type(model).__name__ : model}
-        # user provided a dict
+        self.check_model_attribute(model)
+        self.check_target_attribute(targets)
+        self.check_examples_attribute(examples)
+        
+        if len(np.unique(targets)) == 2:
+            self._classification = True
         else:
-            self._models = model
-
-        self._examples = examples
-
-        # check that targets are assigned correctly
-        if isinstance(targets, list):
-            self._targets = np.array(targets)
-        elif isinstance(targets, np.ndarray):
-            self._targets = targets
-        elif isinstance(targets, (pd.DataFrame, pd.Series)):
-            self._targets = targets.values
-        else:
-            raise TypeError('Target variable must be numpy array or pandas.DataFrame.')
-
-        # make sure data is the form of a pandas dataframe regardless of input type
-        if isinstance(self._examples, np.ndarray):
-            if (feature_names is None):
-                raise Exception('Feature names must be specified if using NumPy array.')
-            else:
-                self._feature_names = feature_names
-                self._examples      = pd.DataFrame(data=examples, columns=feature_names)
-        else:
-            self._feature_names  = examples.columns.to_list()
-            
-        self._classification = classification
+            self._classification = classification
 
         # initialize a PD object
         self._pdp_object = PartialDependence(model=model, examples=examples,
@@ -85,6 +70,55 @@ class InterpretToolkit:
         # initialize a plotting object
         self._clarify_plot_obj = InterpretabilityPlotting()
 
+    def check_model_attribute(self, model):
+        """
+        Checks the type of the model attribute. 
+        If a list or not a dict, then the model argument
+        is converted to a dict for processing. 
+        
+        Args:
+        ----------
+            model : object, list, or dict 
+        """
+         # if model is of type list or single objection, convert to dictionary
+        if not isinstance(model, dict):
+            if isinstance(model, list):
+                self._models = {type(m).__name__ : m for m in model}
+            else:
+                self._models = {type(model).__name__ : model}
+        # user provided a dict
+        else:
+            self._models = model
+    
+    def check_target_attribute(self, targets):
+        """
+        Checks the type of the targets attribute. 
+        """
+         # check that targets are assigned correctly
+        if isinstance(targets, list):
+            self._targets = np.array(targets)
+        elif isinstance(targets, np.ndarray):
+            self._targets = targets
+        elif isinstance(targets, (pd.DataFrame, pd.Series)):
+            self._targets = targets.values
+        else:
+            raise TypeError('Target variable must be numpy array or pandas.DataFrame.')
+            
+    def check_examples_attribute(self, examples):
+        """
+        Check the type of the examples attribute.
+        """
+        # make sure data is the form of a pandas dataframe regardless of input type
+        if isinstance(examples, np.ndarray):
+            if (feature_names is None):
+                raise Exception('Feature names must be specified if using NumPy array.')
+            else:
+                self._feature_names = feature_names
+                self._examples      = pd.DataFrame(data=examples, columns=feature_names)
+        else:
+            self._examples = examples
+            self._feature_names  = examples.columns.to_list()
+        
     def __str__(self):
 
         return '{}'.format(self._models)
@@ -121,7 +155,7 @@ class InterpretToolkit:
         return important_vars_dict
 
         
-    def run_pd(self, features=None, **kwargs):
+    def run_pd(self, features, **kwargs):
         """
             Runs the partial dependence calculation and populates a dictionary with all
             necessary inputs for plotting.
@@ -152,9 +186,10 @@ class InterpretToolkit:
         """
         kwargs['left_yaxis_label'] = 'Mean Probability (%)'
         kwargs['wspace'] = 0.6
+        kwargs['plot_type'] ='pdp'
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance(list(self.pd_dict.keys())[0], tuple):
-            return self._clarify_plot_obj.plot_2d_field(self.pd_dict, 
+            return self._clarify_plot_obj.plot_contours(self.pd_dict, 
                                                         readable_feature_names=readable_feature_names, 
                                                         feature_units=feature_units, 
                                                         **kwargs)
@@ -197,10 +232,13 @@ class InterpretToolkit:
         kwargs['left_yaxis_label'] = 'Accumulated Local Effect (%)'
         kwargs['wspace'] = 0.6
         kwargs['add_zero_line'] = True
+        kwargs['plot_type'] ='ale'
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance(list(self.ale_dict.keys())[0], tuple):
-            #return self._clarify_plot_obj.plot_2d_ale(self.pd_dict, **kwargs)
-            return print("No 2D ALE plotting functionality yet... sorry!")
+            return self._clarify_plot_obj.plot_contours(self.ale_dict, 
+                                                        readable_feature_names=readable_feature_names, 
+                                                        feature_units=feature_units, 
+                                                        **kwargs)
         else:
             return self._clarify_plot_obj.plot_1d_curve(self.ale_dict, 
                                                         readable_feature_names=readable_feature_names, 
@@ -452,9 +490,13 @@ class InterpretToolkit:
         return self.ti_dict
 
 
-    def plot_tree_interpreter(self, **kwargs):
+    def plot_tree_interpreter(self, to_only_varname=None, 
+                              readable_feature_names={}, **kwargs):
 
-        return self._clarify_plot_obj.plot_treeinterpret(self.ti_dict, **kwargs)
+        return self._clarify_plot_obj.plot_treeinterpret(self.ti_dict, 
+                                                         to_only_varname=to_only_varname,
+                                                         readable_feature_names=readable_feature_names, 
+                                                         **kwargs)
 
     def permutation_importance(self, n_vars=5, evaluation_fn="auprc",
             subsample=1.0, njobs=1, nbootstrap=1):

@@ -6,9 +6,21 @@ import numpy as np
 from matplotlib.ticker import (MaxNLocator, FormatStrFormatter,
                                AutoMinorLocator)
 from matplotlib import rcParams
+from matplotlib.colors import ListedColormap
 
 from .utils import combine_like_features, is_outlier
 
+
+pdp_cmap = ListedColormap(['lightcyan', 
+                      'paleturquoise',
+                      'lightblue',
+                       'bisque',
+                       'wheat',
+                       'salmon',
+                       'orangered',
+                       'plum',
+                       'blueviolet'
+                      ])
 
 # Setting the font style to serif
 rcParams['font.family'] = 'serif'
@@ -223,15 +235,22 @@ class InterpretabilityPlotting:
         
         return twin_ax
     
-    def set_xlabel(self, ax, feature_name):
+    def set_axis_label(self, ax, xaxis_label=None, yaxis_label = None):
         """
-        Setting the x-axis label of the plot_1d_curve panels.
+        Setting the x- and y-axis labels.
         """
-        xaxis_label = self.readable_feature_names.get(feature_name, feature_name)
-        units = self.feature_units.get(feature_name, '')
-        xaxis_label_with_units = fr'{xaxis_label} ({units})'
+        if xaxis_label is not None: 
+            xaxis_label_pretty = self.readable_feature_names.get(xaxis_label, xaxis_label)
+            units = self.feature_units.get(xaxis_label, '')
+            xaxis_label_with_units = fr'{xaxis_label_pretty} ({units})'
         
-        ax.set_xlabel(xaxis_label_with_units, fontsize=10)
+            ax.set_xlabel(xaxis_label_with_units, fontsize=10)
+        
+        if yaxis_label is not None: 
+            yaxis_label_pretty = self.readable_feature_names.get(yaxis_label, yaxis_label)
+            units = self.feature_units.get(yaxis_label, '')
+            yaxis_label_with_units = fr'{yaxis_label_pretty} ({units})'
+            ax.set_ylabel(yaxis_label_with_units, fontsize=10)
         
     def set_legend(self, n_panels, fig, ax):
         """
@@ -315,7 +334,7 @@ class InterpretabilityPlotting:
 
             self.set_n_ticks(lineplt_ax)
             self.set_minor_ticks(lineplt_ax)
-            self.set_xlabel(lineplt_ax, feature)
+            self.set_axis_label(lineplt_ax, xaxis_label=feature)
             if add_zero_line:
                 lineplt_ax.axhline(y=0.0, color="k", alpha=0.8)
             lineplt_ax.set_yticks(self.calculate_ticks(lineplt_ax, 5))
@@ -332,62 +351,102 @@ class InterpretabilityPlotting:
 
         return fig, axes
 
-    def plot_2d_pd(self, feature_dict, **kwargs):
+    def plot_contours(self, feature_dict, readable_feature_names={}, 
+                      feature_units={}, **kwargs):
 
         """
         Generic function for 2-D PDP
         """
-
+        self.readable_feature_names = readable_feature_names
+        self.feature_units = feature_units
+        
         hspace = kwargs.get("hspace", 0.5)
-        ylim = kwargs.get("ylim", [25, 50])
-        cmap = kwargs.get("cmap", "bwr")
-        levels = 20
+        wspace = kwargs.get("wspace", 0.6)
+        #ylim = kwargs.get("ylim", [25, 50])
+        
+        if kwargs["plot_type"] == 'ale':
+            cmap = "bwr"
+        elif kwargs["plot_type"] == 'pdp': 
+            cmap = pdp_cmap
+        colorbar_label = kwargs.get("left_yaxis_label")
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(feature_dict.keys())
 
         # create subplots, one for each feature
         fig, axes = self.create_subplots(
-            n_panels=n_panels, hspace=hspace, figsize=(8, 6)
+            n_panels=n_panels, hspace=hspace, wspace=0.6, figsize=(6, 3)
         )
+        
+        max_z = [ ]
+        min_z = [ ]
+        for ax, feature in zip(axes.flat, feature_dict.keys()):
+            model_names = list(feature_dict[feature].keys())
+            zdata = feature_dict[feature][model_names[0]]["values"]
+            max_z.append(np.max(np.mean(zdata,axis=0)))
+            min_z.append(np.min(np.mean(zdata,axis=0)))
+        
+        if kwargs["plot_type"] =='pdp':
+            colorbar_rng = np.round( np.linspace(np.min(min_z), np.max(max_z), 6), 1)
+        elif kwargs["plot_type"] == 'ale':
+            peak = max(abs(np.min(min_z)), abs(np.max(max_z)))
+            print(-peak, peak)
+            colorbar_rng = np.linspace(-0.5,0.5, 10)
+       
 
         # loop over each feature and add relevant plotting stuff
         for ax, feature in zip(axes.flat, feature_dict.keys()):
-
-            xdata1 = feature_dict[feature]["xdata1"]
-            xdata2 = feature_dict[feature]["xdata2"]
-            ydata = feature_dict[feature]["pd_values"]
+            model_names = list(feature_dict[feature].keys())
+            xdata1 = feature_dict[feature][model_names[0]]["xdata1"]
+            xdata2 = feature_dict[feature][model_names[0]]["xdata2"]
+            zdata = feature_dict[feature][model_names[0]]["values"]
 
             # can only do a contour plot with 2-d data
-            x, y = np.mesh(xdata1, xdata2)
+            x1, x2 = np.meshgrid(xdata1, xdata2)
 
-            cf = ax.contourf(x, y, ydata[0, :, :], cmap=cmap, levels=levels, alpha=0.75)
+            # Get the mean of the bootstrapping. 
+            if zdata.shape[0] > 1:
+                zdata = np.mean(zdata, axis=0)
+            
+            cf = ax.contourf(x1, x2, zdata.squeeze(), cmap=cmap, levels=colorbar_rng, alpha=0.75)
+            ax.contour(x1, x2, zdata.squeeze(), levels=colorbar_rng, alpha=0.5, linewidths=0.5, colors='k')
 
-            fig.colorbar(cf, ax)
-
-            ax.set_xlabel(feature[0], fontsize=10)
-            ax.set_ylabel(feature[1], fontsize=10)
-
-            ax.set_ylim(ylim)
-
-        self.set_major_axis_labels(
-            fig,
-            xlabel=None,
-            ylabel_left="Relative Frequency",
-            ylabel_right="Mean Probability (%)",
-            **kwargs,
-        )
-
-        plt.show()
+            self.set_minor_ticks(ax)
+            self.set_axis_label(ax, 
+                                xaxis_label=feature[0], 
+                                yaxis_label=feature[1]
+                               )
+            #ax.set_ylim(ylim)
+        fig.suptitle(model_names[0].replace('Classifier', ''), x=0.5, y=1.05, fontsize=12)
+        cbar = fig.colorbar(cf, ax=axes.ravel().tolist(), 
+                            shrink=0.65,
+                            orientation = 'horizontal',
+                            label = colorbar_label,
+                            pad=0.335,
+                           )
+                           
+        #cbar.set_yticks(self.calculate_ticks(ax, 5))
+        #cbar.set_ticklabels(['low', 'medium', 'high'])
 
         return fig, axes
 
+    def set_tick_labels(self, ax, feature_names, readable_feature_names):
+        """
+        Setting the tick labels for the tree interpreter plots. 
+        """
+        labels = [readable_feature_names.get(feature_name, 
+                                             feature_name) 
+                  for feature_name in feature_names ]
+        labels = [fr'{l}' for l in labels] 
+        ax.set_yticklabels(labels)
+    
     def _ti_plot(
         self,
         dict_to_use,
         key,
         ax=None,
         to_only_varname=None,
+        readable_feature_names={}, 
         n_vars=12,
         other_label="Other Predictors",
     ):
@@ -456,7 +515,7 @@ class InterpretabilityPlotting:
             ax.axvline(x=tick, linestyle="dashed", alpha=0.4, color="#eeeeee", zorder=1)
 
         ax.set_yticks(y_index)
-        ax.set_yticklabels(varnames)
+        self.set_tick_labels(ax, varnames, readable_feature_names)
 
         neg_factor = 1.75 if np.max(contrib) > 1.0 else 1.75
         factor = 0.25 if np.max(contrib) > 1.0 else 0.01
@@ -538,7 +597,8 @@ class InterpretabilityPlotting:
         # make the horizontal plot go with the highest value at the top
         ax.invert_yaxis()
 
-    def plot_treeinterpret(self, result_dict, to_only_varname=None, **kwargs):
+    def plot_treeinterpret(self, result_dict, to_only_varname=None, 
+                           readable_feature_names={}, **kwargs):
         """
         Plot the results of tree interpret
 
@@ -562,7 +622,8 @@ class InterpretabilityPlotting:
             if "all_data" in result_dict[model_name].keys():
 
                 fig = self._ti_plot(
-                    result_dict[model_name]["all_data"], to_only_varname=to_only_varname
+                    result_dict[model_name]["all_data"], to_only_varname=to_only_varname,
+                    readable_feature_names=readable_feature_names
                 )
 
             # must be performanced based
@@ -588,6 +649,7 @@ class InterpretabilityPlotting:
                         ax=sax,
                         key=perf_key,
                         to_only_varname=to_only_varname,
+                        readable_feature_names=readable_feature_names
                     )
                     sax.set_title(perf_key.upper().replace("_", " "), fontsize=15)
 

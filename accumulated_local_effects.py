@@ -83,7 +83,7 @@ class AccumulatedLocalEffects:
             
         self._dict_out = results
             
-    def calculate_first_order_ale(self, model_name, feature, **kwargs):
+    def calculate_first_order_ale(self, model_name, feature, nbins=15, **kwargs):
 
         """
             Computes first-order ALE function on single continuous feature data.
@@ -106,8 +106,8 @@ class AccumulatedLocalEffects:
         
         # Find the ranges to calculate the local effects over
         # Using xdata ensures each bin gets the same number of examples
-        x1vals = np.percentile(self._examples[feature].values, np.arange(2.5, 97.5 + 5, 5))
-
+        x1vals = np.percentile(self._examples[feature].values, np.arange(2.5, 97.5 + 5, nbins))
+        
         # get data in numpy format
         column_of_data = self._examples[feature].to_numpy()
 
@@ -171,7 +171,7 @@ class AccumulatedLocalEffects:
         
         return results
     
-    def calculate_second_order_ale(self, model_name, feature, **kwargs):
+    def calculate_second_order_ale(self, model_name, features, **kwargs):
         """
             Computes second-order ALE function on two continuous features data.
 
@@ -182,25 +182,37 @@ class AccumulatedLocalEffects:
             xdata : array
                 Quantiles of feature.
         """
+        subsample  = kwargs.get('subsample', 1.0)
+        nbootstrap = kwargs.get('nbootstrap', 1)
         model =  self._models[model_name]
         
         # make sure there are two features...
-        assert(len(feature) == 2), "Size of features must be equal to 2."
+        assert(len(features) == 2), "Size of features must be equal to 2."
 
         # check to make sure both features are valid
-        if (feature[0] not in self._feature_names): 
+        if (features[0] not in self._feature_names): 
             raise TypeError(f'Feature {features[0]} is not a valid feature')
 
-        if (feature[1] not in self._feature_names): 
+        if (features[1] not in self._feature_names): 
             raise TypeError(f'Feature {features[1]} is not a valid feature')
 
         # create bins for computation for both features
-        if x1vals is None:
-            x1vals = np.percentile(self._examples[feature[0]].values, np.arange(2.5, 97.5 + 5, 5))
-          
-        if x2vals is None: 
-            x2vals = np.percentile(self._examples[feature[1]].values, np.arange(2.5, 97.5 + 5, 5))
+        x1vals = np.percentile(self._examples[features[0]].values, np.arange(2.5, 97.5 + 5, 15))
+        x2vals = np.percentile(self._examples[features[1]].values, np.arange(2.5, 97.5 + 5, 15))
 
+        """
+        bins = 15
+        x1vals = np.unique(
+        np.quantile(
+            self._examples[features[0]].values, np.linspace(0, 1, bins + 1), interpolation="lower"
+            )
+            )
+        x2vals = np.unique(
+        np.quantile(
+            self._examples[features[1]].values, np.linspace(0, 1, bins + 1), interpolation="lower"
+            )
+            )
+        """
         # get the bootstrap samples
         if nbootstrap > 1:
             bootstrap_examples = compute_bootstrap_samples(self._examples, 
@@ -210,7 +222,7 @@ class AccumulatedLocalEffects:
             bootstrap_examples = [self._examples.index.to_list()]
 
         # define ALE array as 3D
-        ale = np.zeros((nbootstrap, x1vals.shape[1] - 1, x1vals.shape[1] - 1))
+        ale = np.zeros((nbootstrap, len(x1vals) - 1, len(x2vals) - 1))
 
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_examples):
@@ -220,7 +232,7 @@ class AccumulatedLocalEffects:
 
             # compute calculation over 2-d space
             for i in range(1, x1vals.shape[0]):
-                for j in range(1, x1vals.shape[1]):
+                for j in range(1, x2vals.shape[0]):
 
                     # Select subset of training data that falls within subset
                     df_subset = examples[ (examples[features[0]] >= x1vals[i - 1])
@@ -255,18 +267,18 @@ class AccumulatedLocalEffects:
                             effect = (model.predict(z_up[1]) - model.predict(z_up[0])
                                    - (model.predict(z_low[1]) - model.predict(z_low[0])))
 
-                        ale[i - 1, j - 1] = np.mean(effect)
+                        ale[k, i - 1, j - 1] = np.mean(effect)
 
             # The accumulated effect
-            ale[k,:,:] = np.cumsum(ale, axis=0)
+            ale[k,:,:] = np.cumsum(np.cumsum(ale[k,:,:],axis=1), axis=0)
 
             # Now we have to center ALE function in order to obtain null expectation for ALE function
-            ale[k,:,:] -= ale.mean()
+            ale[k,:,:] -= ale[k,:,:].mean()
         
-        temp_dict = {model_name : {feature :{}}}
-        temp_dict[model_name][feature]['values'] = ale
-        temp_dict[model_name][feature]['xdata1']  = 0.5 * (x1vals[1:] + x1vals[:-1])
-        temp_dict[model_name][feature]['xdata2']  = 0.5 * (x2vals[1:] + x2vals[:-1])
+        results = {features : {model_name :{}}}
+        results[features][model_name]['values'] = ale
+        results[features][model_name]['xdata1'] = 0.5 * (x1vals[1:] + x1vals[:-1])
+        results[features][model_name]['xdata2'] = 0.5 * (x2vals[1:] + x2vals[:-1])
         
-        return temp_dict
+        return results
         
