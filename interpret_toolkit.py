@@ -54,7 +54,7 @@ class InterpretToolkit:
         self.check_target_attribute(targets)
         self.check_examples_attribute(examples)
         
-        if len(np.unique(targets)) == 2:
+        if len(np.unique(targets)) == 2 and targets is not None:
             self._classification = True
         else:
             self._classification = classification
@@ -104,7 +104,8 @@ class InterpretToolkit:
         elif isinstance(targets, (pd.DataFrame, pd.Series)):
             self._targets = targets.values
         else:
-            raise TypeError('Target variable must be numpy array or pandas.DataFrame.')
+            if targets is not None:
+                raise TypeError('Target variable must be numpy array or pandas.DataFrame.')
             
     def check_examples_attribute(self, examples):
         """
@@ -119,6 +120,8 @@ class InterpretToolkit:
                 self._examples      = pd.DataFrame(data=examples, columns=feature_names)
         else:
             self._examples = examples
+        
+        if examples is not None:
             self._feature_names  = examples.columns.to_list()
         
     def __str__(self):
@@ -130,6 +133,20 @@ class InterpretToolkit:
         Returns the top predictors for each model from an ImportanceResults object
         """
         return retrieve_important_vars(results, multipass=True)
+    
+    def set_results(self, results, option):
+        """ Set result dict from PermutationImportance as 
+            attribute
+        """
+        available_options = {'permutation_importance' : 'pi_dict',
+                             'pdp' : 'pd_dict',
+                             'ale' : 'ale_dict',
+                             'tree_interpret' : 'ti_dict'
+                            }
+        if option not in list(available_options.keys()):
+            raise ValueError(f'{option} is not a possible option!')
+        
+        setattr(self, available_options[option], results)
     
     def save_figure(self, fig, 
                     fname, bbox_inches='tight', 

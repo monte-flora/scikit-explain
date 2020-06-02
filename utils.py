@@ -1,22 +1,32 @@
 import numpy as np
 import pickle
 import pandas as pd
+from collections import ChainMap
 
-def load_pickle(fname):
+
+def is_all_dict(alist):
+    """ Check if every element of a list are dicts """
+    return all([isinstance(l, dict) for l in alist])
+
+def load_pickle(fnames):
     """
-    Load data from a pickle file.
+    Load data from a list of pickle files as dict
+    where the keys are provided by the user
     """
-    with open(fname,'rb') as pkl_file:
-        data = pickle.load(pkl_file)
-        
-    return data
+    data=[]
+    for f in fnames:
+        with open(f,'rb') as pkl_file:
+            data.append( pickle.load(pkl_file) )
+       
+    if is_all_dict(data):
+        return merge_dict(data)
+    else:
+        return data
     
-def save_pickle(fname,data):
-    """
-    Save data to a pickle file.
-    """
+def save_pickle(fname, data):
+    """Save data to a pickle file."""
     with open(fname,'wb') as pkl_file:
-        pickle.load(data, pkl_file)
+        pickle.dump(data, pkl_file)
         
 def combine_top_features(results_dict,nvars):
     """
@@ -69,17 +79,22 @@ def combine_like_features(contrib, varnames):
 
         return new_contrib, new_varnames
 
+def merge_dict(dicts):
+    """Merge a list of dicts into a single dict """
+    return dict(ChainMap(*dicts))
+   
 def merge_nested_dict(dicts):
     """
     Merge a list of nested dicts into a single dict
     """
     merged_dict = {}
     for d in dicts:
-        key = list(d.keys())[0]
-        subkey = list(d[key].keys())[0]
-        if key not in list(merged_dict.keys()):
-            merged_dict[key] = {subkey: {}}
-        merged_dict[key][subkey] = d[key][subkey]
+        for key in d.keys():
+            for subkey in d[key].keys():
+                if key not in list(merged_dict.keys()):
+                    merged_dict[key] = {subkey: {}}
+                merged_dict[key][subkey] = d[key][subkey]
+                
     return merged_dict
 
 def is_outlier(points, thresh=3.5):

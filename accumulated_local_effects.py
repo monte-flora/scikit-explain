@@ -2,41 +2,58 @@ import numpy as np
 import pandas as pd
 import multiprocessing
 
-from .utils import compute_bootstrap_samples, merge_nested_dict
+from .utils import compute_bootstrap_samples, merge_nested_dict, merge_dict
 from .multiprocessing_utils import run_parallel, to_iterator
 
 class AccumulatedLocalEffects:
 
     def __init__(self, model=None, examples=None, classification=True, 
             feature_names=None):
+        self.check_model_attribute(model)
+        self.check_examples_attribute(examples)
+        
+        self._classification = classification
 
-        # if model is of type list or single objection, convert to dictionary
+        # dictionary containing information for all each feature and model
+        self._dict_out = {}
+        
+    def check_model_attribute(self, model):
+        """
+        Checks the type of the model attribute. 
+        If a list or not a dict, then the model argument
+        is converted to a dict for processing. 
+        
+        Args:
+        ----------
+            model : object, list, or dict 
+        """
+         # if model is of type list or single objection, convert to dictionary
         if not isinstance(model, dict):
             if isinstance(model, list):
                 self._models = {type(m).__name__ : m for m in model}
             else:
                 self._models = {type(model).__name__ : model}
-        # passed in a dict
-        else: 
+        # user provided a dict
+        else:
             self._models = model
-
-        self._examples = examples
-
+    
+    def check_examples_attribute(self, examples):
+        """
+        Check the type of the examples attribute.
+        """
         # make sure data is the form of a pandas dataframe regardless of input type
-        if isinstance(self._examples, np.ndarray): 
-            if (feature_names is None): 
-                raise Exception('Feature names must be specified if using NumPy array.')    
+        if isinstance(examples, np.ndarray):
+            if (feature_names is None):
+                raise Exception('Feature names must be specified if using NumPy array.')
             else:
                 self._feature_names = feature_names
                 self._examples      = pd.DataFrame(data=examples, columns=feature_names)
         else:
+            self._examples = examples
+        
+        if examples is not None:
             self._feature_names  = examples.columns.to_list()
-
-        self._classification = classification
-
-        # dictionary containing information for all each feature and model
-        self._dict_out = {}
-
+        
     def get_final_dict(self): 
 
         return self._dict_out
@@ -79,7 +96,10 @@ class AccumulatedLocalEffects:
                    nprocs_to_use=njobs
             )
                 
-        results = merge_nested_dict(results)
+        if len(models) > 1:
+            results = merge_nested_dict(results)
+        else:
+            results = merge_dict(results)
             
         self._dict_out = results
             
