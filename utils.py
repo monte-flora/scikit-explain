@@ -1,6 +1,6 @@
 import numpy as np
 import pickle
-
+import pandas as pd
 
 def load_pickle(fname):
     """
@@ -114,5 +114,135 @@ def is_outlier(points, thresh=3.5):
     modified_z_score = 0.6745 * diff / med_abs_deviation
 
     return modified_z_score > thresh
+
+
+def get_indices_based_on_performance(model, examples, targets, n_examples=None):
+    """
+       Determines the best hits, worst false alarms, worst misses, and best
+       correct negatives using the data provided during initialization.
+
+       Args:
+       ------------------
+            model : The model to process
+            n_examples: number of "best/worst" examples to return. If None,
+                the routine uses the whole dataset
+
+      Return:
+            a dictionary containing the indices of each of the 4 categories
+            listed above
+    """
+
+    #default is to use all examples
+    if (n_examples is None):
+        n_examples = examples.shape[0]
+
+    #make sure user didn't goof the input
+    if (n_examples <= 0):
+        print("n_examples less than or equals 0. Defaulting back to all")
+        n_examples = examples.shape[0]
+        
+    predictions = model.predict_proba(examples)[:,1]
+    diff = (targets-predictions)
+    data = {'targets': targets, 'predictions': predictions, 'diff': diff}
+    df = pd.DataFrame(data)
+
+    nonevent_examples = df[targets==0]
+    event_examples = df[targets==1]
+
+    event_examples_sorted_indices = event_examples.sort_values(by='diff',ascending=True).index.values
+    nonevent_examples_sorted_indices = nonevent_examples.sort_values(by='diff',ascending=False).index.values
+
+    best_hit_indices = event_examples_sorted_indices[:n_examples].astype(int)
+    worst_miss_indices = event_examples_sorted_indices[-n_examples:][::-1].astype(int)
+    best_corr_neg_indices = nonevent_examples_sorted_indices[:n_examples].astype(int)
+    worst_false_alarm_indices = nonevent_examples_sorted_indices[-n_examples:][::-1].astype(int)
+
+    sorted_dict = {
+                    'hits':  best_hit_indices,
+                    'misses': worst_miss_indices,
+                    'false_alarms': worst_false_alarm_indices,
+                    'corr_negs': best_corr_neg_indices
+                      }
+
+    return sorted_dict
+
+def avg_and_sort_contributions(the_dict, examples, performance_dict=None):
+    """
+        Get the mean value (of data for a predictory) and contribution from
+        each predictor and sort"
+
+        Args:
+        -----------
+            the_dict: dictionary to process
+            performance_dict: if using performance based apporach, this should be
+                the dictionary with corresponding indices
+
+        Return:
+
+            a dictionary of mean values and contributions
+    """
+
+    return_dict = {}
+
+    for key in list(the_dict.keys()):
+
+        df        = the_dict[key]
+        series    = df.mean(axis=0)
+        sorted_df = series.reindex(series.abs().sort_values(ascending=False).index)
+
+        if (performance_dict is None):
+            idxs = examples.index.to_list()
+        else:
+            idxs = performance_dict[key]
+
+        top_vars = {}
+        for var in list(sorted_df.index):
+            if var == 'Bias':
+                top_vars[var] = {
+                                 'Mean Value': None,
+                                 'Mean Contribution' : series[var]
+                                 }
+            else:
+                top_vars[var] = {
+                        "Mean Value": np.mean(examples.loc[idxs,var].values),
+                        "Mean Contribution": series[var],
+                    }
+
+        return_dict[key] = top_vars
+
+    return return_dict
+
+def retrieve_important_vars(results, multipass=True):
+    """
+       Return a list of the important features stored in the 
+        ImportanceObject 
+        
+        Args:
+        -------------------
+            results : python object
+                ImportanceObject from PermutationImportance
+            multipass : boolean
+                if True, returns the multipass permutation importance results
+                else returns the singlepass permutation importance results
+                
+        Returns:
+            top_features : list
+                a list of features with order determined by 
+                the permutation importance method
+    """
+    important_vars_dict = {}
+    for model_name in results.keys():
+        perm_imp_obj = results[model_name]
+        rankings = (
+                perm_imp_obj.retrieve_multipass()
+                if multipass
+                else perm_imp_obj.retrieve_singlepass()
+            )
+        features = list(rankings.keys())
+        important_vars_dict[model_name] = features
+            
+    return important_vars_dict
+
+
 
 

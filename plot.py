@@ -517,7 +517,7 @@ class InterpretabilityPlotting:
         ax.set_yticks(y_index)
         self.set_tick_labels(ax, varnames, readable_feature_names)
 
-        neg_factor = 1.75 if np.max(contrib) > 1.0 else 1.75
+        neg_factor = 2.25 if np.max(contrib) > 1.0 else 1.75
         factor = 0.25 if np.max(contrib) > 1.0 else 0.01
 
         for i, c in enumerate(np.round(contrib, 2)):
@@ -622,7 +622,8 @@ class InterpretabilityPlotting:
             if "all_data" in result_dict[model_name].keys():
 
                 fig = self._ti_plot(
-                    result_dict[model_name]["all_data"], to_only_varname=to_only_varname,
+                    result_dict[model_name]["all_data"], 
+                    to_only_varname=to_only_varname,
                     readable_feature_names=readable_feature_names
                 )
 
@@ -630,7 +631,7 @@ class InterpretabilityPlotting:
             else:
 
                 # create subplots, one for each feature
-                fig, sub_axes = self.create_subplots(
+                fig, axes = self.create_subplots(
                     n_panels=4,
                     n_columns=2,
                     hspace=hspace,
@@ -640,18 +641,16 @@ class InterpretabilityPlotting:
                     figsize=(8, 6),
                 )
 
-                for sax, perf_key in zip(
-                    sub_axes.flat, list(result_dict[model_name].keys())
-                ):
+                for ax, perf_key in zip(axes.flat, result_dict[model_name].keys()):
                     print(perf_key)
                     self._ti_plot(
                         result_dict[model_name][perf_key],
-                        ax=sax,
+                        ax=ax,
                         key=perf_key,
                         to_only_varname=to_only_varname,
                         readable_feature_names=readable_feature_names
                     )
-                    sax.set_title(perf_key.upper().replace("_", " "), fontsize=15)
+                    ax.set_title(perf_key.upper().replace("_", " "), fontsize=15)
 
         return fig
 
