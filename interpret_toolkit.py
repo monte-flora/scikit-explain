@@ -52,7 +52,7 @@ class InterpretToolkit:
 
         self.check_model_attribute(model)
         self.check_target_attribute(targets)
-        self.check_examples_attribute(examples)
+        self.check_examples_attribute(examples, feature_names)
         
         if len(np.unique(targets)) == 2 and targets is not None:
             self._classification = True
@@ -107,7 +107,7 @@ class InterpretToolkit:
             if targets is not None:
                 raise TypeError('Target variable must be numpy array or pandas.DataFrame.')
             
-    def check_examples_attribute(self, examples):
+    def check_examples_attribute(self, examples, feature_names=None):
         """
         Check the type of the examples attribute.
         """
@@ -122,7 +122,7 @@ class InterpretToolkit:
             self._examples = examples
         
         if examples is not None:
-            self._feature_names  = examples.columns.to_list()
+            self._feature_names  = self._examples.columns.to_list()
         
     def __str__(self):
 

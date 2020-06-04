@@ -1,5 +1,5 @@
-# import matplotlib
-# matplotlib.use('Agg')
+import matplotlib
+matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,7 +45,7 @@ font_sizes = {
 plt.rc("font", size=FONT_SIZE)
 plt.rc("axes", titlesize=FONT_SIZE)
 plt.rc("axes", labelsize=FONT_SIZE)
-plt.rc("xtick", labelsize=TINY_FONT_SIZE - 2)
+plt.rc("xtick", labelsize=TINY_FONT_SIZE - 4)
 plt.rc("ytick", labelsize=TEENSIE_FONT_SIZE)
 plt.rc("legend", fontsize=TEENSIE_FONT_SIZE+2)
 plt.rc("figure", titlesize=BIG_FONT_SIZE)
@@ -139,7 +139,8 @@ class InterpretabilityPlotting:
                 transform=ax.transAxes,
             )
 
-    def add_histogram_axis(self, ax, data, density=False, **kwargs):
+    def add_histogram_axis(self, ax, data, bins=15, min_value=None, 
+            max_value=None, density=False, **kwargs):
         """
         Adds a background histogram of data for a given feature. 
         """
@@ -147,14 +148,12 @@ class InterpretabilityPlotting:
         color = kwargs.get("color", "lightblue")
         edgecolor = kwargs.get("color", "white")
 
-        min_value = np.percentile(data, 2.5)
-        max_value = np.percentile(data, 97.5)
-        
-        data = np.clip(data, a_min=min_value, a_max=max_value)
+        if min_value is not None and max_value is not None:
+            data = np.clip(data, a_min=min_value, a_max=max_value)
         
         cnt, bins, patches = ax.hist(
             data,
-            bins="auto",
+            bins=bins,
             alpha=0.3,
             color=color,
             density=density,
@@ -162,7 +161,7 @@ class InterpretabilityPlotting:
             zorder=1
         )
         ax.set_yscale("log")
-        ax.set_yticks([1e0, 1e1, 1e2])
+        ax.set_yticks([1e0, 1e1, 1e2, 1e3, 1e4])
         if density:
             return "Relative Frequency"
         
@@ -244,7 +243,7 @@ class InterpretabilityPlotting:
             units = self.feature_units.get(xaxis_label, '')
             xaxis_label_with_units = fr'{xaxis_label_pretty} ({units})'
         
-            ax.set_xlabel(xaxis_label_with_units, fontsize=10)
+            ax.set_xlabel(xaxis_label_with_units, fontsize=8)
         
         if yaxis_label is not None: 
             yaxis_label_pretty = self.readable_feature_names.get(yaxis_label, yaxis_label)
@@ -312,7 +311,7 @@ class InterpretabilityPlotting:
                 hist_data = unnormalize(hist_data)
             # add histogram
             hist_ax = self.make_twin_ax(lineplt_ax)
-            twin_yaxis_label=self.add_histogram_axis(hist_ax, hist_data)
+            twin_yaxis_label=self.add_histogram_axis(hist_ax, hist_data, min_value=xdata[0], max_value=xdata[-1])
     
             for i, model_name in enumerate(model_names):
 
@@ -345,7 +344,7 @@ class InterpretabilityPlotting:
             fig,
             xlabel=None,
             ylabel_left=left_yaxis_label,
-            ylabel_right=twin_yaxis_label,
+            ylabel_right = twin_yaxis_label,
             **kwargs,
         )
 
@@ -387,13 +386,12 @@ class InterpretabilityPlotting:
             min_z.append(np.min(np.mean(zdata,axis=0)))
         
         if kwargs["plot_type"] =='pdp':
-            colorbar_rng = np.round( np.linspace(np.min(min_z), np.max(max_z), 6), 1)
+            colorbar_rng = np.linspace(np.min(min_z)-0.01, np.max(max_z)+0.01, 100)
         elif kwargs["plot_type"] == 'ale':
             peak = max(abs(np.min(min_z)), abs(np.max(max_z)))
             print(-peak, peak)
-            colorbar_rng = np.linspace(-0.5,0.5, 10)
+            colorbar_rng = np.linspace(-0.5,0.5, 100)
        
-
         # loop over each feature and add relevant plotting stuff
         for ax, feature in zip(axes.flat, feature_dict.keys()):
             model_names = list(feature_dict[feature].keys())
@@ -517,8 +515,10 @@ class InterpretabilityPlotting:
         ax.set_yticks(y_index)
         self.set_tick_labels(ax, varnames, readable_feature_names)
 
-        neg_factor = 2.25 if np.max(contrib) > 1.0 else 1.75
+        neg_factor = 2.25 if np.max(np.abs(contrib)) > 1.0 else 0.08
         factor = 0.25 if np.max(contrib) > 1.0 else 0.01
+
+        print('neg_factor', neg_factor) 
 
         for i, c in enumerate(np.round(contrib, 2)):
             if c > 0:
@@ -856,7 +856,8 @@ class InterpretabilityPlotting:
 
     def save_figure(self, fig, fname, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """
-        return plt.savefig(fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
+        plt.savefig(fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
+        plt.close(fig) 
 
     # You can fill this in by using a dictionary with {var_name: legible_name}
     def convert_vars_to_readable(self, variables_list, VARIABLE_NAMES_DICT):

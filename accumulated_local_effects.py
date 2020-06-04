@@ -103,7 +103,7 @@ class AccumulatedLocalEffects:
             
         self._dict_out = results
             
-    def calculate_first_order_ale(self, model_name, feature, nbins=15, **kwargs):
+    def calculate_first_order_ale(self, model_name, feature, nbins=30, **kwargs):
 
         """
             Computes first-order ALE function on single continuous feature data.
@@ -126,8 +126,8 @@ class AccumulatedLocalEffects:
         
         # Find the ranges to calculate the local effects over
         # Using xdata ensures each bin gets the same number of examples
-        x1vals = np.percentile(self._examples[feature].values, np.arange(2.5, 97.5 + 5, nbins))
-        
+        x1vals = np.percentile(self._examples[feature].values, np.linspace(0.0, 100.0, nbins))     
+
         # get data in numpy format
         column_of_data = self._examples[feature].to_numpy()
 
@@ -144,10 +144,11 @@ class AccumulatedLocalEffects:
 
         # define ALE array
         ale = np.zeros((nbootstrap, x1vals.shape[0]-1))
-
+            
+        print('starting calculations...')
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_examples):
-
+            print(k)
             # get samples
             examples = self._examples.iloc[idx, :]
 
@@ -216,23 +217,11 @@ class AccumulatedLocalEffects:
         if (features[1] not in self._feature_names): 
             raise TypeError(f'Feature {features[1]} is not a valid feature')
 
+        nbins=30
         # create bins for computation for both features
-        x1vals = np.percentile(self._examples[features[0]].values, np.arange(2.5, 97.5 + 5, 15))
-        x2vals = np.percentile(self._examples[features[1]].values, np.arange(2.5, 97.5 + 5, 15))
+        x1vals = np.percentile(self._examples[features[0]].values, np.linspace(0, 100.0, nbins))
+        x2vals = np.percentile(self._examples[features[1]].values, np.arange(0, 100.0, nbins))
 
-        """
-        bins = 15
-        x1vals = np.unique(
-        np.quantile(
-            self._examples[features[0]].values, np.linspace(0, 1, bins + 1), interpolation="lower"
-            )
-            )
-        x2vals = np.unique(
-        np.quantile(
-            self._examples[features[1]].values, np.linspace(0, 1, bins + 1), interpolation="lower"
-            )
-            )
-        """
         # get the bootstrap samples
         if nbootstrap > 1:
             bootstrap_examples = compute_bootstrap_samples(self._examples, 

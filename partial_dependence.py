@@ -149,10 +149,9 @@ class PartialDependence:
         # append examples for histogram use
         hist_vals = column_of_data
 
+        nbins = 30
         # define bins based on 10th and 90th percentiles
-        x1vals = np.linspace(
-            np.percentile(column_of_data, 2.5), np.percentile(column_of_data, 97.5), num=20
-        )
+        x1vals = np.percentile(self._examples[feature].values, np.linspace(0.0, 100.0, nbins))
 
         # get the bootstrap samples
         if nbootstrap > 1:
@@ -217,17 +216,15 @@ class PartialDependence:
         if (feature_tuple[1] not in self._feature_names): 
             raise TypeError(f'Feature {feature_tuple[1]} is not a valid feature')
 
-
+        nbins = 30
         # ensures each bin gets the same number of examples
         x1vals = np.percentile(self._examples[feature_tuple[0]].values, 
-                                         np.arange(2.5, 97.5 + 5, 15))
+                                         np.linspace(0.0, 100.0, nbins))
 
         # ensures each bin gets the same number of examples
         x2vals = np.percentile(self._examples[feature_tuple[1]].values, 
-                                         np.arange(2.5, 97.5 + 5, 15))
+                                         np.linspace(0.0, 100.0, nbins))
 
-        
-        
         # get the bootstrap samples
         if nbootstrap > 1:
             bootstrap_examples = compute_bootstrap_samples(self._examples, 
