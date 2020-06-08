@@ -3,6 +3,7 @@ import pandas as pd
 
 from .utils import compute_bootstrap_samples, merge_nested_dict, merge_dict
 from .multiprocessing_utils import run_parallel, to_iterator
+from copy import deepcopy
 
 class PartialDependence:
 
@@ -118,7 +119,7 @@ class PartialDependence:
         self._dict_out = results
     
  
-    def compute_1d_partial_dependence(self, model_name, feature, **kwargs):
+    def compute_1d_partial_dependence(self, model_name, feature, nbins, **kwargs):
 
         """
         Calculate the partial dependence.
@@ -149,7 +150,6 @@ class PartialDependence:
         # append examples for histogram use
         hist_vals = column_of_data
 
-        nbins = 30
         # define bins based on 10th and 90th percentiles
         x1vals = np.percentile(self._examples[feature].values, np.linspace(0.0, 100.0, nbins))
 
@@ -190,7 +190,7 @@ class PartialDependence:
         return results
                 
             
-    def compute_2d_partial_dependence(self, model_name, feature_tuple, **kwargs):
+    def compute_2d_partial_dependence(self, model_name, feature_tuple, nbins, **kwargs):
 
         """
         Calculate the partial dependence between two features.
@@ -216,7 +216,6 @@ class PartialDependence:
         if (feature_tuple[1] not in self._feature_names): 
             raise TypeError(f'Feature {feature_tuple[1]} is not a valid feature')
 
-        nbins = 30
         # ensures each bin gets the same number of examples
         x1vals = np.percentile(self._examples[feature_tuple[0]].values, 
                                          np.linspace(0.0, 100.0, nbins))
@@ -241,14 +240,14 @@ class PartialDependence:
         for k, idx in enumerate(bootstrap_examples):
 
             # get samples
-            examples = self._examples.iloc[idx, :].copy()
+            examples = deepcopy(self._examples.iloc[idx, :])
 
             # similar concept as 1-D, but for 2-D
             for i, value1 in enumerate(x1vals):
                 for j, value2 in enumerate(x2vals):
 
-                    examples.loc[feature_tuple[0]] = value1
-                    examples.loc[feature_tuple[1]] = value2
+                    examples.loc[:, feature_tuple[0]] = value1
+                    examples.loc[:, feature_tuple[1]] = value2
 
                     if self._classification is True:
                         predictions = model.predict_proba(examples)[:, 1] * 100.
@@ -264,3 +263,41 @@ class PartialDependence:
         
         return results
     
+
+    
+    def friedman_h_statistic(self, model_name, feature_tuple, nbins=15):
+        """
+        Compute the H-statistic. 
+        """
+        feature1, feature2 = feature_tuple
+        
+        feature1_results = self.compute_1d_partial_dependence(model_name, feature1, nbins=nbins)
+        feature2_results = self.compute_1d_partial_dependence(model_name, feature2, nbins=nbins)
+        
+        feature1_pd = feature1_results[feature1][model_name]['values'].squeeze()
+        feature2_pd = feature2_results[feature2][model_name]['values'].squeeze()
+        
+        x1 = feature1_results[feature1][model_name]['xdata1']
+        x2 = feature2_results[feature2][model_name]['xdata1']
+        
+        combined_results = self.compute_2d_partial_dependence(model_name, feature_tuple, nbins)
+        
+        combined_pd = combined_results[feature_tuple][model_name]['values'].squeeze()
+        
+        feature1_pd -= feature1_pd.mean()
+        feature2_pd -= feature2_pd.mean()
+        combined_pd -= combined_pd.mean()
+        
+        pd_decomposed = feature1_pd[:,np.newaxis] + feature2_pd[np.newaxis,:]
+        numer = (combined_pd - pd_decomposed)**2
+        denom = (combined_pd)**2
+        H_squared = np.sum(numer) / np.sum(denom)
+        
+        return sqrt(H_squared)
+
+        
+        
+        
+        
+        
+        
