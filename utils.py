@@ -39,28 +39,17 @@ def combine_top_features(results_dict,nvars):
     
     return unique_features
     
-def compute_bootstrap_samples(examples, subsample=1.0, nbootstrap=None):
+def compute_bootstrap_samples(examples, subsample=1.0, nbootstrap=1):
 
     """
         Routine to generate bootstrap examples
     """
-
-    # get total number of examples
     n_examples = len(examples)
-
-    # below comprehension gets the indices of bootstrap examples
-    bootstrap_replicates = np.asarray(
-        [
-            [
-                np.random.choice(range(n_examples))
-                for _ in range(int(subsample * n_examples))
-            ]
-            for _ in range(nbootstrap)
-        ]
-    )
-
-    return bootstrap_replicates
-
+    size = int(subsample_ratio * n_examples)
+    bootstrap_indices = [np.random.choice(range(n_examples), size=size) for _ in range(nbootstrap)] 
+    
+    return bootstrap_indices
+    
 def combine_like_features(contrib, varnames):
         """
         Combine the contributions of like features. E.g., 
