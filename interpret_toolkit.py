@@ -8,7 +8,7 @@ from .plot import InterpretabilityPlotting
 from .utils import get_indices_based_on_performance, avg_and_sort_contributions, retrieve_important_vars
 
 from .PermutationImportance.permutation_importance import sklearn_permutation_importance
-from sklearn.metrics import roc_auc_score, roc_curve, average_precision_score
+from sklearn.metrics import roc_auc_score, roc_curve, average_precision_score, brier_score_loss
 
 
 list_of_acceptable_tree_models = [
@@ -18,6 +18,10 @@ list_of_acceptable_tree_models = [
     "ExtraTreesClassifier",
     "ExtraTreesRegressor",
 ]
+
+def brier_skill_score(target_values, forecast_probabilities):
+    climo = np.mean((target_values - np.mean(target_values))**2)
+    return 1.0 - brier_score_loss(target_values, forecast_probabilities) / climo
 
 class InterpretToolkit:
 
@@ -430,7 +434,7 @@ class InterpretToolkit:
             evaluation_fn = average_precision_score
             scoring_strategy = "argmin_of_mean"
         elif evaluation_fn.lower() == 'bss':
-            evaluation_fn = None 
+            evaluation_fn = brier_skill_score
             scoring_strategy = "argmin_of_mean"
             
         self.nbootstrap = nbootstrap
@@ -446,7 +450,7 @@ class InterpretToolkit:
 
             pi_result = sklearn_permutation_importance(
                 model            = model,
-                scoring_data     = (self._examples, targets),
+                scoring_data     = (self._examples.values, targets.values),
                 evaluation_fn    = evaluation_fn,
                 variable_names   = self._feature_names,
                 scoring_strategy = scoring_strategy,

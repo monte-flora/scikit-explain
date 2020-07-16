@@ -119,7 +119,7 @@ class PartialDependence:
         self._dict_out = results
     
  
-    def compute_1d_partial_dependence(self, model_name, feature, nbins, **kwargs):
+    def compute_1d_partial_dependence(self, model_name, feature, nbins=30, **kwargs):
 
         """
         Calculate the partial dependence.
