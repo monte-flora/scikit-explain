@@ -60,13 +60,16 @@ class InterpretabilityPlotting:
         Create a series of subplots (MxN) based on the 
         number of panels and number of columns (optionally)
         """
-
-        n_columns = kwargs.get("n_columns", 3)
         figsize = kwargs.get("figsize", (6.4, 4.8))
         wspace = kwargs.get("wspace", 0.4)
         hspace = kwargs.get("hspace", 0.3)
         sharex = kwargs.get("sharex", False)
         sharey = kwargs.get("sharey", False)
+
+        if n_panels < 3:
+            n_columns = n_panels
+        else:
+            n_columns = kwargs.get("n_columns", 3)
 
         n_rows = int(n_panels / n_columns)
         extra_row = 0 if (n_panels % n_columns) == 0 else 1
@@ -80,6 +83,9 @@ class InterpretabilityPlotting:
             dpi=300,
         )
         plt.subplots_adjust(wspace=wspace, hspace=hspace)
+
+        if n_panels < 3:
+            axes = np.array(axes)
 
         n_axes_to_delete = len(axes.flat) - n_panels
 
@@ -148,8 +154,8 @@ class InterpretabilityPlotting:
         color = kwargs.get("color", "lightblue")
         edgecolor = kwargs.get("color", "white")
 
-        if min_value is not None and max_value is not None:
-            data = np.clip(data, a_min=min_value, a_max=max_value)
+        #if min_value is not None and max_value is not None:
+        #    data = np.clip(data, a_min=min_value, a_max=max_value)
         
         cnt, bins, patches = ax.hist(
             data,
