@@ -4,6 +4,98 @@ import pandas as pd
 from collections import ChainMap
 
 
+def cartesian(arrays, out=None):
+    """Generate a cartesian product of input arrays.
+    Parameters
+    
+    Codes comes directly from sklearn/utils/extmath.py
+    ----------
+    arrays : list of array-like
+        1-D arrays to form the cartesian product of.
+    out : ndarray
+        Array to place the cartesian product in.
+    Returns
+    -------
+    out : ndarray
+        2-D array of shape (M, len(arrays)) containing cartesian products
+        formed of input arrays.
+    Examples
+    --------
+    >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
+    array([[1, 4, 6],
+           [1, 4, 7],
+           [1, 5, 6],
+           [1, 5, 7],
+           [2, 4, 6],
+           [2, 4, 7],
+           [2, 5, 6],
+           [2, 5, 7],
+           [3, 4, 6],
+           [3, 4, 7],
+           [3, 5, 6],
+           [3, 5, 7]])
+    """
+    arrays = [np.asarray(x) for x in arrays]
+    shape = (len(x) for x in arrays)
+    dtype = arrays[0].dtype
+
+    ix = np.indices(shape)
+    ix = ix.reshape(len(arrays), -1).T
+
+    if out is None:
+        out = np.empty_like(ix, dtype=dtype)
+
+    for n, arr in enumerate(arrays):
+        out[:, n] = arrays[n][ix[:, n]]
+
+    return out
+
+
+def is_str(a):
+    """Check if argument is a string"""
+    return isinstance(a, str)
+
+def is_valid_feature(features, official_feature_list):
+    """Check if a feature is valid"""
+    for f in features:
+        if isinstance(f, tuple):
+            for sub_f in f:
+                if sub_f not in official_feature_list:
+                    raise Exception(f"Feature {sub_f} is not a valid feature!")
+        else:
+            if f not in official_feature_list:
+                raise Exception(f"Feature {f} is not a valid feature!")
+
+def is_classifier(estimator):
+    """Return True if the given estimator is (probably) a classifier.
+    Parameters
+    
+    Function from base.py in sklearn 
+    ----------
+    estimator : object
+        Estimator object to test.
+    Returns
+    -------
+    out : bool
+        True if estimator is a classifier and False otherwise.
+    """
+    return getattr(estimator, "_estimator_type", None) == "classifier"
+
+def is_regressor(estimator):
+    """Return True if the given estimator is (probably) a regressor.
+    Parameters
+    
+    Functions from base.py in sklearn 
+    ----------
+    estimator : object
+        Estimator object to test.
+    Returns
+    -------
+    out : bool
+        True if estimator is a regressor and False otherwise.
+    """
+    return getattr(estimator, "_estimator_type", None) == "regressor"
+
 def is_all_dict(alist):
     """ Check if every element of a list are dicts """
     return all([isinstance(l, dict) for l in alist])
@@ -39,13 +131,12 @@ def combine_top_features(results_dict,nvars):
     
     return unique_features
     
-def compute_bootstrap_samples(examples, subsample=1.0, nbootstrap=1):
-
+def compute_bootstrap_indices(examples, subsample=1.0, nbootstrap=1):
     """
         Routine to generate bootstrap examples
     """
     n_examples = len(examples)
-    size = int(subsample_ratio * n_examples)
+    size = int(subsample * n_examples)
     bootstrap_indices = [np.random.choice(range(n_examples), size=size) for _ in range(nbootstrap)] 
     
     return bootstrap_indices

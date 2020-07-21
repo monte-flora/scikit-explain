@@ -1,131 +1,108 @@
 import numpy as np
 import pandas as pd
 
-from .utils import compute_bootstrap_samples, merge_nested_dict, merge_dict
+from .utils import (compute_bootstrap_indices, 
+                    merge_nested_dict, 
+                    merge_dict,
+                    is_str,
+                    is_valid_feature,
+                    is_regressor,
+                    is_classifier, 
+                    cartesian
+                   )
 from .multiprocessing_utils import run_parallel, to_iterator
 from copy import deepcopy
+from .attributes import Attributes
 
-class PartialDependence:
+
+class PartialDependence(Attributes):
 
     """
-    Class for computing various ML model interpretations...blah blah blah
-
+    PartialDependence is a class for computing first- and second-order
+    partial dependence (PDP) from Friedman (2001). 
+    The computations can take advantage of multiple cores for parallelization. 
+    
     Args:
         model : a single (or multiple) scikit-learn models represented as a dictionary.
             Create a dictionary such as { "RandomForest" : rf_sklearn_model }
         examples : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
             to specify the feature names
-        targets: list or numpy array of targets/labels. List converted to numpy array
-        classification: defaults to True for classification problems. 
-            Set to false otherwise.
         feature_names : defaults to None. Should only be set if examples is a 
             nd.numpy array. Make sure it's a list
+        model_output : str 
+            
+            
+    Reference: 
+        Friedman, J. H., 2001: GREEDY FUNCTION APPROXIMATION: A GRADIENT BOOSTING MACHINE. 
+        Ann Statistics, 29, 1189–1232, https://doi.org/10.1214/aos/1013203451.
     """
-
-    def __init__(self, model=None, examples=None, classification=True, 
+    def __init__(self, model, examples, model_output='probability', 
             feature_names=None):
-
-        self.check_model_attribute(model)
-        self.check_examples_attribute(examples)
-
-        self._classification = classification
-
-        # dictionary containing information for all each feature and model
-        self._dict_out = {}
+        # These functions come from the inherited Attributes class
+        self.set_model_attribute(model)
+        self.set_examples_attribute(examples, feature_names)
+        self.model_output = model_output
         
-    def check_model_attribute(self, model):
+    def run_pd(self, features=None, nbins=25, njobs=1, subsample=1.0, nbootstrap=1):
+
         """
-        Checks the type of the model attribute. 
-        If a list or not a dict, then the model argument
-        is converted to a dict for processing. 
+        Runs the partial dependence calculation by handling parallelization, 
+        subsampling data, and/or using bootstraping to compute confidence intervals.
+        
+        Returns a nested dictionary with all neccesary inputs for plotting. 
         
         Args:
-        ----------
-            model : object, list, or dict 
-        """
-         # if model is of type list or single objection, convert to dictionary
-        if not isinstance(model, dict):
-            if isinstance(model, list):
-                self._models = {type(m).__name__ : m for m in model}
-            else:
-                self._models = {type(model).__name__ : model}
-        # user provided a dict
-        else:
-            self._models = model
-    
-    def check_examples_attribute(self, examples):
-        """
-        Check the type of the examples attribute.
-        """
-        # make sure data is the form of a pandas dataframe regardless of input type
-        if isinstance(examples, np.ndarray):
-            if (feature_names is None):
-                raise Exception('Feature names must be specified if using NumPy array.')
-            else:
-                self._feature_names = feature_names
-                self._examples      = pd.DataFrame(data=examples, columns=feature_names)
-        else:
-            self._examples = examples
-        
-        if examples is not None:
-            self._feature_names  = examples.columns.to_list()
-            
-    def get_final_dict(self):  
-        
-        return self._dict_out
-
-    def run_pd(self, features=None, njobs=1, subsample=1.0, nbootstrap=1, **kwargs):
-
-        """
-            Runs the accumulated local effect calculation and returns a dictionary with all
-            necessary inputs for plotting.
-        
-            feature: List of strings for first-order partial dependence, or list of tuples
-                     for second-order
+        ---------
+            features: string, 2-tuple of strings, list of strings, or lists of 2-tuple strings
+                feature names to compute partial dependence for. If 2-tuple, it will compute 
+                the second-order partial dependence. 
+             njobs : int or float 
+                 if int, the number of processors to use for parallelization
+                 if float, percentage of total processors to use for parallelization 
+             subsample : float (between 0-1)
+                 Fraction of randomly sampled examples to evaluate (default is 1.0; no subsampling)
+             nbootstrap
+ 
+ 
             subsample: a float (between 0-1) for fraction of examples used in bootstrap
             nbootstrap: number of bootstrap iterations to perform. Defaults to 1 (no
                         bootstrapping).
         """    
-        models = [name for name in list(self._models.keys())]
+        model_str_ids = [name for name in self.models.keys()]
 
-        # get number of features we are processing
-        n_feats = len(features)
+        #Check if features is a string
+        if is_str(features) or isinstance(features, tuple):
+            features = [features]
 
-        # check first element of feature and see if of type tuple; assume second-order calculations
-        if isinstance(features[0], tuple): 
-            func = self.compute_2d_partial_dependence
-        else:
-            func = self.compute_1d_partial_dependence
-            
-        args_iterator = to_iterator(models, features)
+        args_iterator = to_iterator(model_str_ids, 
+                                    features,
+                                    [nbins],
+                                    [subsample],
+                                    [nbootstrap])
 
-        kwargs = {
-                      "subsample": subsample, 
-                      "nbootstrap": nbootstrap
-                     }
-        
         results = run_parallel(
-                   func = func,
+                   func = self.compute_partial_dependence,
                    args_iterator = args_iterator,
-                   kwargs = kwargs, 
+                   kwargs = {}, 
                    nprocs_to_use=njobs
             )
-
-        if len(models) > 1:
+        
+        if len(model_str_ids) > 1:
             results = merge_nested_dict(results)
         else:
             results = merge_dict(results)
                 
-        self._dict_out = results
+        return results
     
- 
-    def compute_1d_partial_dependence(self, model_name, feature, nbins=30, **kwargs):
+    def compute_partial_dependence(self, model_name, features, nbins=30, subsample=1.0, nbootstrap=1):
 
         """
-        Calculate the partial dependence.
-        # Friedman, J., 2001: Greedy function approximation: a gradient boosting machine.Annals of Statistics,29 (5), 1189–1232.
+        Calculate the centered partial dependence.
+        
+        # Friedman, J., 2001: Greedy function approximation: a gradient boosting machine.
+        Annals of Statistics, 29 (5), 1189–1232.
         ##########################################################################
-        Partial dependence plots fix a value for one or more predictors
+        # Partial dependence plots fix a value for one or more predictors
         # for examples, passing these new data through a trained model, 
         # and then averaging the resulting predictions. After repeating this process
         # for a range of values of X*, regions of non-zero slope indicates that
@@ -134,140 +111,107 @@ class PartialDependence:
         #########################################################################
 
         Args: 
-            feature : name of feature to compute PD for (string) 
-        """
-        subsample  = kwargs.get('subsample', 1.0)
-        nbootstrap = kwargs.get('nbootstrap', 1)
-        model =  self._models[model_name]
-
-        # check to make sure feature is valid
-        if feature not in self._feature_names:
-            raise Exception(f"Feature {feature} is not a valid feature")
-
-        # get data in numpy format
-        column_of_data = self._examples[feature].to_numpy()
-
-        # append examples for histogram use
-        hist_vals = column_of_data
-
-        # define bins based on 10th and 90th percentiles
-        x1vals = np.percentile(self._examples[feature].values, np.linspace(0.0, 100.0, nbins))
-
-        # get the bootstrap samples
-        if nbootstrap > 1:
-            bootstrap_examples = compute_bootstrap_samples(self._examples, 
-                                        subsample=subsample, 
-                                        nbootstrap=nbootstrap)
-        else:
-            bootstrap_examples = [self._examples.index.to_list()]
-
-        # define PDP array
-        pdp_values = np.full((nbootstrap, x1vals.shape[0]), np.nan)
-
-        # for each bootstrap set
-        for k, idx in enumerate(bootstrap_examples):
-
-            # get samples
-            examples = self._examples.iloc[idx, :].copy()
-        
-            # for each value, set all indices to the value, make prediction, store mean prediction
-            for i, value in enumerate(x1vals):
-
-                examples.loc[:, feature] = value
-
-                if self._classification is True:
-                    predictions = model.predict_proba(examples)[:, 1] * 100.
-                else:
-                    predictions = model.predict(examples)
-
-                pdp_values[k,i] = np.mean(predictions)
-        
-        results = {feature : {model_name :{}}}
-        results[feature][model_name]['values'] = pdp_values
-        results[feature][model_name]['xdata1']     = x1vals
-        results[feature][model_name]['hist_data']  = hist_vals
-        
-        return results
+            model_name : str
+                string identifier or key value for the model object dict
+            features : str
+                name of feature to compute PD for (string) 
+            nbins : int 
+                Number of evenly-spaced bins to compute PD
+            subsample : float between 0-1
+                Percent of randomly sampled examples to compute PD for.
+            nbootstrap : int 
+                Number of bootstrapping 
                 
-            
-    def compute_2d_partial_dependence(self, model_name, feature_tuple, nbins, **kwargs):
-
+        Returns:
+            pd, partial dependence values (in %, i.e., multiplied by 100.) 
         """
-        Calculate the partial dependence between two features.
+        # Retrieve the model object from the models dict attribute 
+        model =  self.models[model_name]
 
-        Args: 
-            feature : tuple or list of strings of predictor names
+         #Check if features is a string
+        if is_str(features):
+            features = [features]
 
-        """
+        # Check if feature is valid
+        is_valid_feature(features, self.feature_names)
 
-        subsample  = kwargs.get('subsample', 1.0)
-        nbootstrap = kwargs.get('nbootstrap', 1)
-        model =  self._models[model_name]
+        # Extract the values for the features 
+        feature_values = [self.examples[f].to_numpy() for f in features]
         
-        print(f'model name : {model_name}')
-        print(f'feature tuple : {feature_tuple}')
-
-        # make sure there are two features...
-        assert(len(feature_tuple) == 2), "Size of features must be equal to 2."
-
-        # check to make sure feature is valid
-        if (feature_tuple[0] not in self._feature_names): 
-            raise TypeError(f'Feature {feature_tuple[0]} is not a valid feature')
-        if (feature_tuple[1] not in self._feature_names): 
-            raise TypeError(f'Feature {feature_tuple[1]} is not a valid feature')
-
-        # ensures each bin gets the same number of examples
-        x1vals = np.percentile(self._examples[feature_tuple[0]].values, 
-                                         np.linspace(0.0, 100.0, nbins))
-
-        # ensures each bin gets the same number of examples
-        x2vals = np.percentile(self._examples[feature_tuple[1]].values, 
-                                         np.linspace(0.0, 100.0, nbins))
+        # Create a grid of values 
+        grid = [np.linspace(np.amin(f), 
+                           np.amax(f), 
+                           nbins
+                          ) for f in feature_values]
 
         # get the bootstrap samples
         if nbootstrap > 1:
-            bootstrap_examples = compute_bootstrap_samples(self._examples, 
+            bootstrap_indices = compute_bootstrap_indices(self.examples, 
                                         subsample=subsample, 
                                         nbootstrap=nbootstrap)
         else:
-            bootstrap_examples = [self._examples.index.to_list()]
+            bootstrap_indices = [self.examples.index.to_list()]
 
-        # define 2-D grid
-        pdp_values = np.full((nbootstrap, x1vals.shape[0], 
-                                                x2vals.shape[0]), np.nan)
+        if self.model_output=='probability':
+            prediction_method = model.predict_proba
+        elif self.model_output == 'raw':
+            prediction_method = model.predict
 
+        pd_values = [ ]
+        
         # for each bootstrap set
-        for k, idx in enumerate(bootstrap_examples):
-
+        for k, idx in enumerate(bootstrap_indices):
             # get samples
-            examples = deepcopy(self._examples.iloc[idx, :])
+            examples = self.examples.iloc[idx, :].copy()
+            
+            averaged_predictions = [ ]
+            # for each value, set all indices to the value, 
+            # make prediction, store mean prediction
+            for value_set in cartesian(grid): 
+                examples_temp = examples.copy()
+                for i, feature in enumerate(features):
+                    examples_temp.loc[:, feature] = value_set[i]
+                    predictions = prediction_method(examples_temp)
 
-            # similar concept as 1-D, but for 2-D
-            for i, value1 in enumerate(x1vals):
-                for j, value2 in enumerate(x2vals):
+                # average over samples
+                averaged_predictions.append(np.mean(predictions, axis=0))        
+                        
+            averaged_predictions = np.array(averaged_predictions).T
+          
+            if self.model_output=='probability': 
+                print("""Output is a probability; 
+                      Only outputing the effect of the positive class!""") 
+                # Binary classification, shape is (2, n_points).
+                # we output the effect of **positive** class
+                averaged_predictions = averaged_predictions[1]  
+        
+            # Center the predictions 
+            averaged_predictions -= np.mean(averaged_predictions)
+        
+            pd_values.append(averaged_predictions) 
+        
+        # Reshape the pd_values for second-order effects 
+        pd_values = np.array(pd_values)
+        if len(features) > 1:
+            pd_values = pd_values.reshape(nbootstrap, nbins, nbins)
 
-                    examples.loc[:, feature_tuple[0]] = value1
-                    examples.loc[:, feature_tuple[1]] = value2
-
-                    if self._classification is True:
-                        predictions = model.predict_proba(examples)[:, 1] * 100.
-                    else:
-                        predictions = model.predict(examples)
-
-                    pdp_values[k,i,j] = np.mean(predictions)
-           
-        results = {feature_tuple : {model_name :{}}}
-        results[feature_tuple][model_name]['values'] = pdp_values
-        results[feature_tuple][model_name]['xdata1'] = x1vals
-        results[feature_tuple][model_name]['xdata2'] = x2vals
+        key = tuple(features) 
+        results = {key : {model_name : {}}}
+        results[key][model_name]['values'] = pd_values
+        results[key][model_name]['xdata1'] = grid[0]
+        if len(features) > 1:
+            results[key][model_name]['xdata2'] = grid[1]
+        results[key][model_name]['hist_data'] = feature_values
         
         return results
-    
 
     
     def friedman_h_statistic(self, model_name, feature_tuple, nbins=15):
         """
-        Compute the H-statistic. 
+        Compute the H-statistic for two-way interactions between two features. 
+        
+        ToDo: Need to center the PD! 
+        
         """
         feature1, feature2 = feature_tuple
         

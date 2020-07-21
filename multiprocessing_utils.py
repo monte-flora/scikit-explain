@@ -54,11 +54,13 @@ def run_parallel( func, args_iterator, kwargs, nprocs_to_use, ):
     nprocs_to_use, int or float, if int, taken as the literal number of processors to use
                                 if float (between 0 and 1), taken as the percentage of available processors to use
     '''
-
     if 0 <= nprocs_to_use < 1:
         nprocs_to_use = int(nprocs_to_use*mp.cpu_count())
     else:
         nprocs_to_use = int(nprocs_to_use)
+        
+    if nprocs_to_use > mp.cpu_count():
+        raise ValueError(f'User requested {nprocs_to_use} processors, but system only has {mp.cpu_count()}!')
     
     print(f'Using {nprocs_to_use} processors...')
 
@@ -70,10 +72,6 @@ def run_parallel( func, args_iterator, kwargs, nprocs_to_use, ):
     for args in args_iterator:
         if not isinstance(args, tuple):
             args = (args,)
-        if all([isinstance(a, str) for a in args]):
-            key = '__'.join(args)
-        else:
-            key = args
         result = pool.apply_async(LogExceptions(func), args, kwargs)
         result_objects.append(result)
                 

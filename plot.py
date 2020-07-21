@@ -1,5 +1,5 @@
-import matplotlib
-matplotlib.use('Agg')
+#import matplotlib
+#matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +9,6 @@ from matplotlib import rcParams
 from matplotlib.colors import ListedColormap
 
 from .utils import combine_like_features, is_outlier
-
 
 pdp_cmap = ListedColormap(['lightcyan', 
                       'paleturquoise',
@@ -207,7 +206,7 @@ class InterpretabilityPlotting:
         # fill between CI bounds
         ax.fill_between(xdata, lower_bound, upper_bound, facecolor=facecolor, alpha=0.4)
 
-    def calculate_ticks(self, ax, ticks, round_to=0.1, center=False):
+    def calculate_ticks(self, ax, ticks, round_to=0.01, center=False):
         upperbound = np.ceil(ax.get_ybound()[1] / round_to)
         lowerbound = np.floor(ax.get_ybound()[0] / round_to)
         dy = upperbound - lowerbound
@@ -247,14 +246,21 @@ class InterpretabilityPlotting:
         if xaxis_label is not None: 
             xaxis_label_pretty = self.readable_feature_names.get(xaxis_label, xaxis_label)
             units = self.feature_units.get(xaxis_label, '')
-            xaxis_label_with_units = fr'{xaxis_label_pretty} ({units})'
+            if units == '':
+                xaxis_label_with_units = fr'{xaxis_label_pretty}'
+            else:
+                xaxis_label_with_units = fr'{xaxis_label_pretty} ({units})'
         
             ax.set_xlabel(xaxis_label_with_units, fontsize=8)
         
         if yaxis_label is not None: 
             yaxis_label_pretty = self.readable_feature_names.get(yaxis_label, yaxis_label)
             units = self.feature_units.get(yaxis_label, '')
-            yaxis_label_with_units = fr'{yaxis_label_pretty} ({units})'
+            if units == '':
+                yaxis_label_with_units = fr'{yaxis_label_pretty}'
+            else:
+                yaxis_label_with_units = fr'{yaxis_label_pretty} ({units})'
+
             ax.set_ylabel(yaxis_label_with_units, fontsize=10)
         
     def set_legend(self, n_panels, fig, ax):
@@ -262,8 +268,8 @@ class InterpretabilityPlotting:
         Set a single legend for the plots. 
         """
         handles, labels = ax.get_legend_handles_labels()
-        # Put a legend below current axis
-        fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 0.06),
+        # Put a legend below current axis # bbox_to_anchor=(0.5, 0.06)
+        fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 0.09),
           fancybox=True, shadow=True, ncol=3)
  
     def set_minor_ticks(self, ax):
@@ -339,7 +345,7 @@ class InterpretabilityPlotting:
 
             self.set_n_ticks(lineplt_ax)
             self.set_minor_ticks(lineplt_ax)
-            self.set_axis_label(lineplt_ax, xaxis_label=feature)
+            self.set_axis_label(lineplt_ax, xaxis_label=feature[0])
             if add_zero_line:
                 lineplt_ax.axhline(y=0.0, color="k", alpha=0.8)
             lineplt_ax.set_yticks(self.calculate_ticks(lineplt_ax, 5))
@@ -369,10 +375,7 @@ class InterpretabilityPlotting:
         wspace = kwargs.get("wspace", 0.6)
         #ylim = kwargs.get("ylim", [25, 50])
         
-        if kwargs["plot_type"] == 'ale':
-            cmap = "bwr"
-        elif kwargs["plot_type"] == 'pdp': 
-            cmap = pdp_cmap
+        cmap = "bwr" 
         colorbar_label = kwargs.get("left_yaxis_label")
 
         # get the number of panels which will be length of feature dictionary
@@ -386,17 +389,17 @@ class InterpretabilityPlotting:
         max_z = [ ]
         min_z = [ ]
         for ax, feature in zip(axes.flat, feature_dict.keys()):
+            
+            print(feature)
+            
             model_names = list(feature_dict[feature].keys())
             zdata = feature_dict[feature][model_names[0]]["values"]
             max_z.append(np.max(np.mean(zdata,axis=0)))
             min_z.append(np.min(np.mean(zdata,axis=0)))
         
-        if kwargs["plot_type"] =='pdp':
-            colorbar_rng = np.linspace(np.min(min_z)-0.01, np.max(max_z)+0.01, 100)
-        elif kwargs["plot_type"] == 'ale':
             peak = max(abs(np.min(min_z)), abs(np.max(max_z)))
             print(-peak, peak)
-            colorbar_rng = np.linspace(-0.5,0.5, 100)
+            colorbar_rng = np.linspace(-peak,peak, 10)
        
         # loop over each feature and add relevant plotting stuff
         for ax, feature in zip(axes.flat, feature_dict.keys()):
@@ -413,7 +416,8 @@ class InterpretabilityPlotting:
                 zdata = np.mean(zdata, axis=0)
             
             cf = ax.contourf(x1, x2, zdata.squeeze(), cmap=cmap, levels=colorbar_rng, alpha=0.75)
-            ax.contour(x1, x2, zdata.squeeze(), levels=colorbar_rng, alpha=0.5, linewidths=0.5, colors='k')
+            #ax.contour(x1, x2, zdata.squeeze(), levels=colorbar_rng, alpha=0.5, 
+            #           linewidths=0.5, colors='k')
 
             self.set_minor_ticks(ax)
             self.set_axis_label(ax, 
