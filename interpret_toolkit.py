@@ -97,11 +97,13 @@ class InterpretToolkit(Attributes):
                     fname, bbox_inches='tight', 
                     dpi=300, aformat='png'):
         """ Saves a figure """
-        self._clarify_plot_obj.save_figure(fig, 
-                                           fname, 
-                                           bbox_inches=bbox_inches, 
-                                           dpi=dpi, 
-                                           aformat=aformat)
+        # initialize a plotting object
+        plot_obj = InterpretabilityPlotting()
+        plot_obj.save_figure(fig, 
+                             fname, 
+                             bbox_inches=bbox_inches, 
+                             dpi=dpi, 
+                             aformat=aformat)
         
     def calc_pd(self, features, nbins=25, njobs=1, subsample=1.0, nbootstrap=1):
         """
@@ -408,20 +410,20 @@ class InterpretToolkit(Attributes):
             
         self.nbootstrap = nbootstrap
 
-        targets = pd.DataFrame(data=self._targets, columns=['Test'])
+        targets = pd.DataFrame(data=self.targets, columns=['Test'])
 
         self.pi_dict = {}
 
         # loop over each model
-        for model_name, model in self._models.items():
+        for model_name, model in self.models.items():
 
             print(f"Processing {model_name}...")
 
             pi_result = sklearn_permutation_importance(
                 model            = model,
-                scoring_data     = (self._examples.values, targets.values),
+                scoring_data     = (self.examples.values, targets.values),
                 evaluation_fn    = evaluation_fn,
-                variable_names   = self._feature_names,
+                variable_names   = self.feature_names,
                 scoring_strategy = scoring_strategy,
                 subsample        = subsample,
                 nimportant_vars  = n_vars,
@@ -434,9 +436,14 @@ class InterpretToolkit(Attributes):
         return self.pi_dict
 
     def plot_importance(self, result_dict=None, **kwargs):
+        """
+        """
+        # initialize a plotting object
+        plot_obj = InterpretabilityPlotting()
+        
         if hasattr(self, 'pi_dict'):
             result = self.pi_dict
         else:
             result = result_dict
 
-        return self._clarify_plot_obj.plot_variable_importance(result, **kwargs)
+        return plot_obj.plot_variable_importance(result, **kwargs)
