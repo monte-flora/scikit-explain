@@ -43,7 +43,7 @@ class PartialDependence(Attributes):
         self.set_examples_attribute(examples, feature_names)
         self.model_output = model_output
         
-    def run_pd(self, features=None, nbins=25, njobs=1, subsample=1.0, nbootstrap=1):
+    def run_pd(self, features, nbins=25, njobs=1, subsample=1.0, nbootstrap=1):
 
         """
         Runs the partial dependence calculation by handling parallelization, 
@@ -179,8 +179,8 @@ class PartialDependence(Attributes):
             averaged_predictions = np.array(averaged_predictions).T
           
             if self.model_output=='probability': 
-                print("""Output is a probability; 
-                      Only outputing the effect of the positive class!""") 
+                #print("""Output is a probability; 
+                #      Only outputing the effect of the positive class!""") 
                 # Binary classification, shape is (2, n_points).
                 # we output the effect of **positive** class
                 averaged_predictions = averaged_predictions[1]  

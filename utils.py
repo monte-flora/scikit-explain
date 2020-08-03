@@ -105,6 +105,9 @@ def load_pickle(fnames):
     Load data from a list of pickle files as dict
     where the keys are provided by the user
     """
+    if not isinstance(fnames, list):
+        fnames = [fnames]
+    
     data=[]
     for f in fnames:
         with open(f,'rb') as pkl_file:

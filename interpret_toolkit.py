@@ -63,7 +63,7 @@ class InterpretToolkit(Attributes):
     """
 
     def __init__(self, model=None, examples=None, targets=None, 
-                 model_output=True,
+                 model_output='probability',
                  feature_names=None):
 
         self.set_model_attribute(model)
@@ -378,7 +378,7 @@ class InterpretToolkit(Attributes):
                                                          **kwargs)
 
     def permutation_importance(self, n_vars=5, evaluation_fn="auprc",
-            subsample=1.0, njobs=1, nbootstrap=1):
+            subsample=1.0, njobs=1, nbootstrap=1, scoring_strategy=None):
 
         """
         Performs multipass permutation importance using Eli's code.
@@ -397,7 +397,17 @@ class InterpretToolkit(Attributes):
             nbootstrap: integer
                 number of bootstrapp resamples
         """
-
+        available_scores = ['auc', 'aupdc', 'bss']
+        
+        if evaluation_fn.lower not in available_scores and scoring_strategy is None:
+            raise ValueError(""" scoring_strategy is None! If you are using a user-defined
+                                 evaluation_fn then scoring_strategy must be set! If a metric is positively-oriented (a higher 
+                                 value is better), then set scoring_strategy = "argmin_of_mean" and if is negatively-oriented-
+                                 oriented (a lower value is better), then set scoring_strategy = "argmax_of_mean"
+                             """)
+            
+      
+        
         if evaluation_fn.lower() == "auc":
             evaluation_fn = roc_auc_score
             scoring_strategy = "argmin_of_mean"
@@ -407,9 +417,7 @@ class InterpretToolkit(Attributes):
         elif evaluation_fn.lower() == 'bss':
             evaluation_fn = brier_skill_score
             scoring_strategy = "argmin_of_mean"
-            
-        self.nbootstrap = nbootstrap
-
+               
         targets = pd.DataFrame(data=self.targets, columns=['Test'])
 
         self.pi_dict = {}
@@ -428,15 +436,20 @@ class InterpretToolkit(Attributes):
                 subsample        = subsample,
                 nimportant_vars  = n_vars,
                 njobs            = njobs,
-                nbootstrap       = self.nbootstrap,
+                nbootstrap       = nbootstrap,
             )
 
             self.pi_dict[model_name] = pi_result
-
+              
         return self.pi_dict
 
     def plot_importance(self, result_dict=None, **kwargs):
         """
+        Method for plotting the permutation importance results
+        
+        Args:
+            result_dict : dict 
+            kwargs : keyword arguments 
         """
         # initialize a plotting object
         plot_obj = InterpretabilityPlotting()
@@ -445,5 +458,8 @@ class InterpretToolkit(Attributes):
             result = self.pi_dict
         else:
             result = result_dict
+        
+        if result is None:
+            raise ValueError('result_dict is None! Either set it or run the .permutation_importance method first!')
 
         return plot_obj.plot_variable_importance(result, **kwargs)
