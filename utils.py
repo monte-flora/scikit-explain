@@ -4,6 +4,10 @@ import pandas as pd
 from collections import ChainMap
 
 
+def brier_skill_score(target_values, forecast_probabilities):
+    climo = np.mean((target_values - np.mean(target_values))**2)
+    return 1.0 - brier_score_loss(target_values, forecast_probabilities) / climo
+
 def cartesian(arrays, out=None):
     """Generate a cartesian product of input arrays.
     Parameters
@@ -54,6 +58,14 @@ def cartesian(arrays, out=None):
 def is_str(a):
     """Check if argument is a string"""
     return isinstance(a, str)
+
+def is_list(a):
+    """Check if argument is a list"""
+    return isinstance(a, list)
+
+def to_list(a):
+    """Convert argument to a list"""
+    return [a]
 
 def is_valid_feature(features, official_feature_list):
     """Check if a feature is valid"""
@@ -140,8 +152,7 @@ def compute_bootstrap_indices(examples, subsample=1.0, nbootstrap=1):
     """
     n_examples = len(examples)
     size = int(subsample * n_examples)
-    bootstrap_indices = [np.random.choice(range(n_examples), size=size) for _ in range(nbootstrap)] 
-    
+    bootstrap_indices = [np.random.choice(range(n_examples), size=size).tolist() for _ in range(nbootstrap)]
     return bootstrap_indices
     
 def combine_like_features(contrib, varnames):

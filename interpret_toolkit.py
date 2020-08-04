@@ -9,13 +9,14 @@ from .plot import InterpretabilityPlotting
 from .utils import (
        get_indices_based_on_performance, 
      avg_and_sort_contributions, 
-     retrieve_important_vars)
+     retrieve_important_vars,
+     brier_skill_score)
 
 from .PermutationImportance.permutation_importance import sklearn_permutation_importance
 from sklearn.metrics import (roc_auc_score, 
                              roc_curve, 
-                             average_precision_score, 
-                             brier_score_loss)
+                             average_precision_score
+                            )
 
 
 list_of_acceptable_tree_models = [
@@ -26,9 +27,6 @@ list_of_acceptable_tree_models = [
     "ExtraTreesRegressor",
 ]
 
-def brier_skill_score(target_values, forecast_probabilities):
-    climo = np.mean((target_values - np.mean(target_values))**2)
-    return 1.0 - brier_score_loss(target_values, forecast_probabilities) / climo
 
 class InterpretToolkit(Attributes):
 
@@ -43,10 +41,11 @@ class InterpretToolkit(Attributes):
     
 
     Attributes:
-        model : object, list, or dict
-            a trained single scikit-learn model, or list of scikit-learn models, or
-            dictionary of models where the key-value pairs are the model name as 
-            a string identifier and prefit model object.
+        model : object, list
+            a trained single scikit-learn model, or list of scikit-learn models
+            
+        model_names : str, list
+            Names of the models (for internal and plotting purposes) 
             
         examples : pandas.DataFrame or ndnumpy.array; shape = (n_examples, n_features)
             training or validation examples to evaluate.
@@ -62,16 +61,19 @@ class InterpretToolkit(Attributes):
             nd.numpy array. Make sure it's a list
     """
 
-    def __init__(self, model=None, examples=None, targets=None, 
+    def __init__(self, model=None, model_names=None, 
+                 examples=None, targets=None, 
                  model_output='probability',
                  feature_names=None):
 
-        self.set_model_attribute(model)
+        self.set_model_attribute(model, model_names)
         self.set_target_attribute(targets)
         self.set_examples_attribute(examples, feature_names)
         
         # TODO: Check that all the models given have the requested model_output
         self.model_output = model_output 
+        
+        self.checked_attributes = True
        
     def get_important_vars(self, results, multipass=True):
         """
@@ -110,12 +112,18 @@ class InterpretToolkit(Attributes):
             Runs the partial dependence calculation and populates a dictionary with all
             necessary inputs for plotting.
 
-            feature: List of strings for first-order partial dependence, or list of tuples
-                     for second-order
+            feature: list of strs, or list of 2-tuples of strs
+                if list of strs, computes the first-order PD for the given features
+                if list of 2-tuples of strs, computes the second-order PD for the pairs of features.
+                     
             nbins : int
+                Number of evenly-spaced bins to compute PD
+                
             njobs : int or float
-            subsample: a float (between 0-1) for fraction of examples used in bootstrap
-            nbootstrap: number of bootstrap iterations to perform. Defaults to 1 (no
+            subsample: float (between 0-1) 
+                fraction of examples used in bootstrap
+            nbootstrap: int 
+                    number of bootstrap iterations to perform. Defaults to 1 (no
                         bootstrapping).
 
             Return:
@@ -123,8 +131,10 @@ class InterpretToolkit(Attributes):
                 used for plotting.
         """
         pd_object = PartialDependence(model=self.models, 
+                                      model_names=self.model_names,
                                       examples=self.examples,  
-                                      model_output=self.model_output)
+                                      model_output=self.model_output, 
+                                     checked_attributes=self.checked_attributes)
         
         results = pd_object.run_pd(features=features, 
                                    nbins=nbins, 
@@ -132,9 +142,10 @@ class InterpretToolkit(Attributes):
                                    subsample=subsample, 
                                    nbootstrap=nbootstrap)
         self.pd_dict = results
+        self.features_used = features
         
         return results
-
+    
     def plot_pd(self, readable_feature_names={}, feature_units={}, **kwargs):
         """
             Plots the PD. If the first instance is a tuple, then a 2-D plot is
@@ -152,16 +163,36 @@ class InterpretToolkit(Attributes):
         kwargs['plot_type'] ='pdp'
         
         # plot the PD data. Use first feature key to see if 1D (str) or 2D (tuple)
-        if len(list(self.pd_dict.keys())[0])> 1:
+        if isinstance( list( self.pd_dict.keys() )[0] , tuple):
             return plot_obj.plot_contours(self.pd_dict, 
+                                          model_names=self.model_names,
+                                          features=self.features_used,
                                           readable_feature_names=readable_feature_names, 
                                           feature_units=feature_units, 
                                           **kwargs)
         else:
             return plot_obj.plot_1d_curve(self.pd_dict, 
-                                         readable_feature_names=readable_feature_names, 
-                                         feature_units=feature_units, 
-                                         **kwargs)
+                                          model_names=self.model_names,
+                                          features=self.features_used,
+                                          readable_feature_names=readable_feature_names, 
+                                          feature_units=feature_units, 
+                                          **kwargs)
+        
+    def calc_feature_interactions(self, model_name, features, nbins=15):
+        """
+            Runs the Friedman's H-statistic for computing feature interactions
+        """
+        pd_object = PartialDependence(model=self.models, 
+                                      model_names=self.model_names,
+                                      examples=self.examples,  
+                                      model_output=self.model_output, 
+                                      checked_attributes=self.checked_attributes)
+        
+        results = pd_object.friedman_h_statistic(model_name, 
+                                                 feature_tuple=features, 
+                                                 nbins=nbins
+                                                )
+        return results 
 
     def calc_ale(self, features, nbins=25, njobs=1, subsample=1.0, nbootstrap=1):
         """
@@ -179,16 +210,21 @@ class InterpretToolkit(Attributes):
                 used for plotting.
         """
         # initialize a ALE object
-        ale_object = AccumulatedLocalEffects(model=self.models, 
-                                      examples=self.examples,  
-                                      model_output=self.model_output)
+        ale_object = AccumulatedLocalEffects(model=self.models,
+                                             model_names=self.model_names,
+                                             examples=self.examples,  
+                                             model_output=self.model_output,
+                                             checked_attributes=self.checked_attributes
+                                            )
         
         results = ale_object.run_ale(features=features, 
                                      nbins=nbins, 
                                      njobs=njobs, 
                                      subsample=subsample, 
-                                     nbootstrap=nbootstrap)
+                                     nbootstrap=nbootstrap
+                                    )
         self.ale_dict = results
+        self.features_used = features
         
         return results
         
@@ -210,15 +246,19 @@ class InterpretToolkit(Attributes):
         kwargs['wspace'] = 0.6
         kwargs['add_zero_line'] = True
         kwargs['plot_type'] ='ale'
-        
+
         # plot the ALE data. Use first feature key to see if 1D (str) or 2D (tuple)
-        if len(list(self.pd_dict.keys())[0])> 1:
+        if isinstance( list( self.ale_dict.keys() )[0] , tuple):
             return plot_obj.plot_contours(self.ale_dict, 
+                                          model_names=self.model_names,
+                                          features=self.features_used,
                                           readable_feature_names=readable_feature_names, 
                                           feature_units=feature_units, 
                                           **kwargs)
         else:
             return plot_obj.plot_1d_curve(self.ale_dict, 
+                                          model_names=self.model_names,
+                                          features=self.features_used,
                                          readable_feature_names=readable_feature_names, 
                                          feature_units=feature_units, 
                                          **kwargs)
@@ -399,12 +439,14 @@ class InterpretToolkit(Attributes):
         """
         available_scores = ['auc', 'aupdc', 'bss']
         
-        if evaluation_fn.lower not in available_scores and scoring_strategy is None:
-            raise ValueError(""" scoring_strategy is None! If you are using a user-defined
-                                 evaluation_fn then scoring_strategy must be set! If a metric is positively-oriented (a higher 
-                                 value is better), then set scoring_strategy = "argmin_of_mean" and if is negatively-oriented-
-                                 oriented (a lower value is better), then set scoring_strategy = "argmax_of_mean"
-                             """)
+        if evaluation_fn.lower() not in available_scores and scoring_strategy is None:
+            raise ValueError(
+                ''' 
+                The scoring_strategy argument is None! If you are using a user-define evaluation_fn 
+                then scoring_strategy must be set! If a metric is positively-oriented (a higher value is better), 
+                then set scoring_strategy = "argmin_of_mean" and if is negatively-oriented-
+                (a lower value is better), then set scoring_strategy = "argmax_of_mean"
+                ''') 
             
       
         
@@ -462,4 +504,6 @@ class InterpretToolkit(Attributes):
         if result is None:
             raise ValueError('result_dict is None! Either set it or run the .permutation_importance method first!')
 
-        return plot_obj.plot_variable_importance(result, **kwargs)
+        return plot_obj.plot_variable_importance(result, 
+                                                 model_names=self.model_names, 
+                                                 **kwargs)

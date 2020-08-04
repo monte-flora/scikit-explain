@@ -13,34 +13,59 @@ from .utils import (compute_bootstrap_indices,
 from .multiprocessing_utils import run_parallel, to_iterator
 from copy import deepcopy
 from .attributes import Attributes
+from math import sqrt 
 
 
 class PartialDependence(Attributes):
 
     """
     PartialDependence is a class for computing first- and second-order
-    partial dependence (PDP) from Friedman (2001). 
-    The computations can take advantage of multiple cores for parallelization. 
+    partial dependence (PD; Friedman (2001). Parts of the code were based on 
+    the computations in sklearn.inspection.partial_dependence (Pedregosa et al. 2011). 
+    Currently, the package handles regression and binary classification. 
     
-    Args:
-        model : a single (or multiple) scikit-learn models represented as a dictionary.
-            Create a dictionary such as { "RandomForest" : rf_sklearn_model }
-        examples : pandas DataFrame or ndnumpy array. If ndnumpy array, make sure
-            to specify the feature names
-        feature_names : defaults to None. Should only be set if examples is a 
-            nd.numpy array. Make sure it's a list
-        model_output : str 
+    Attributes:
+        model : pre-fit scikit-learn model object, or list of 
+            Provide a list of model objects to compute PD 
+            for multiple model predictions.
+        
+        model_names : str, list 
+            List of model names for the model objects in model. 
+            For internal and plotting purposes. 
             
+        examples : pandas.DataFrame or ndnumpy.array. 
+            Examples used to train the model.
             
+        feature_names : list of strs
+            If examples are ndnumpy.array, then provide the feature_names 
+            (default is None; assumes examples are pandas.DataFrame).
+            
+        model_output : 'probability' or 'regression' 
+            What is the expected model output. 'probability' uses the positive class of 
+            the .predict_proba() method while 'regression' uses .predict().
+            
+        checked_attributes : boolean 
+            For internal purposes only
+    
     Reference: 
         Friedman, J. H., 2001: GREEDY FUNCTION APPROXIMATION: A GRADIENT BOOSTING MACHINE. 
         Ann Statistics, 29, 1189–1232, https://doi.org/10.1214/aos/1013203451.
+        
+        Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.  
     """
-    def __init__(self, model, examples, model_output='probability', 
-            feature_names=None):
-        # These functions come from the inherited Attributes class
-        self.set_model_attribute(model)
-        self.set_examples_attribute(examples, feature_names)
+    def __init__(self, model, model_names, examples, 
+                 model_output='probability', 
+                 feature_names=None, checked_attributes=False):
+        # These functions come from the inherited Attributes class  
+        if not checked_attributes:
+            self.set_model_attribute(model, model_names)
+            self.set_examples_attribute(examples, feature_names)
+        else:
+            self.models = model
+            self.model_names = model_names
+            self.examples = examples
+            self.feature_names = list(examples.columns)
+           
         self.model_output = model_output
         
     def run_pd(self, features, nbins=25, njobs=1, subsample=1.0, nbootstrap=1):
@@ -56,25 +81,25 @@ class PartialDependence(Attributes):
             features: string, 2-tuple of strings, list of strings, or lists of 2-tuple strings
                 feature names to compute partial dependence for. If 2-tuple, it will compute 
                 the second-order partial dependence. 
-             njobs : int or float 
+            
+            nbins : int 
+                Number of evenly-spaced bins to compute PD over. 
+             
+            njobs : int or float 
                  if int, the number of processors to use for parallelization
                  if float, percentage of total processors to use for parallelization 
-             subsample : float (between 0-1)
+                 
+            subsample : float (between 0-1)
                  Fraction of randomly sampled examples to evaluate (default is 1.0; no subsampling)
-             nbootstrap
- 
- 
-            subsample: a float (between 0-1) for fraction of examples used in bootstrap
+                 
             nbootstrap: number of bootstrap iterations to perform. Defaults to 1 (no
                         bootstrapping).
         """    
-        model_str_ids = [name for name in self.models.keys()]
-
         #Check if features is a string
         if is_str(features) or isinstance(features, tuple):
             features = [features]
 
-        args_iterator = to_iterator(model_str_ids, 
+        args_iterator = to_iterator(self.model_names, 
                                     features,
                                     [nbins],
                                     [subsample],
@@ -87,7 +112,7 @@ class PartialDependence(Attributes):
                    nprocs_to_use=njobs
             )
         
-        if len(model_str_ids) > 1:
+        if len(self.model_names) > 1:
             results = merge_nested_dict(results)
         else:
             results = merge_dict(results)
@@ -145,7 +170,7 @@ class PartialDependence(Attributes):
                           ) for f in feature_values]
 
         # get the bootstrap samples
-        if nbootstrap > 1:
+        if nbootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(self.examples, 
                                         subsample=subsample, 
                                         nbootstrap=nbootstrap)
@@ -162,7 +187,7 @@ class PartialDependence(Attributes):
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
             # get samples
-            examples = self.examples.iloc[idx, :].copy()
+            examples = self.examples.iloc[idx, :]
             
             averaged_predictions = [ ]
             # for each value, set all indices to the value, 
@@ -179,12 +204,11 @@ class PartialDependence(Attributes):
             averaged_predictions = np.array(averaged_predictions).T
           
             if self.model_output=='probability': 
-                #print("""Output is a probability; 
-                #      Only outputing the effect of the positive class!""") 
                 # Binary classification, shape is (2, n_points).
                 # we output the effect of **positive** class
-                averaged_predictions = averaged_predictions[1]  
-        
+                # and convert to percentages
+                averaged_predictions = averaged_predictions[1] * 100. 
+            
             # Center the predictions 
             averaged_predictions -= np.mean(averaged_predictions)
         
@@ -194,44 +218,40 @@ class PartialDependence(Attributes):
         pd_values = np.array(pd_values)
         if len(features) > 1:
             pd_values = pd_values.reshape(nbootstrap, nbins, nbins)
-
-        key = tuple(features) 
-        results = {key : {model_name : {}}}
-        results[key][model_name]['values'] = pd_values
-        results[key][model_name]['xdata1'] = grid[0]
-        if len(features) > 1:
-            results[key][model_name]['xdata2'] = grid[1]
-        results[key][model_name]['hist_data'] = feature_values
+        else: 
+            features = features[0]
+        
+        results = { features: {model_name : {}}}
+        results[features][model_name]['values'] = pd_values
+        results[features][model_name]['xdata1'] = grid[0]
+        if np.shape(grid)[0] > 1:
+            results[features][model_name]['xdata2'] = grid[1]
+        results[features][model_name]['hist_data'] = feature_values
         
         return results
 
-    
     def friedman_h_statistic(self, model_name, feature_tuple, nbins=15):
         """
         Compute the H-statistic for two-way interactions between two features. 
         
-        ToDo: Need to center the PD! 
+        Args:
+            model_name : str
+            feature_tuple : 2-tuple of strs
+            nbins : int
         
+        Returns:
         """
         feature1, feature2 = feature_tuple
         
-        feature1_results = self.compute_1d_partial_dependence(model_name, feature1, nbins=nbins)
-        feature2_results = self.compute_1d_partial_dependence(model_name, feature2, nbins=nbins)
+        feature1_results = self.compute_partial_dependence(model_name, feature1, nbins=nbins)
+        feature2_results = self.compute_partial_dependence(model_name, feature2, nbins=nbins)
         
         feature1_pd = feature1_results[feature1][model_name]['values'].squeeze()
         feature2_pd = feature2_results[feature2][model_name]['values'].squeeze()
-        
-        x1 = feature1_results[feature1][model_name]['xdata1']
-        x2 = feature2_results[feature2][model_name]['xdata1']
-        
-        combined_results = self.compute_2d_partial_dependence(model_name, feature_tuple, nbins)
-        
+
+        combined_results = self.compute_partial_dependence(model_name, feature_tuple, nbins)
         combined_pd = combined_results[feature_tuple][model_name]['values'].squeeze()
-        
-        feature1_pd -= feature1_pd.mean()
-        feature2_pd -= feature2_pd.mean()
-        combined_pd -= combined_pd.mean()
-        
+       
         pd_decomposed = feature1_pd[:,np.newaxis] + feature2_pd[np.newaxis,:]
         numer = (combined_pd - pd_decomposed)**2
         denom = (combined_pd)**2

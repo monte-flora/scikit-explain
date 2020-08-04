@@ -18,33 +18,50 @@ class AccumulatedLocalEffects(Attributes):
     """
     AccumulatedLocalEffects is a class for computing first- and second-order
     accumulated local effects (ALE) from Apley and Zhy et al. (2016). 
+    Parts of the code are based on the python package at 
+    https://github.com/blent-ai/ALEPython. 
+    
     The computations can take advantage of multiple cores for parallelization. 
     
-    Attributes: 
-        model : object, list, or dict
-            a trained single scikit-learn model, or list of scikit-learn models, or
-            dictionary of models where the key-value pairs are the model name as 
-            a string identifier and prefit model object.
+    Attributes:
+        model : pre-fit scikit-learn model object, or list of 
+            Provide a list of model objects to compute PD 
+            for multiple model predictions.
+        
+        model_names : str, list 
+            List of model names for the model objects in model. 
+            For internal and plotting purposes. 
             
-        examples : pandas.DataFrame or ndnumpy.array; shape = (n_examples, n_features)
-            training or validation examples to evaluate.
-            If ndnumpy array, make sure to specify the feature names
+        examples : pandas.DataFrame or ndnumpy.array. 
+            Examples used to train the model.
             
-        model_output : "predict" or "predict_proba"
-            What output of the model should be evaluated. 
+        feature_names : list of strs
+            If examples are ndnumpy.array, then provide the feature_names 
+            (default is None; assumes examples are pandas.DataFrame).
             
-        feature_names : defaults to None. Should only be set if examples is a
-            nd.numpy array. Make sure it's a list
+        model_output : 'probability' or 'regression' 
+            What is the expected model output. 'probability' uses the positive class of 
+            the .predict_proba() method while 'regression' uses .predict().
+            
+        checked_attributes : boolean 
+            For internal purposes only
     
     Reference: 
         Apley, D. W., and J. Zhu, 2016: Visualizing the Effects of Predictor 
         Variables in Black Box Supervised Learning Models.
     
     """
-    def __init__(self, model, examples, model_output, feature_names=None):
-        # These functions from the inherited Attributes class
-        self.set_model_attribute(model)
-        self.set_examples_attribute(examples, feature_names)
+    def __init__(self, model, model_names, examples, model_output, feature_names=None, checked_attributes=False):
+        # These functions come from the inherited Attributes class  
+        if not checked_attributes:
+            self.set_model_attribute(model, model_names)
+            self.set_examples_attribute(examples, feature_names)
+        else:
+            self.models = model
+            self.model_names = model_names
+            self.examples = examples
+            self.feature_names = list(examples.columns)
+           
         self.model_output = model_output
         
     def run_ale(self, features=None, nbins=25, 
@@ -63,9 +80,6 @@ class AccumulatedLocalEffects(Attributes):
             nbins : int 
                 Number of bins to compute ALE in. 
         """   
-        # Retrieve the string identifiers for the different models 
-        model_str_ids = [name for name in self.models.keys()]
-        
         #Check if features is a string
         if is_str(features):
             features = [features]
@@ -76,7 +90,7 @@ class AccumulatedLocalEffects(Attributes):
         else:
             func = self.compute_first_order_ale
             
-        args_iterator = to_iterator(model_str_ids, 
+        args_iterator = to_iterator(self.model_names, 
                                     features,
                                     [nbins],
                                     [subsample],
@@ -89,7 +103,7 @@ class AccumulatedLocalEffects(Attributes):
             )
         
         # Unpack the results from the parallelization script
-        if len(model_str_ids) > 1:
+        if len(self.model_names) > 1:
             results = merge_nested_dict(results)
         else:
             results = merge_dict(results)
@@ -128,29 +142,33 @@ class AccumulatedLocalEffects(Attributes):
             raise Exception(f"Feature {feature} is not a valid feature")
 
         # get the bootstrap samples
-        if nbootstrap > 1:
+        if nbootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(self.examples, 
                                         subsample=subsample, 
                                         nbootstrap=nbootstrap)
         else:
             bootstrap_indices = [self.examples.index.to_list()]
+  
 
-        # define ALE array
-        ale = np.zeros((nbootstrap, nbins))
-            
-        print('starting calculations...')
+        # Using the original, unaltered feature values 
+        # calculate the bin edges to be used in the bootstrapping. 
+        original_feature_values = self.examples[feature].values
+        bin_edges = np.unique( np.percentile(original_feature_values, 
+                                  np.linspace(0.0, 100.0, nbins+1),
+                                  interpolation="lower"
+                                )
+                                )
+        
+        ale = np.zeros((nbootstrap, len(bin_edges)-1))
         
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
             examples = self.examples.iloc[idx, :]
-            
+
             # Find the ranges to calculate the local effects over
             # Using xdata ensures each bin gets the same number of examples
             feature_values = examples[feature].values
-            bin_edges = np.percentile(feature_values, 
-                                  np.linspace(0.0, 100.0, nbins+1),
-                                  interpolation="nearest"
-                                )
+            
             # if right=True, then the smallest value in data is not included in a bin.
             # Thus, Define the bins the feature samples fall into. Shift and clip to ensure we are
             # getting the index of the left bin edge and the smallest sample retains its index
@@ -158,41 +176,43 @@ class AccumulatedLocalEffects(Attributes):
             indices = np.clip(
                 np.digitize(feature_values, bin_edges, right=True) - 1, 0, None
                 )
-
+            
             # Assign the feature quantile values (based on its bin index) to two copied training datasets, 
             #one for each bin edge. Then compute the difference between the corresponding predictions
             predictions = []
             for offset in range(2):
-                examples_temp = self.examples.copy()
+                examples_temp = examples.copy()
                 examples_temp[feature] = bin_edges[indices + offset]
                 if self.model_output == 'probability':
-                    # Assumes we only care about the positive class of a binary classification
+                    # Assumes we only care about the positive class of a binary classification.
+                    # And converts to percentage (e.g., multiply by 100%) 
                     # TODO : may need to FIX THIS! 
-                    predictions.append(model.predict_proba(examples_temp)[:,1])
+                    predictions.append(model.predict_proba(examples_temp)[:,1]*100.) 
                 elif self.model_output == 'raw':
                     predictions.append(model.predict(examples_temp))
         
             # The individual (local) effects.
             effects = predictions[1] - predictions[0]
-
+            
             # Group the effects by their bin index 
             index_groupby = pd.DataFrame({"index": indices, "effects": effects}).groupby(
                 "index"
             )
+            
             # Compute the mean local effect for each bin 
             mean_effects = index_groupby.mean().to_numpy().flatten()
             
             # Accumulate (cumulative sum) the mean local effects
             # Essentially intergrating the derivative to regain
             # the original function. 
-            ale[k,:] = mean_effects.cumsum()
+            ale_uncentered = mean_effects.cumsum()
             
             # Now we have to center ALE function in order to 
             # obtain null expectation for ALE function
-            ale[k,:] -= ale[k,:].mean()
+            ale[k,:] = ale_uncentered - np.mean(ale_uncentered) 
             
         results = {feature : {model_name :{}}}
-        results[feature][model_name]['values'] = ale
+        results[feature][model_name]['values'] = np.array(ale)
         results[feature][model_name]['xdata1'] = 0.5 * (bin_edges[1:] + bin_edges[:-1])
         results[feature][model_name]['hist_data'] = feature_values
         
@@ -337,8 +357,6 @@ class AccumulatedLocalEffects(Attributes):
             """
             # Now we have to center ALE function in order to obtain null expectation for ALE function
             ale[k,:,:] -= ale[k,:,:].mean()
-            
-            print(ale)
             
             results = {features : {model_name :{}}}
             results[features][model_name]['values'] = ale
