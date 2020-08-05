@@ -4,11 +4,9 @@ import pandas as pd
 from .attributes import Attributes
 from .partial_dependence import PartialDependence
 from .accumulated_local_effects import AccumulatedLocalEffects
-from .tree_interpreter import TreeInterpreter
+from .local_prediction import ExplainLocalPrediction
 from .plot import InterpretabilityPlotting
 from .utils import (
-       get_indices_based_on_performance, 
-     avg_and_sort_contributions, 
      retrieve_important_vars,
      brier_skill_score)
 
@@ -17,16 +15,6 @@ from sklearn.metrics import (roc_auc_score,
                              roc_curve, 
                              average_precision_score
                             )
-
-
-list_of_acceptable_tree_models = [
-    "RandomForestClassifier",
-    "RandomForestRegressor",
-    "DecisionTreeClassifier",
-    "ExtraTreesClassifier",
-    "ExtraTreesRegressor",
-]
-
 
 class InterpretToolkit(Attributes):
 
@@ -88,7 +76,7 @@ class InterpretToolkit(Attributes):
         available_options = {'permutation_importance' : 'pi_dict',
                              'pdp' : 'pd_dict',
                              'ale' : 'ale_dict',
-                             'tree_interpret' : 'ti_dict'
+                             'contributions' : 'contributions_dict'
                             }
         if option not in list(available_options.keys()):
             raise ValueError(f'{option} is not a possible option!')
@@ -263,159 +251,45 @@ class InterpretToolkit(Attributes):
                                          feature_units=feature_units, 
                                          **kwargs)
 
-
-    def tree_interpreter(self, model, indices=None):
-
+        
+    def calc_contributions(self, method, data_for_shap=None, performance_based=False, 
+                           n_examples=100, shap_sample_size=1000): 
         """
-        Method for intrepreting tree based ML models using treeInterpreter.
-        ADD REFERENCE HERE SOMEWHERE
-
-        Args:
-
-            model: the tree based model to use for computation
-            indices: list of indices to perform interpretation over. If None, all indices
-                are used
-
-        Return:
-
-            contributions_dataframe: Pandas DataFrame
-
         """
-        # if indices to use is None, implies use all data
-        if (indices is None):
-            indices  = self._examples.index.to_list()
-            examples = self._examples
-        else:
-            examples = self._examples.iloc[indices]
-
-        # number of examples
-        n_examples = len(indices)
-
-        # check that we have data to process
-        if (n_examples == 0):
-            print(f"No examples, returning empty dataframe")
-            return pd.DataFrame()
-
-        # create an instance of the TreeInterpreter class
-        ti = TreeInterpreter(model, examples)
-
-        print(f"Interpreting {n_examples} examples...")
-        prediction, bias, contributions = ti.predict()
-
-        positive_class_contributions = contributions[:, :, 1]
-        positive_class_bias = bias[0,1]   #bias is all the same values for first index
-
-        tmp_data = []
-
-        # loop over each case appending each feature and value to a dictionary
-        for i in range(n_examples):
-
-            key_list = []
-            var_list = []
-
-            for c, feature in zip( positive_class_contributions[i, :], self._feature_names):
-
-                key_list.append(feature)
-                var_list.append(round(100.0 * c, 2))
-
-            key_list.append('Bias')
-            var_list.append(round(100. * positive_class_bias, 2))
-
-            tmp_data.append(dict(zip(key_list, var_list)))
-
-        # return a pandas DataFrame to do analysis on
-        contributions_dataframe = pd.DataFrame(data=tmp_data)
-
-        return contributions_dataframe
-
-    def run_tree_interpreter(self, performance_based=False, n_examples=10):
-
-        """
-        Method for running tree interpreter. This function is called by end user
-
-        Args:
-            performance_based: string of whether to use indices based on hits, misses,
-                false alarms, or correct negatives. Default is False (uses all examples
-                provided during constructor call)
-            n_examples : int representing the number of examples to get if
-                performance_based is True. Default is 10 examples.
-
-        Return:
-
-            dict_of_dfs: dictionary of pandas DataFrames, one for each key
-        """
-
-        # will be returned; a list of pandas dataframes, one for each performance dict key
-        self.ti_dict = {}
-
-        # if performance based interpretor, run tree_interpretor for each metric
-        if performance_based is True:
-
-            # loop over each model
-            for model_name, model in self._models.items():
-
-                # check to make sure model is of type Tree
-                if type(model).__name__ not in list_of_acceptable_tree_models:
-                    print(f"{model_name} is not accepted for this method. Passing...")
-                    continue
-
-                # create entry for current model
-                self.ti_dict[model_name] = {}
-
-                # get the dictionary of hits, misses, correct neg, false alarms indices
-                performance_dict = get_indices_based_on_performance(model, 
-                                                                    examples=self._examples, 
-                                                                    targets=self._targets, 
-                                                                    n_examples=n_examples)
-
-                for key, values in performance_dict.items():
-
-                    print(f"Processing {key}...")
-
-                    # run the tree interpreter
-                    cont_dict = self.tree_interpreter(model, indices=values)
-
-                    self.ti_dict[model_name][key] = cont_dict
-
-                # average out the contributions and sort based on contribution
-                some_dict = avg_and_sort_contributions(self.ti_dict[model_name],
-                                                       examples = self._examples,
-                                                    performance_dict=performance_dict)
-
-                self.ti_dict[model_name] = some_dict
-        else:
-
-            # loop over each model
-            for model_name, model in self._models.items():
-
-                # check to make sure model is of type Tree
-                if type(model).__name__ not in list_of_acceptable_tree_models:
-                    print(f"{model_name} is not accepted for this method. Passing...")
-                    continue
-
-                # create entry for current model
-                self.ti_dict[model_name] = {}
-
-                # run the tree interpreter
-                cont_dict = self.tree_interpreter(model)
-
-                self.ti_dict[model_name]['all_data'] = cont_dict
-
-                # average out the contributions and sort based on contribution
-                some_dict = self.avg_and_sort_contributions(self.ti_dict[model_name])
-
-                self.ti_dict[model_name] = some_dict
-
-        return self.ti_dict
-
-
-    def plot_tree_interpreter(self, to_only_varname=None, 
+        elp = ExplainLocalPrediction(model=self.models,
+                            model_names=self.model_names,
+                            examples=self.examples,
+                            targets=self.targets,
+                            model_output=self.model_output,
+                            checked_attributes=self.checked_attributes         
+                            )
+        
+        results = elp._get_local_prediction(method=method, 
+                                            data_for_shap=data_for_shap,
+                                            performance_based=performance_based, 
+                                            n_examples=n_examples,
+                                           shap_sample_size=shap_sample_size)
+        
+        self.contributions_dict = results
+        
+        return results                  
+           
+    def plot_contributions(self, to_only_varname=None, 
                               readable_feature_names={}, **kwargs):
+        """
+        
+        """
+        # Check if calc_pd has been ran
+        if not hasattr(self, 'contributions_dict'):
+            raise AttributeError('No results! Run calc_contributions first!')
 
-        return self._clarify_plot_obj.plot_treeinterpret(self.ti_dict, 
-                                                         to_only_varname=to_only_varname,
-                                                         readable_feature_names=readable_feature_names, 
-                                                         **kwargs)
+        # initialize a plotting object
+        plot_obj = InterpretabilityPlotting()
+        
+        return plot_obj.plot_contributions(self.contributions_dict, 
+                                           to_only_varname=to_only_varname,
+                                           readable_feature_names=readable_feature_names, 
+                                           **kwargs)
 
     def permutation_importance(self, n_vars=5, evaluation_fn="auprc",
             subsample=1.0, njobs=1, nbootstrap=1, scoring_strategy=None):
@@ -439,7 +313,7 @@ class InterpretToolkit(Attributes):
         """
         available_scores = ['auc', 'aupdc', 'bss']
         
-        if evaluation_fn.lower() not in available_scores and scoring_strategy is None:
+        if not isinstance(evaluation_fn.lower(),str) and scoring_strategy is None:
             raise ValueError(
                 ''' 
                 The scoring_strategy argument is None! If you are using a user-define evaluation_fn 
@@ -448,8 +322,6 @@ class InterpretToolkit(Attributes):
                 (a lower value is better), then set scoring_strategy = "argmax_of_mean"
                 ''') 
             
-      
-        
         if evaluation_fn.lower() == "auc":
             evaluation_fn = roc_auc_score
             scoring_strategy = "argmin_of_mean"
@@ -459,7 +331,9 @@ class InterpretToolkit(Attributes):
         elif evaluation_fn.lower() == 'bss':
             evaluation_fn = brier_skill_score
             scoring_strategy = "argmin_of_mean"
-               
+        else:
+            raise ValueError("evaluation_fn is not set! Available options are 'auc', 'aupdc', or 'bss'") 
+                
         targets = pd.DataFrame(data=self.targets, columns=['Test'])
 
         self.pi_dict = {}

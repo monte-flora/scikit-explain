@@ -506,7 +506,7 @@ class InterpretabilityPlotting:
         labels = [fr'{l}' for l in labels] 
         ax.set_yticklabels(labels)
     
-    def _ti_plot(
+    def _contribution_plot(
         self,
         dict_to_use,
         key,
@@ -517,7 +517,7 @@ class InterpretabilityPlotting:
         other_label="Other Predictors",
     ):
         """
-        Plot the tree interpreter.
+        Plot the feature contributions. 
         """
         contrib = []
         varnames = []
@@ -561,7 +561,7 @@ class InterpretabilityPlotting:
         contrib = contrib[sorted_idx]
         varnames = varnames[sorted_idx]
 
-        bar_colors = ["seagreen" if c > 0 else "tomato" for c in contrib]
+        bar_colors = ["xkcd:pastel red" if c > 0 else 'xkcd:powder blue' for c in contrib]
         y_index = range(len(contrib))
 
         # Despine
@@ -606,10 +606,10 @@ class InterpretabilityPlotting:
                 )
 
         ax.set_xlim([np.min(contrib) - neg_factor, np.max(contrib) + factor])
-
-        pos_contrib_ratio = float(sum(contrib[contrib>0])) / len(contrib)
         
-        if pos_contrib_ratio > 0.5:
+        pos_contrib_ratio = abs(np.max(contrib)) > abs(np.min(contrib))
+        
+        if pos_contrib_ratio:
             ax.text(
                 0.685,
                 0.1,
@@ -660,10 +660,10 @@ class InterpretabilityPlotting:
         # make the horizontal plot go with the highest value at the top
         ax.invert_yaxis()
 
-    def plot_treeinterpret(self, result_dict, to_only_varname=None, 
+    def plot_contributions(self, result_dict, to_only_varname=None, 
                            readable_feature_names={}, **kwargs):
         """
-        Plot the results of tree interpret
+        Plot the results of feature contributions
 
         Args:
         ---------------
@@ -682,12 +682,24 @@ class InterpretabilityPlotting:
         for model_name in result_dict.keys():
 
             # try for all_data/average data
-            if "all_data" in result_dict[model_name].keys():
+            if "non_performance" in result_dict[model_name].keys():
+                # create subplots, one for each feature
+                fig, ax = self.create_subplots(
+                    n_panels=1,
+                    n_columns=1,
+                    hspace=hspace,
+                    wspace=wspace,
+                    sharex=False,
+                    sharey=False,
+                    figsize=(3, 2.5),
+                )
 
-                fig = self._ti_plot(
-                    result_dict[model_name]["all_data"], 
+                fig = self._contribution_plot(
+                    result_dict[model_name]["non_performance"], 
                     to_only_varname=to_only_varname,
-                    readable_feature_names=readable_feature_names
+                    readable_feature_names=readable_feature_names,
+                    key='',
+                    ax=ax
                 )
 
             # must be performanced based
@@ -706,7 +718,7 @@ class InterpretabilityPlotting:
 
                 for ax, perf_key in zip(axes.flat, result_dict[model_name].keys()):
                     print(perf_key)
-                    self._ti_plot(
+                    self._contribution_plot(
                         result_dict[model_name][perf_key],
                         ax=ax,
                         key=perf_key,
@@ -1002,7 +1014,7 @@ class InterpretabilityPlotting:
         Returns the color for each variable.
         """
         if var == "No Permutations":
-            return 'xkcd:pastel red' #"tomato"
+            return 'xkcd:pastel red'
         else:
             if VARIABLES_COLOR_DICT is None:
                 return "xkcd:powder blue"

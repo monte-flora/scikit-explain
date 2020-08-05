@@ -225,7 +225,7 @@ def is_outlier(points, thresh=3.5):
     return modified_z_score > thresh
 
 
-def get_indices_based_on_performance(model, examples, targets, n_examples=None):
+def get_indices_based_on_performance(model, examples, targets, model_output='probability', n_examples=None):
     """
        Determines the best hits, worst false alarms, worst misses, and best
        correct negatives using the data provided during initialization.
@@ -250,7 +250,11 @@ def get_indices_based_on_performance(model, examples, targets, n_examples=None):
         print("n_examples less than or equals 0. Defaulting back to all")
         n_examples = examples.shape[0]
         
-    predictions = model.predict_proba(examples)[:,1]
+    if model_output == 'probability':      
+        predictions = model.predict_proba(examples)[:,1]
+    elif model_output == 'regression':
+        predictions = model.predict(examples)
+        
     diff = (targets-predictions)
     data = {'targets': targets, 'predictions': predictions, 'diff': diff}
     df = pd.DataFrame(data)
@@ -275,7 +279,7 @@ def get_indices_based_on_performance(model, examples, targets, n_examples=None):
 
     return sorted_dict
 
-def avg_and_sort_contributions(the_dict, examples, performance_dict=None):
+def avg_and_sort_contributions(the_dict):
     """
         Get the mean value (of data for a predictory) and contribution from
         each predictor and sort"
@@ -299,21 +303,20 @@ def avg_and_sort_contributions(the_dict, examples, performance_dict=None):
         series    = df.mean(axis=0)
         sorted_df = series.reindex(series.abs().sort_values(ascending=False).index)
 
-        if (performance_dict is None):
-            idxs = examples.index.to_list()
-        else:
-            idxs = performance_dict[key]
+        #if (performance_dict is None):
+        #    idxs = examples.index.to_list()
+        #else:
+        #    idxs = performance_dict[key]
 
+        # "Mean Value": np.mean(examples.loc[idxs,var].values),
         top_vars = {}
         for var in list(sorted_df.index):
             if var == 'Bias':
                 top_vars[var] = {
-                                 'Mean Value': None,
                                  'Mean Contribution' : series[var]
                                  }
             else:
                 top_vars[var] = {
-                        "Mean Value": np.mean(examples.loc[idxs,var].values),
                         "Mean Contribution": series[var],
                     }
 
