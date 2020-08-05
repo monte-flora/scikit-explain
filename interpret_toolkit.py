@@ -341,7 +341,7 @@ class InterpretToolkit(Attributes):
             nbootstrap: integer
                 number of bootstrapp resamples
         """
-        available_scores = ['auc', 'aupdc', 'bss']
+        available_scores = ['auc', 'auprc', 'bss']
         
         if not isinstance(evaluation_fn.lower(),str) and scoring_strategy is None:
             raise ValueError(
