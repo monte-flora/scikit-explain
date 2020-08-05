@@ -22,13 +22,15 @@ class Attributes:
                 List of names of the models in model_objs 
                 (for plotting purposes) 
         """
+        model_is_none = model_objs==None
         if not is_list(model_objs):
             model_objs = to_list(model_objs)
         
         if not is_list(model_names):
             model_names = to_list(model_names)
-               
-        assert len(model_objs) == len(model_names), "Number of model objects is not equal to the number of model names given!"    
+        
+        if not model_is_none:
+            assert len(model_objs) == len(model_names), "Number of model objects is not equal to the number of model names given!"    
        
         self.models = OrderedDict([(name, obj) for name, obj in zip(model_names, model_objs)])
         self.model_names = model_names
@@ -61,4 +63,5 @@ class Attributes:
         else:
             self.examples = examples
         
-        self.feature_names  = self.examples.columns.to_list()
+        if examples is not None:
+            self.feature_names  = self.examples.columns.to_list()
