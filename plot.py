@@ -136,7 +136,7 @@ class InterpretabilityPlotting:
         for ax, row in zip(iterator, labels):
             ax.yaxis.set_label_position("right")
             ax.annotate(row, xy=(1, 1), xytext=(pad, 0.5), xycoords = ax.transAxes, rotation=270,
-                size=8, ha='center', va='center', color='red', alpha=0.65)
+                    size=8, ha='center', va='center', color='xkcd:vermillion', alpha=0.65)
     
 
     def add_alphabet_label(self, axes):
@@ -811,7 +811,7 @@ class InterpretabilityPlotting:
                     ax.set_title(model_name, fontsize=12, alpha=0.8)
                 # Despine
                 self.despine_plt(ax)
-                
+               
                 importance_obj = importance_dict[model_name]
 
                 rankings = (

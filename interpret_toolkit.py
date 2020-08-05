@@ -437,7 +437,7 @@ class InterpretToolkit(Attributes):
             nbootstrap: integer
                 number of bootstrapp resamples
         """
-        available_scores = ['auc', 'aupdc', 'bss']
+        available_scores = ['auc', 'auprc', 'bss']
         
         if evaluation_fn.lower() not in available_scores and scoring_strategy is None:
             raise ValueError(
