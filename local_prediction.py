@@ -103,22 +103,43 @@ class ExplainLocalPrediction(Attributes):
         return contributions_dict
     
     
-    def _get_shap_values(self, model, examples, subsample_size):
+    def _get_shap_values(self, model, examples, subsample_size, subsample_method='kmean'):
         """
         """
-        # Check if model is a tree or need to use 
-        #explainer = shap.KernelExplainer(model.predict_proba, X, link="identity")
-        #shap_values = explainer.shap_values(X, l1_reg="num_features(10)")
         if self.model_output == 'regression':
             self.model_output = 'raw'
 
-        data_for_shap = shap.sample(self.data_for_shap, subsample_size)
+        if subsample_method=='kmean':    
+            data_for_shap = shap.kmeans(self.data_for_shap, subsample_size)
+        elif subsample_method=='random':
+            data_for_shap = shap.sample(self.data_for_shap, subsample_size)
+            
+        try: 
+            print(f'subsample_size: {subsample_size}')
+            print(f'subsample_method: {subsample_method}')
+            # Use the 'tree-dependent' method 
+            explainer = shap.TreeExplainer(model, 
+                                       data = data_for_shape, 
+                                       model_output=self.model_output
+                                          )
+            
+            contributions = explainer.shap_values(examples)
+            
+        except: 
+            if self.model_output == 'probability':
+                func = model.predict_proba
+                link = 'identity'
+            else:
+                fun = model.predict
+                link = 'identity'
+            
+            explainer = shap.KernelExplainer(func, 
+                                             data_for_shap, 
+                                             link=link
+                                            )
+            
+            contributions = explainer.shap_values(examples, l1_reg="num_features(10)")
         
-        # Use the 'tree-dependent' method 
-        explainer = shap.TreeExplainer(model, 
-                                       data = None, 
-                                       model_output='raw')
-        contributions = explainer.shap_values(examples)
         
         if self.model_output == 'probability':
             bias = explainer.expected_value[1]

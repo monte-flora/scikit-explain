@@ -9,6 +9,7 @@ from matplotlib import rcParams
 from matplotlib.colors import ListedColormap
 
 from .utils import combine_like_features, is_outlier
+import shap 
 
 # Setting the font style to serif
 rcParams['font.family'] = 'serif'
@@ -47,7 +48,6 @@ line_colors = ["xkcd:fire engine red",
 
 class InterpretabilityPlotting:
     def create_subplots(self, n_panels, **kwargs):
-
         """
         Create a series of subplots (MxN) based on the 
         number of panels and number of columns (optionally)
@@ -152,7 +152,7 @@ class InterpretabilityPlotting:
     
         for i, ax in enumerate(iterator):
             ax.text(
-                    0.85,
+                    0.9,
                     0.09,
                     f"({alphabet_list[i]})",
                     fontsize=10,
@@ -206,7 +206,7 @@ class InterpretabilityPlotting:
 
     def confidence_interval_plot(self, ax, xdata, ydata, label, **kwargs):
         """
-        Plot Confidence Intervals
+        Plot a line plot with an optional confidence interval polygon
         """
 
         facecolor = kwargs.get("facecolor", "r")
@@ -334,8 +334,15 @@ class InterpretabilityPlotting:
         ax.yaxis.set_major_locator(MaxNLocator(5))
         ax.yaxis.set_major_locator(MaxNLocator(4))
         
-    def plot_1d_curve(self, feature_dict, features, model_names, readable_feature_names={}, 
-                      feature_units={}, unnormalize=None, **kwargs):
+    def plot_1d_curve(self, 
+                      feature_dict,
+                      features, 
+                      model_names, 
+                      shap_values=None,
+                      readable_feature_names={}, 
+                      feature_units={}, 
+                      unnormalize=None, 
+                      **kwargs):
         """
         Generic function for 1-D ALE and PD.
         """
@@ -420,7 +427,8 @@ class InterpretabilityPlotting:
             **kwargs,
         )
         self.set_legend(n_panels, fig, lineplt_ax, major_ax)
-
+        self.add_alphabet_label(axes)
+        
         return fig, axes
 
     def plot_contours(self, model_names, feature_dict, readable_feature_names={}, 
@@ -434,7 +442,6 @@ class InterpretabilityPlotting:
         
         hspace = kwargs.get("hspace", 0.5)
         wspace = kwargs.get("wspace", 0.6)
-        #ylim = kwargs.get("ylim", [25, 50])
         
         cmap = "bwr" 
         colorbar_label = kwargs.get("left_yaxis_label")
@@ -482,7 +489,7 @@ class InterpretabilityPlotting:
                                 xaxis_label=feature[0], 
                                 yaxis_label=feature[1]
                                )
-            #ax.set_ylim(ylim)
+         
         fig.suptitle(model_names[0].replace('Classifier', ''), x=0.5, y=1.05, fontsize=12)
         cbar = fig.colorbar(cf, ax=axes.ravel().tolist(), 
                             shrink=0.65,
@@ -490,12 +497,66 @@ class InterpretabilityPlotting:
                             label = colorbar_label,
                             pad=0.335,
                            )
-                           
-        #cbar.set_yticks(self.calculate_ticks(ax, 5))
-        #cbar.set_ticklabels(['low', 'medium', 'high'])
 
         return fig, axes
+    
 
+    def plot_shap(self, shap_values, examples, 
+                  features=None, 
+                  display_feature_names=None,
+                  plot_type='summary', **kwargs):
+        """
+        """
+        plt.rc("xtick", labelsize=TINY_FONT_SIZE)
+        hspace = kwargs.get("hspace", 0.5)
+        
+        original_column_names = list(examples.columns)
+        
+        if display_feature_names is None:
+            display_feature_names = list(examples.columns)
+        else:
+            examples = examples.to_numpy()
+        
+        if plot_type == 'summary':
+            shap.summary_plot(shap_values =shap_values, 
+                         features = examples, 
+                         feature_names = display_feature_names,
+                         max_display=20,
+                         plot_size=0.5,
+                         plot_type='dot',
+                         show=False)
+        else:
+            n_panels = len(features)
+            
+            print(n_panels)
+            
+            # create subplots, one for each feature
+            fig, axes = self.create_subplots(
+                n_panels=n_panels, hspace=hspace, **kwargs
+            )      
+            
+            if n_panels == 1:
+                ax_iterator = [axes]
+            else:
+                ax_iterator = axes.flat
+            
+            for ax, feature in zip(ax_iterator, features):
+                
+                print('Processing : ', feature)
+                
+                # summarize the effects of all the features
+                feature_idx = original_column_names.index(feature)
+                
+                shap.dependence_plot(
+                     shap_values=shap_values[:,feature_idx], 
+                     features=examples,
+                     feature_names=display_feature_names,
+                     interaction_index=None,
+                     ax=ax, 
+                     show=False)
+                
+            self.add_alphabet_label(axes)
+                  
     def set_tick_labels(self, ax, feature_names, readable_feature_names):
         """
         Setting the tick labels for the tree interpreter plots. 

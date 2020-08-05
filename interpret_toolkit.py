@@ -215,8 +215,9 @@ class InterpretToolkit(Attributes):
         self.features_used = features
         
         return results
-        
-    def plot_ale(self, readable_feature_names={}, feature_units={}, **kwargs):
+    
+    
+    def plot_ale(self, readable_feature_names={}, feature_units={}, add_shap=False, **kwargs):
         """
             Plots the ALE. If the first instance is a tuple, then a 2-D plot is
             assumed, else 1-D.
@@ -268,7 +269,7 @@ class InterpretToolkit(Attributes):
                                             data_for_shap=data_for_shap,
                                             performance_based=performance_based, 
                                             n_examples=n_examples,
-                                           shap_sample_size=shap_sample_size)
+                                            shap_sample_size=shap_sample_size)
         
         self.contributions_dict = results
         
@@ -290,6 +291,35 @@ class InterpretToolkit(Attributes):
                                            to_only_varname=to_only_varname,
                                            readable_feature_names=readable_feature_names, 
                                            **kwargs)
+        
+        
+    def plot_shap(self, features=None, display_feature_names=None, 
+                  plot_type='summary', data_for_shap=None, subsample_size=1000):
+        """
+        """
+        elp = ExplainLocalPrediction(model=self.models,
+                            model_names=self.model_names,
+                            examples=self.examples,
+                            targets=self.targets,
+                            model_output=self.model_output,
+                            checked_attributes=self.checked_attributes         
+                            )
+        
+        model = list(self.models.items())[0][1]
+        
+        elp.data_for_shap = data_for_shap    
+        shap_values, bias = elp._get_shap_values(model=model, 
+                                                 examples=self.examples,
+                                                 subsample_size=subsample_size)
+                  
+        # initialize a plotting object
+        plot_obj = InterpretabilityPlotting()
+        plot_obj.plot_shap(shap_values=shap_values, 
+                           examples=self.examples, 
+                           features=features, 
+                           plot_type=plot_type,
+                           display_feature_names=display_feature_names
+                          )
 
     def permutation_importance(self, n_vars=5, evaluation_fn="auprc",
             subsample=1.0, njobs=1, nbootstrap=1, scoring_strategy=None):
