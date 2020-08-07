@@ -863,7 +863,7 @@ class InterpretabilityPlotting:
         elif n_panels == 2:
             figsize = (6,2.5)
         else:
-            figsize = kwargs.get("figsize", (8,2))
+            figsize = kwargs.get("figsize", (6,2))
         
         # create subplots, one for each feature
         fig, axes = self.create_subplots(
@@ -1028,16 +1028,16 @@ class InterpretabilityPlotting:
                 if k == 0:
                     pad = -0.15       
                     ax.annotate('higher ranking', xy=(0, 0), xytext=(pad, 0.5), xycoords = ax.transAxes, rotation=90,
-                        size=6, ha='center', va='center', color='xkcd:vermillion', alpha=0.65)
+                        size=5, ha='center', va='center', color='xkcd:blue grey', alpha=0.65)
 
-                    ax.annotate(r'$\rightarrow$', xy=(0, 0), xytext=(pad, 0.75), xycoords = ax.transAxes, rotation=90,
-                        size=12, ha='center', va='center', color='xkcd:vermillion', alpha=0.65)    
+                    ax.annotate(r'$\rightarrow$', xy=(0, 0), xytext=(pad, 0.85), xycoords = ax.transAxes, rotation=90,
+                        size=10, ha='center', va='center', color='xkcd:blue grey', alpha=0.65)    
                     
                     ax.annotate('lower ranking', xy=(0, 0), xytext=(pad+0.05, 0.5), xycoords = ax.transAxes, rotation=90,
-                            size=6, ha='center', va='center', color='xkcd:dodger blue', alpha=0.65)
+                            size=5, ha='center', va='center', color='xkcd:blue grey', alpha=0.65)
 
-                    ax.annotate(r'$\leftarrow$', xy=(0, 0), xytext=(pad+0.05, 0.24), xycoords = ax.transAxes, rotation=90,
-                       size=12, ha='center', va='center', color='xkcd:dodger blue', alpha=0.65)
+                    ax.annotate(r'$\leftarrow$', xy=(0, 0), xytext=(pad+0.05, 0.10), xycoords = ax.transAxes, rotation=90,
+                       size=10, ha='center', va='center', color='xkcd:blue grey', alpha=0.65)
           
         self.set_major_axis_labels(
                 fig,
