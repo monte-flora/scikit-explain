@@ -84,8 +84,8 @@ class InterpretToolkit(Attributes):
         
         setattr(self, available_options[option], results)
     
-    def save_figure(self, fig, 
-                    fname, bbox_inches='tight', 
+    def save_figure(self, 
+                    fname, fig=None, bbox_inches='tight', 
                     dpi=300, aformat='png'):
         """ Saves a figure """
         # initialize a plotting object

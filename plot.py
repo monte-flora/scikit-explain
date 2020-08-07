@@ -1050,7 +1050,7 @@ class InterpretabilityPlotting:
         self.add_alphabet_label(axes)
 
             
-    def save_figure(self, fig, fname, bbox_inches="tight", dpi=300, aformat="png"):
+    def save_figure(self, fname, fig=None, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """
         plt.savefig(fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
         plt.close(fig) 
