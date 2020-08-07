@@ -187,9 +187,9 @@ class AccumulatedLocalEffects(Attributes):
                     # Assumes we only care about the positive class of a binary classification.
                     # And converts to percentage (e.g., multiply by 100%) 
                     # TODO : may need to FIX THIS! 
-                    predictions.append(model.predict_proba(examples_temp)[:,1]*100.) 
+                    predictions.append(model.predict_proba(examples_temp.values)[:,1]*100.) 
                 elif self.model_output == 'raw':
-                    predictions.append(model.predict(examples_temp))
+                    predictions.append(model.predict(examples_temp.values))
         
             # The individual (local) effects.
             effects = predictions[1] - predictions[0]

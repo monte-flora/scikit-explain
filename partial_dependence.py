@@ -196,7 +196,7 @@ class PartialDependence(Attributes):
                 examples_temp = examples.copy()
                 for i, feature in enumerate(features):
                     examples_temp.loc[:, feature] = value_set[i]
-                    predictions = prediction_method(examples_temp)
+                    predictions = prediction_method(examples_temp.values)
 
                 # average over samples
                 averaged_predictions.append(np.mean(predictions, axis=0))        
