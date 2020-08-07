@@ -1,4 +1,5 @@
 import shap
+import traceback
 from .tree_interpreter import TreeInterpreter
 import pandas as pd
 
@@ -16,6 +17,7 @@ list_of_acceptable_tree_models = [
     "ExtraTreesClassifier",
     "ExtraTreesRegressor",
 ]
+
 
 class ExplainLocalPrediction(Attributes):
     def __init__(self, model, model_names, examples, targets, model_output, 
@@ -103,36 +105,37 @@ class ExplainLocalPrediction(Attributes):
         return contributions_dict
     
     
-    def _get_shap_values(self, model, examples, subsample_size, subsample_method='kmean'):
+    def _get_shap_values(self, model, examples, subsample_size, 
+                         subsample_method='random'):
         """
         """
         if self.model_output == 'regression':
             self.model_output = 'raw'
 
-        if subsample_method=='kmean':    
+        if subsample_method=='kmeans':   
+            print(f'Performing K-means clustering (K={subsample_size}) to subset the data for the background dataset...')
             data_for_shap = shap.kmeans(self.data_for_shap, subsample_size)
         elif subsample_method=='random':
+            print(f'Performing random sampling (N={subsample_size}) to subset the data for the background dataset...')
             data_for_shap = shap.sample(self.data_for_shap, subsample_size)
-            
+        
         try: 
-            print(f'subsample_size: {subsample_size}')
-            print(f'subsample_method: {subsample_method}')
-            # Use the 'tree-dependent' method 
+            print('trying TreeExplainer...')
             explainer = shap.TreeExplainer(model, 
-                                       data = data_for_shape, 
+                                       data = data_for_shap, 
                                        model_output=self.model_output
                                           )
-            
             contributions = explainer.shap_values(examples)
             
-        except: 
+        except Exception as e:
+            traceback.print_exc()
             if self.model_output == 'probability':
                 func = model.predict_proba
                 link = 'identity'
             else:
                 fun = model.predict
                 link = 'identity'
-            
+            print('TreeExplainer failed, starting KernelExplainer...')
             explainer = shap.KernelExplainer(func, 
                                              data_for_shap, 
                                              link=link

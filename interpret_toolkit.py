@@ -7,6 +7,7 @@ from .accumulated_local_effects import AccumulatedLocalEffects
 from .local_prediction import ExplainLocalPrediction
 from .plot import InterpretabilityPlotting
 from .utils import (
+    get_indices_based_on_performance,
      retrieve_important_vars,
      brier_skill_score)
 
@@ -294,7 +295,8 @@ class InterpretToolkit(Attributes):
         
         
     def plot_shap(self, features=None, display_feature_names=None, 
-                  plot_type='summary', data_for_shap=None, subsample_size=1000):
+                  plot_type='summary', data_for_shap=None, subsample_size=1000, 
+                  performance_based=False, n_examples=100):
         """
         """
         elp = ExplainLocalPrediction(model=self.models,
@@ -307,15 +309,25 @@ class InterpretToolkit(Attributes):
         
         model = list(self.models.items())[0][1]
         
-        elp.data_for_shap = data_for_shap    
+        elp.data_for_shap = data_for_shap
+        if performance_based:
+            performance_dict = get_indices_based_on_performance(model, 
+                                                                examples=self.examples, 
+                                                                targets=self.targets, 
+                                                                n_examples=n_examples)
+            indices = performance_dict['hits']
+            examples = self.examples.iloc[indices,:]
+        else:
+            examples=self.examples
+            
         shap_values, bias = elp._get_shap_values(model=model, 
-                                                 examples=self.examples,
+                                                 examples=examples,
                                                  subsample_size=subsample_size)
                   
         # initialize a plotting object
         plot_obj = InterpretabilityPlotting()
         plot_obj.plot_shap(shap_values=shap_values, 
-                           examples=self.examples, 
+                           examples=examples, 
                            features=features, 
                            plot_type=plot_type,
                            display_feature_names=display_feature_names
