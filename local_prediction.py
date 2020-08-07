@@ -50,10 +50,7 @@ class ExplainLocalPrediction(Attributes):
                 data to perform the contribution break-down on.
             method : 'treeinterpreter' or 'shap' 
         """
-        if performance_based:
-            data_for_shap = self.examples 
-        else:
-            if data_for_shap is None and method == 'shap':
+        if data_for_shap is None and method == 'shap':
                 raise ValueError("""
                                  data_for_shap is None!, but the user set method='shap'.
                                  If using SHAP, then you must provide data to train the explainer.
@@ -77,6 +74,7 @@ class ExplainLocalPrediction(Attributes):
             # create entry for current model
             #self.contributions_dict[model_name] = {}
             if performance_based:
+                print('Computing performance-based contributions...') 
                 performance_dict = get_indices_based_on_performance(model, 
                                                                 examples=self.examples, 
                                                                 targets=self.targets, 
