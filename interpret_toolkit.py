@@ -90,8 +90,8 @@ class InterpretToolkit(Attributes):
         """ Saves a figure """
         # initialize a plotting object
         plot_obj = InterpretabilityPlotting()
-        plot_obj.save_figure(fig, 
-                             fname, 
+        plot_obj.save_figure(fig=fig, 
+                             fname=fname, 
                              bbox_inches=bbox_inches, 
                              dpi=dpi, 
                              aformat=aformat)

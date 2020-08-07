@@ -1052,8 +1052,9 @@ class InterpretabilityPlotting:
             
     def save_figure(self, fname, fig=None, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """
-        plt.savefig(fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
-        plt.close(fig) 
+        plt.savefig(fname=fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
+        if fig is not None:
+            plt.closefig(fig)
 
     # You can fill this in by using a dictionary with {var_name: legible_name}
     def convert_vars_to_readable(self, variables_list, VARIABLE_NAMES_DICT):
