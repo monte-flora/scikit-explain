@@ -352,7 +352,6 @@ class InterpretabilityPlotting:
         hspace = kwargs.get("hspace", 0.5)
         facecolor = kwargs.get("facecolor", "gray")
         left_yaxis_label = kwargs.get("left_yaxis_label")
-        add_zero_line = kwargs.get("add_zero_line", False)
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(feature_dict.keys())
@@ -414,8 +413,7 @@ class InterpretabilityPlotting:
             self.set_n_ticks(lineplt_ax)
             self.set_minor_ticks(lineplt_ax)
             self.set_axis_label(lineplt_ax, xaxis_label=''.join(feature))
-            if add_zero_line:
-                lineplt_ax.axhline(y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle='dashed')
+            lineplt_ax.axhline(y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle='dashed')
             lineplt_ax.set_yticks(self.calculate_ticks(lineplt_ax, 5, center=True))
 
         kwargs['fontsize'] = majoraxis_fontsize
