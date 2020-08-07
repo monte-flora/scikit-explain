@@ -143,8 +143,13 @@ class ExplainLocalPrediction(Attributes):
         
         
         if self.model_output == 'probability':
-            bias = explainer.expected_value[1]
-            contributions = contributions[1]
+            # Neccesary for XGBoost, which only outputs a scalar, not a list like scikit-learn 
+            try:
+                bias = explainer.expected_value[1]
+                contributions = contributions[1]
+            except IndexError:
+                bias = explainer.expected_value
+                contributions = contributions
         else:
             bias = explainer.expected_value
         

@@ -251,9 +251,9 @@ def get_indices_based_on_performance(model, examples, targets, model_output='pro
         n_examples = examples.shape[0]
         
     if model_output == 'probability':      
-        predictions = model.predict_proba(examples)[:,1]
+        predictions = model.predict_proba(examples.values)[:,1]
     elif model_output == 'regression':
-        predictions = model.predict(examples)
+        predictions = model.predict(examples.values)
         
     diff = (targets-predictions)
     data = {'targets': targets, 'predictions': predictions, 'diff': diff}
