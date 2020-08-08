@@ -296,7 +296,7 @@ class InterpretToolkit(Attributes):
         
     def plot_shap(self, features=None, display_feature_names=None, 
                   plot_type='summary', data_for_shap=None, subsample_size=1000, 
-                  performance_based=False, n_examples=100):
+                  performance_based=False, n_examples=100, **kwargs):
         """
         """
         elp = ExplainLocalPrediction(model=self.models,
@@ -324,13 +324,17 @@ class InterpretToolkit(Attributes):
                                                  examples=examples,
                                                  subsample_size=subsample_size)
                   
+        if self.model_output == 'probability':
+            shap_values *= 100.    
+        
         # initialize a plotting object
         plot_obj = InterpretabilityPlotting()
         plot_obj.plot_shap(shap_values=shap_values, 
                            examples=examples, 
                            features=features, 
                            plot_type=plot_type,
-                           display_feature_names=display_feature_names
+                           display_feature_names=display_feature_names,
+                           **kwargs
                           )
 
     def permutation_importance(self, n_vars=5, evaluation_fn="auprc",

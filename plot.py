@@ -195,7 +195,7 @@ class InterpretabilityPlotting:
         Plots a curve of data
         """
 
-        linewidth = kwargs.get("linewidth", 2.0)
+        linewidth = kwargs.get("linewidth", 1.25)
         linestyle = kwargs.get("linestyle", "-")
 
         if "color" not in kwargs:
@@ -505,8 +505,11 @@ class InterpretabilityPlotting:
                   plot_type='summary', **kwargs):
         """
         """
+        plt.rc("font", size=12)
         plt.rc("xtick", labelsize=TINY_FONT_SIZE)
-        hspace = kwargs.get("hspace", 0.5)
+        plt.rc("axes", labelsize=6)
+        hspace = kwargs.get("hspace", 0.4)
+        kwargs['wspace'] = 0.55
         
         original_column_names = list(examples.columns)
         
@@ -514,7 +517,7 @@ class InterpretabilityPlotting:
             display_feature_names = list(examples.columns)
         else:
             examples = examples.to_numpy()
-        
+       
         if plot_type == 'summary':
             shap.summary_plot(shap_values =shap_values, 
                          features = examples, 
@@ -523,14 +526,13 @@ class InterpretabilityPlotting:
                          plot_size=0.5,
                          plot_type='dot',
                          show=False)
-        else:
+        
+        elif plot_type == 'dependence':
             n_panels = len(features)
-            
-            print(n_panels)
-            
             # create subplots, one for each feature
             fig, axes = self.create_subplots(
-                n_panels=n_panels, hspace=hspace, **kwargs
+                n_panels=n_panels, hspace=hspace, 
+                figsize=(10, 10), **kwargs
             )      
             
             if n_panels == 1:
@@ -539,20 +541,33 @@ class InterpretabilityPlotting:
                 ax_iterator = axes.flat
             
             for ax, feature in zip(ax_iterator, features):
-                
                 print('Processing : ', feature)
                 
                 # summarize the effects of all the features
                 feature_idx = original_column_names.index(feature)
                 
                 shap.dependence_plot(
-                     shap_values=shap_values[:,feature_idx], 
+                     ind = feature_idx,
+                     shap_values=shap_values, 
                      features=examples,
                      feature_names=display_feature_names,
-                     interaction_index=None,
-                     ax=ax, 
+                     interaction_index='auto',
+                     dot_size=5, 
+                     ax=ax,
                      show=False)
-                
+                ax.set_ylabel('')
+                for item in ([ax.xaxis.label, ax.yaxis.label]):
+                    item.set_fontsize(10)
+                self.set_minor_ticks(ax)
+
+            major_ax = self.set_major_axis_labels(
+                fig,
+                xlabel=None,
+                ylabel_left='SHAP values (%)\n(Feature Contributions)',
+                **kwargs,
+            )
+
+
             self.add_alphabet_label(axes)
                   
     def set_tick_labels(self, ax, feature_names, readable_feature_names):
