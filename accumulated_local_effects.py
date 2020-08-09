@@ -3,8 +3,8 @@ import pandas as pd
 import multiprocessing
 from itertools import product
 
-from .utils import (compute_bootstrap_indices, 
-                    merge_nested_dict, 
+from .utils import (compute_bootstrap_indices,
+                    merge_nested_dict,
                     merge_dict
                    )
 from .multiprocessing_utils import run_parallel, to_iterator
@@ -15,44 +15,49 @@ def is_str(a):
     return isinstance(a, str)
 
 class AccumulatedLocalEffects(Attributes):
-    """
-    AccumulatedLocalEffects is a class for computing first- and second-order
-    accumulated local effects (ALE) from Apley and Zhy et al. (2016). 
-    Parts of the code are based on the python package at 
-    https://github.com/blent-ai/ALEPython. 
-    
-    The computations can take advantage of multiple cores for parallelization. 
-    
-    Attributes:
-        model : pre-fit scikit-learn model object, or list of 
-            Provide a list of model objects to compute PD 
-            for multiple model predictions.
-        
-        model_names : str, list 
-            List of model names for the model objects in model. 
-            For internal and plotting purposes. 
-            
-        examples : pandas.DataFrame or ndnumpy.array. 
-            Examples used to train the model.
-            
-        feature_names : list of strs
-            If examples are ndnumpy.array, then provide the feature_names 
-            (default is None; assumes examples are pandas.DataFrame).
-            
-        model_output : 'probability' or 'regression' 
-            What is the expected model output. 'probability' uses the positive class of 
-            the .predict_proba() method while 'regression' uses .predict().
-            
-        checked_attributes : boolean 
-            For internal purposes only
-    
-    Reference: 
-        Apley, D. W., and J. Zhu, 2016: Visualizing the Effects of Predictor 
+
+    """ AccumulatedLocalEffects is a class for computing first- and second-order
+    accumulated local effects (ALE) from Apley and Zhy et al. (2016).
+    Parts of the code are based on the python package at
+    https://github.com/blent-ai/ALEPython.
+
+    Reference:
+        Apley, D. W., and J. Zhu, 2016: Visualizing the Effects of Predictor
         Variables in Black Box Supervised Learning Models.
-    
+
+    The computations can take advantage of multiple cores for parallelization.
+
     """
+
     def __init__(self, model, model_names, examples, model_output, feature_names=None, checked_attributes=False):
-        # These functions come from the inherited Attributes class  
+
+        """
+        Args:
+        ----------
+        model : single or list of pre-fit scikit-learn model objects
+            Provide a list of model objects to compute ALE
+            for multiple model predictions.
+
+        model_names : string, or list of strings
+            List of model names for the model objects in model.
+            For internal and plotting purposes.
+
+        examples : pandas.DataFrame, or ndnumpy.array.
+            Examples used to train the model.
+
+        feature_names : list of strings
+            If examples are ndnumpy.array, then provide the feature_names
+            (default is None; assumes examples are pandas.DataFrame).
+
+        model_output : 'probability' or 'regression'
+            What is the expected model output. 'probability' uses the positive class of
+            the .predict_proba() method while 'regression' uses .predict().
+
+        checked_attributes : boolean
+            For internal purposes only
+        """
+
+        # These functions come from the inherited Attributes class
         if not checked_attributes:
             self.set_model_attribute(model, model_names)
             self.set_examples_attribute(examples, feature_names)
@@ -61,106 +66,140 @@ class AccumulatedLocalEffects(Attributes):
             self.model_names = model_names
             self.examples = examples
             self.feature_names = list(examples.columns)
-           
+
         self.model_output = model_output
-        
-    def run_ale(self, features=None, nbins=25, 
+
+    def run_ale(self, features=None, nbins=25,
                 njobs=1, subsample=1.0, nbootstrap=1):
-        """
-        Runs the accumulated local effect calculation and returns a dictionary with all
-        necessary inputs for plotting.
-        
+
+        """Runs the accumulated local effect calculation and populates a
+           dictionary.
+
         Args:
-            feature: str, list of strs, or list of 2-tuples of strs
-                List of strings for first-order partial dependence, or list of tuples
-                     for second-order 
-            subsample: a float (between 0-1) for fraction of examples used in bootstrap
-            nbootstrap: number of bootstrap iterations to perform. Defaults to 1 (no
-                        bootstrapping).
-            nbins : int 
-                Number of bins to compute ALE in. 
-        """   
+        ----------
+        features : single string, list of strings, single tuple, or
+                   list of 2-tuples of strings
+            If list of strings, computes the first-order PD for the given features
+            If list of 2-tuples of strings, computes the second-order PD for the
+                pairs of features.
+
+        nbins : int
+            Number of evenly-spaced bins to compute ALE. Defaults to 25.
+
+        njobs : int or float
+            Number of processes to run. Default is 1
+
+        subsample: float (between 0-1)
+            Fraction of examples used in bootstrap resampling. Default is 1.0
+
+        nbootstrap: int
+            Number of bootstrap iterations to perform. Defaults to 1 (no
+                bootstrapping).
+
+        Return:
+        -------
+        dictionary of ALE values for each model and feature set specified.
+        """
+
         #Check if features is a string
         if is_str(features):
             features = [features]
-           
+
         # check first element of feature and see if of type tuple; assume second-order calculations
-        if isinstance(features[0], tuple): 
+        if isinstance(features[0], tuple):
             func =  self.compute_second_order_ale
         else:
             func = self.compute_first_order_ale
-            
-        args_iterator = to_iterator(self.model_names, 
+
+        # create a list of iterator args
+        args_iterator = to_iterator(self.model_names,
                                     features,
                                     [nbins],
                                     [subsample],
                                     [nbootstrap])
+
+        # run the computation function in parallel
         results = run_parallel(
                    func = func,
                    args_iterator = args_iterator,
-                   kwargs = {}, 
+                   kwargs = {},
                    nprocs_to_use=njobs
             )
-        
+
         # Unpack the results from the parallelization script
         if len(self.model_names) > 1:
             results = merge_nested_dict(results)
         else:
             results = merge_dict(results)
-            
-        return results 
-    
+
+        return results
+
     def _get_percentiles(feature_values, nbins):
         pass
-    
+
     def compute_first_order_ale(self, model_name, feature, nbins=30, subsample=1.0, nbootstrap=1):
+
         """
         Computes first-order ALE function on single continuous feature data.
-        
-        Script is based on the _first_order_ale_quant from 
+
+        Script is based on the _first_order_ale_quant from
         https://github.com/blent-ai/ALEPython/
-        
+
         Args:
         ----------
-            model_name : str
-                 the string identifier for model in the attribute "models" dict
-            feature : string
-                The name of the feature to consider.
-            nbins : int 
-            subsample : float [0,1]
-            nbootstrap
-                
-        Returns: 
+        model_name : string
+             The string identifier for model in the attribute "models" dict
+
+        feature : string
+            The name of the feature to consider.
+
+        nbins : int
+            Number of evenly-spaced bins to compute ALE. Defaults to 30.
+
+        njobs : int or float
+            Number of processes to run. Default is 1
+
+        subsample: float (between 0-1)
+            Fraction of examples used in bootstrap resampling. Default is 1.0
+
+        nbootstrap: int
+            Number of bootstrap iterations to perform. Defaults to 1 (no
+                bootstrapping).
+
+        Returns:
         ----------
-            results : nested dictionary 
-                
+        results : dictionary
+            A dictionary of ALE values, and data used to create ALE.
+
         """
+
+        #get the correct model
         model =  self.models[model_name]
-        
+
         # check to make sure feature is valid
         if feature not in self.feature_names:
             raise Exception(f"Feature {feature} is not a valid feature")
 
         # get the bootstrap samples
         if nbootstrap > 1 or float(subsample) != 1.0:
-            bootstrap_indices = compute_bootstrap_indices(self.examples, 
-                                        subsample=subsample, 
+            bootstrap_indices = compute_bootstrap_indices(self.examples,
+                                        subsample=subsample,
                                         nbootstrap=nbootstrap)
         else:
             bootstrap_indices = [self.examples.index.to_list()]
-  
 
-        # Using the original, unaltered feature values 
-        # calculate the bin edges to be used in the bootstrapping. 
+
+        # Using the original, unaltered feature values
+        # calculate the bin edges to be used in the bootstrapping.
         original_feature_values = self.examples[feature].values
-        bin_edges = np.unique( np.percentile(original_feature_values, 
+        bin_edges = np.unique( np.percentile(original_feature_values,
                                   np.linspace(0.0, 100.0, nbins+1),
                                   interpolation="lower"
                                 )
                                 )
-        
+
         ale = np.zeros((nbootstrap, len(bin_edges)-1))
-        
+
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
             examples = self.examples.iloc[idx, :]
@@ -168,7 +207,7 @@ class AccumulatedLocalEffects(Attributes):
             # Find the ranges to calculate the local effects over
             # Using xdata ensures each bin gets the same number of examples
             feature_values = examples[feature].values
-            
+
             # if right=True, then the smallest value in data is not included in a bin.
             # Thus, Define the bins the feature samples fall into. Shift and clip to ensure we are
             # getting the index of the left bin edge and the smallest sample retains its index
@@ -176,8 +215,8 @@ class AccumulatedLocalEffects(Attributes):
             indices = np.clip(
                 np.digitize(feature_values, bin_edges, right=True) - 1, 0, None
                 )
-            
-            # Assign the feature quantile values (based on its bin index) to two copied training datasets, 
+
+            # Assign the feature quantile values (based on its bin index) to two copied training datasets,
             #one for each bin edge. Then compute the difference between the corresponding predictions
             predictions = []
             for offset in range(2):
@@ -185,72 +224,89 @@ class AccumulatedLocalEffects(Attributes):
                 examples_temp[feature] = bin_edges[indices + offset]
                 if self.model_output == 'probability':
                     # Assumes we only care about the positive class of a binary classification.
-                    # And converts to percentage (e.g., multiply by 100%) 
-                    # TODO : may need to FIX THIS! 
-                    predictions.append(model.predict_proba(examples_temp)[:,1]*100.) 
+                    # And converts to percentage (e.g., multiply by 100%)
+                    # TODO : may need to FIX THIS!
+                    predictions.append(model.predict_proba(examples_temp)[:,1]*100.)
                 elif self.model_output == 'raw':
                     predictions.append(model.predict(examples_temp))
-        
+
             # The individual (local) effects.
             effects = predictions[1] - predictions[0]
-            
-            # Group the effects by their bin index 
+
+            # Group the effects by their bin index
             index_groupby = pd.DataFrame({"index": indices, "effects": effects}).groupby(
                 "index"
             )
-            
-            # Compute the mean local effect for each bin 
+
+            # Compute the mean local effect for each bin
             mean_effects = index_groupby.mean().to_numpy().flatten()
-            
+
             # Accumulate (cumulative sum) the mean local effects
             # Essentially intergrating the derivative to regain
-            # the original function. 
+            # the original function.
             ale_uncentered = mean_effects.cumsum()
-            
-            # Now we have to center ALE function in order to 
+
+            # Now we have to center ALE function in order to
             # obtain null expectation for ALE function
-            ale[k,:] = ale_uncentered - np.mean(ale_uncentered) 
-            
+            ale[k,:] = ale_uncentered - np.mean(ale_uncentered)
+
         results = {feature : {model_name :{}}}
         results[feature][model_name]['values'] = np.array(ale)
         results[feature][model_name]['xdata1'] = 0.5 * (bin_edges[1:] + bin_edges[:-1])
         results[feature][model_name]['hist_data'] = feature_values
-        
+
         return results
-    
+
     def compute_second_order_ale(self, model_name, features, nbins=30, subsample=1.0, nbootstrap=1):
+
         """
-        Computes second-order ALE function on two continuous features data.
-            
-        Script is based on the _second_order_ale_quant from 
+        Computes second-order ALE function on single continuous feature data.
+
+        Script is based on the _second_order_ale_quant from
         https://github.com/blent-ai/ALEPython/
-        
+
         To Do:
             NEEDS WORK!!! second bootstrap is all zeros!
 
         Args:
         ----------
-            model_name : str
-            features : string
-                The name of the feature to consider.
-            nbins : int
-            subsample : float between [0,1]
-            nbootstrap : int 
-        
-        Returns :
+        model_name : string
+             The string identifier for model in the attribute "models" dict
+
+        feature : string
+            The name of the feature to consider.
+
+        nbins : int
+            Number of evenly-spaced bins to compute ALE. Defaults to 30.
+
+        njobs : int or float
+            Number of processes to run. Default is 1
+
+        subsample: float (between 0-1)
+            Fraction of examples used in bootstrap resampling. Default is 1.0
+
+        nbootstrap: int
+            Number of bootstrap iterations to perform. Defaults to 1 (no
+                bootstrapping).
+
+        Returns:
         ----------
-            results : nested dict 
+        results : dictionary
+            A dictionary of ALE values, and data used to create ALE.
+
         """
+
+        #get the correct model
         model =  self.models[model_name]
-        
+
         # make sure there are two features...
         assert(len(features) == 2), "Size of features must be equal to 2."
 
         # check to make sure both features are valid
-        if (features[0] not in self.feature_names): 
+        if (features[0] not in self.feature_names):
             raise TypeError(f'Feature {features[0]} is not a valid feature')
 
-        if (features[1] not in self.feature_names): 
+        if (features[1] not in self.feature_names):
             raise TypeError(f'Feature {features[1]} is not a valid feature')
 
         # create bins for computation for both features
@@ -259,8 +315,8 @@ class AccumulatedLocalEffects(Attributes):
 
         # get the bootstrap samples
         if nbootstrap > 1:
-            bootstrap_indices = compute_bootstrap_samples(self.examples, 
-                                        subsample=subsample, 
+            bootstrap_indices = compute_bootstrap_samples(self.examples,
+                                        subsample=subsample,
                                         nbootstrap=nbootstrap)
         else:
             bootstrap_indices = [self.examples.index.to_list()]
@@ -273,11 +329,11 @@ class AccumulatedLocalEffects(Attributes):
 
             # get samples
             examples = self.examples.iloc[idx, :]
-            
+
             # create bins for computation for both features
             feature_values = [examples[features[i]].values for i in range(2)]
             bin_edges = [np.percentile(f, np.linspace(0, 100.0, nbins+1)) for f in feature_values]
-            
+
             # Define the bins the feature samples fall into. Shift and clip to ensure we are
             # getting the index of the left bin edge and the smallest sample retains its index
             # of 0.
@@ -297,7 +353,7 @@ class AccumulatedLocalEffects(Attributes):
                     predictions[shifts] = model.predict_proba(examples_temp)[:,1]
                 elif self.model_output == 'raw':
                     predictions[shifts] = model.predict(examples_temp)
-            
+
             # The individual (local) effects.
             effects = (predictions[(1, 1)] - predictions[(1, 0)]) - (
                     predictions[(0, 1)] - predictions[(0, 0)]
@@ -310,22 +366,22 @@ class AccumulatedLocalEffects(Attributes):
 
             # Compute mean effects.
             mean_effects = index_groupby.mean()
-            
+
             # Get the number of samples in each bin.
             n_samples = index_groupby.size().to_numpy()
 
             # Get the indices of the mean values.
             group_indices = mean_effects.index
             valid_grid_indices = tuple(zip(*group_indices))
-            
+
             # Create a 2D array of the number of samples in each bin.
             #samples_grid = np.zeros(ale.shape[1:])
             #samples_grid[valid_grid_indices] = n_samples
-           
+
             # Extract only the data.
             mean_effects = mean_effects.to_numpy().flatten()
             ale[k,:,:][valid_grid_indices] = mean_effects
-           
+
             # Compute the cumulative sums.
             ale[k,:,:] = np.cumsum(np.cumsum(ale[k,:,:], axis=0), axis=1)
 
@@ -357,12 +413,10 @@ class AccumulatedLocalEffects(Attributes):
             """
             # Now we have to center ALE function in order to obtain null expectation for ALE function
             ale[k,:,:] -= ale[k,:,:].mean()
-            
+
             results = {features : {model_name :{}}}
             results[features][model_name]['values'] = ale
             results[features][model_name]['xdata1'] = 0.5 * (bin_edges[0][1:] + bin_edges[0][:-1])
             results[features][model_name]['xdata2'] = 0.5 * (bin_edges[1][1:] + bin_edges[1][:-1])
-        
+
             return results
-            
-           

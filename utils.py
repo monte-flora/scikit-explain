@@ -5,25 +5,44 @@ from collections import ChainMap
 
 
 def brier_skill_score(target_values, forecast_probabilities):
+
+    """Computes the brier skill score in the range (-inf, 1]
+
+    Args:
+    ---------
+    target_values : list, or numpy.array
+        Target values.
+
+    forecast_probabilities : list, or numpy.array
+        probabilities obtained from ML model
+
+    Return:
+    ---------
+    float representing the brier skill score
+    """
+
     climo = np.mean((target_values - np.mean(target_values))**2)
     return 1.0 - brier_score_loss(target_values, forecast_probabilities) / climo
 
 def cartesian(arrays, out=None):
-    """Generate a cartesian product of input arrays.
-    Parameters
     
-    Codes comes directly from sklearn/utils/extmath.py
+    """Generate a cartesian product of input arrays.
+    Code comes directly from sklearn/utils/extmath.py
+
+    Args:
     ----------
     arrays : list of array-like
         1-D arrays to form the cartesian product of.
     out : ndarray
         Array to place the cartesian product in.
-    Returns
+
+    Return:
     -------
     out : ndarray
         2-D array of shape (M, len(arrays)) containing cartesian products
         formed of input arrays.
-    Examples
+
+    Examples:
     --------
     >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
     array([[1, 4, 6],
@@ -39,6 +58,7 @@ def cartesian(arrays, out=None):
            [3, 5, 6],
            [3, 5, 7]])
     """
+
     arrays = [np.asarray(x) for x in arrays]
     shape = (len(x) for x in arrays)
     dtype = arrays[0].dtype
@@ -54,133 +74,36 @@ def cartesian(arrays, out=None):
 
     return out
 
-
-def is_str(a):
-    """Check if argument is a string"""
-    return isinstance(a, str)
-
-def is_list(a):
-    """Check if argument is a list"""
-    return isinstance(a, list)
-
-def to_list(a):
-    """Convert argument to a list"""
-    return [a]
-
-def is_valid_feature(features, official_feature_list):
-    """Check if a feature is valid"""
-    for f in features:
-        if isinstance(f, tuple):
-            for sub_f in f:
-                if sub_f not in official_feature_list:
-                    raise Exception(f"Feature {sub_f} is not a valid feature!")
-        else:
-            if f not in official_feature_list:
-                raise Exception(f"Feature {f} is not a valid feature!")
-
-def is_classifier(estimator):
-    """Return True if the given estimator is (probably) a classifier.
-    Parameters
-    
-    Function from base.py in sklearn 
-    ----------
-    estimator : object
-        Estimator object to test.
-    Returns
-    -------
-    out : bool
-        True if estimator is a classifier and False otherwise.
-    """
-    return getattr(estimator, "_estimator_type", None) == "classifier"
-
-def is_regressor(estimator):
-    """Return True if the given estimator is (probably) a regressor.
-    Parameters
-    
-    Functions from base.py in sklearn 
-    ----------
-    estimator : object
-        Estimator object to test.
-    Returns
-    -------
-    out : bool
-        True if estimator is a regressor and False otherwise.
-    """
-    return getattr(estimator, "_estimator_type", None) == "regressor"
-
-def is_all_dict(alist):
-    """ Check if every element of a list are dicts """
-    return all([isinstance(l, dict) for l in alist])
-
-def load_pickle(fnames):
-    """
-    Load data from a list of pickle files as dict
-    where the keys are provided by the user
-    """
-    if not isinstance(fnames, list):
-        fnames = [fnames]
-    
-    data=[]
-    for f in fnames:
-        with open(f,'rb') as pkl_file:
-            data.append( pickle.load(pkl_file) )
-       
-    if is_all_dict(data):
-        return merge_dict(data)
-    else:
-        return data
-    
-def save_pickle(fname, data):
-    """Save data to a pickle file."""
-    with open(fname,'wb') as pkl_file:
-        pickle.dump(data, pkl_file)
-        
-def combine_top_features(results_dict,nvars):
-    """
-    """
-    combined_features = []
-    for model_name in results_dict.keys():
-        features = results_dict[model_name][:nvars]
-        combined_features.extend(features)
-    unique_features = list(set(combined_features))
-    
-    return unique_features
-    
-def compute_bootstrap_indices(examples, subsample=1.0, nbootstrap=1):
-    """
-        Routine to generate bootstrap examples
-    """
-    n_examples = len(examples)
-    size = int(subsample * n_examples)
-    bootstrap_indices = [np.random.choice(range(n_examples), size=size).tolist() for _ in range(nbootstrap)]
-    return bootstrap_indices
-    
-def combine_like_features(contrib, varnames):
-        """
-        Combine the contributions of like features. E.g., 
-        multiple statistics of a single variable
-        """
-        duplicate_vars = {}
-        for var in varnames:
-            duplicate_vars[var] = [idx for idx, v in enumerate(varnames) if v == var]
-
-        new_contrib = []
-        new_varnames = []
-        for var in list(duplicate_vars.keys()):
-            idxs = duplicate_vars[var]
-            new_varnames.append(var)
-            new_contrib.append(np.array(contrib)[idxs].sum())
-
-        return new_contrib, new_varnames
-
 def merge_dict(dicts):
-    """Merge a list of dicts into a single dict """
+
+    """Merge a list of dicts into a single dict
+
+    Args:
+    ----------
+    dicts : list of dicts
+        Multiple dictionaries.
+
+    Returns:
+    -------
+    a single dictionary
+    """
+
     return dict(ChainMap(*dicts))
-   
+
 def merge_nested_dict(dicts):
+
+    """Merge a list of nested dicts into a single dict
+
+    Args:
+    ----------
+    dicts : list of nested dicts
+        Multiple nested dictionaries.
+
+    Returns:
+    -------
+    a single dictionary
     """
-    Merge a list of nested dicts into a single dict
-    """
+
     merged_dict = {}
     for d in dicts:
         for key in d.keys():
@@ -188,57 +111,64 @@ def merge_nested_dict(dicts):
                 if key not in list(merged_dict.keys()):
                     merged_dict[key] = {subkey: {}}
                 merged_dict[key][subkey] = d[key][subkey]
-                
+
     return merged_dict
 
-def is_outlier(points, thresh=3.5):
-    """
-    Returns a boolean array with True if points are outliers and False 
-    otherwise.
+def compute_bootstrap_indices(examples, subsample=1.0, nbootstrap=1):
 
-    Parameters:
-    -----------
-        points : An numobservations by numdimensions array of observations
-        thresh : The modified z-score to use as a threshold. Observations with
-            a modified z-score (based on the median absolute deviation) greater
-            than this value will be classified as outliers.
+    """Generates the indices of bootstrap samples
 
-    Returns:
-    --------
-        mask : A numobservations-length boolean array.
-
-    References:
+    Args:
     ----------
-        Boris Iglewicz and David Hoaglin (1993), "Volume 16: How to Detect and
-        Handle Outliers", The ASQC Basic References in Quality Control:
-        Statistical Techniques, Edward F. Mykytka, Ph.D., Editor. 
+    examples : pandas.DataFrame
+        The dataframe to get the indices for
+
+    subsample : float (between 0-1)
+        Fraction of examples used in bootstrap resampling. Default is 1.0
+
+    nbootstrap : int
+        Number of bootstrap iterations to perform. Defaults to 1 (no
+            bootstrapping).
+
+    Return:
+    -------
+    bootstrap_indices : list of arrays of ints
+        The indices for each bootstrap set
+
+    TODO: change examples to just be n_examples. No need to pass the dataframe
+          around.
     """
-    if len(points.shape) == 1:
-        points = points[:, None]
-    median = np.median(points, axis=0)
-    diff = np.sum((points - median)**2, axis=-1)
-    diff = np.sqrt(diff)
-    med_abs_deviation = np.median(diff)
 
-    modified_z_score = 0.6745 * diff / med_abs_deviation
-
-    return modified_z_score > thresh
-
+    n_examples = len(examples)
+    size = int(subsample * n_examples)
+    bootstrap_indices = [np.random.choice(range(n_examples), size=size).tolist() for _ in range(nbootstrap)]
+    return bootstrap_indices
 
 def get_indices_based_on_performance(model, examples, targets, n_examples=None):
-    """
-       Determines the best hits, worst false alarms, worst misses, and best
-       correct negatives using the data provided during initialization.
 
-       Args:
-       ------------------
-            model : The model to process
-            n_examples: number of "best/worst" examples to return. If None,
-                the routine uses the whole dataset
+    """ Determines the best hits, worst false alarms, worst misses, and best
+    correct negatives using the data provided during initialization.
 
-      Return:
-            a dictionary containing the indices of each of the 4 categories
-            listed above
+    Args:
+    -------
+    model : scikit object
+        The model to process
+
+    examples : pandas.DataFrame, or ndnumpy.array.
+        Examples used to train the model.
+
+    targets: list, or numpy.array
+        Target values.
+
+    n_examples:
+        number of examples to return. If None,
+        the routine uses the whole dataset
+
+    Return:
+    -------
+    sorted_dict : dict
+        A dictionary containing the indices of each of the 4 categories
+        listed above
     """
 
     #default is to use all examples
@@ -249,7 +179,7 @@ def get_indices_based_on_performance(model, examples, targets, n_examples=None):
     if (n_examples <= 0):
         print("n_examples less than or equals 0. Defaulting back to all")
         n_examples = examples.shape[0]
-        
+
     predictions = model.predict_proba(examples)[:,1]
     diff = (targets-predictions)
     data = {'targets': targets, 'predictions': predictions, 'diff': diff}
@@ -276,19 +206,26 @@ def get_indices_based_on_performance(model, examples, targets, n_examples=None):
     return sorted_dict
 
 def avg_and_sort_contributions(the_dict, examples, performance_dict=None):
+
     """
-        Get the mean value (of data for a predictory) and contribution from
-        each predictor and sort"
+    Get the mean value (of data for a predictory) and contribution from
+    each predictor and sort"
 
-        Args:
-        -----------
-            the_dict: dictionary to process
-            performance_dict: if using performance based apporach, this should be
-                the dictionary with corresponding indices
+    Args:
+    -----------
+    the_dict: dict
+        The dictionary to process
 
-        Return:
+    examples : pandas.DataFrame
+        The examples to process
 
-            a dictionary of mean values and contributions
+    performance_dict: if using performance based apporach, this should be
+        the dictionary with corresponding indices
+
+    Return:
+    -----------
+    return_dict: dict
+        A dictionary of mean values and contributions
     """
 
     return_dict = {}
@@ -321,37 +258,165 @@ def avg_and_sort_contributions(the_dict, examples, performance_dict=None):
 
     return return_dict
 
-def retrieve_important_vars(results, multipass=True):
+
+
+#----------------------------------------------------------------------------#
+#Move the below routines to a file called .... assert_checkys.py or something?
+
+def is_str(a):
+    """Check if argument is a string"""
+    return isinstance(a, str)
+
+def is_list(a):
+    """Check if argument is a list"""
+    return isinstance(a, list)
+
+def to_list(a):
+    """Convert argument to a list"""
+    return [a]
+
+def is_valid_feature(features, official_feature_list):
+    """Check if a feature is valid"""
+    for f in features:
+        if isinstance(f, tuple):
+            for sub_f in f:
+                if sub_f not in official_feature_list:
+                    raise Exception(f"Feature {sub_f} is not a valid feature!")
+        else:
+            if f not in official_feature_list:
+                raise Exception(f"Feature {f} is not a valid feature!")
+
+def is_classifier(estimator):
+    """Return True if the given estimator is (probably) a classifier.
+    Parameters
+
+    Function from base.py in sklearn
+    ----------
+    estimator : object
+        Estimator object to test.
+    Returns
+    -------
+    out : bool
+        True if estimator is a classifier and False otherwise.
     """
-       Return a list of the important features stored in the 
-        ImportanceObject 
-        
-        Args:
-        -------------------
-            results : python object
-                ImportanceObject from PermutationImportance
-            multipass : boolean
-                if True, returns the multipass permutation importance results
-                else returns the singlepass permutation importance results
-                
-        Returns:
-            top_features : list
-                a list of features with order determined by 
-                the permutation importance method
+    return getattr(estimator, "_estimator_type", None) == "classifier"
+
+def is_regressor(estimator):
+    """Return True if the given estimator is (probably) a regressor.
+    Parameters
+
+    Functions from base.py in sklearn
+    ----------
+    estimator : object
+        Estimator object to test.
+    Returns
+    -------
+    out : bool
+        True if estimator is a regressor and False otherwise.
     """
-    important_vars_dict = {}
-    for model_name in results.keys():
-        perm_imp_obj = results[model_name]
-        rankings = (
-                perm_imp_obj.retrieve_multipass()
-                if multipass
-                else perm_imp_obj.retrieve_singlepass()
-            )
-        features = list(rankings.keys())
-        important_vars_dict[model_name] = features
-            
-    return important_vars_dict
+    return getattr(estimator, "_estimator_type", None) == "regressor"
+
+def is_all_dict(alist):
+    """ Check if every element of a list are dicts """
+    return all([isinstance(l, dict) for l in alist])
+#----------------------------------------------------------------------------#
+
+#----------------------------------------------------------------------------#
+#These are only used in the notebooks....get rid of them here? Just have in
+#notebook?
+
+def load_pickle(fnames):
+    """
+    Load data from a list of pickle files as dict
+    where the keys are provided by the user
+    """
+    if not isinstance(fnames, list):
+        fnames = [fnames]
+
+    data=[]
+    for f in fnames:
+        with open(f,'rb') as pkl_file:
+            data.append( pickle.load(pkl_file) )
+
+    if is_all_dict(data):
+        return merge_dict(data)
+    else:
+        return data
+
+def save_pickle(fname, data):
+    """Save data to a pickle file."""
+    with open(fname,'wb') as pkl_file:
+        pickle.dump(data, pkl_file)
+#----------------------------------------------------------------------------#
 
 
+#----------------------------------------------------------------------------#
+#Move to an asthetics_utils.py file or something?
+
+def combine_top_features(results_dict,nvars):
+    """
+    """
+    combined_features = []
+    for model_name in results_dict.keys():
+        features = results_dict[model_name][:nvars]
+        combined_features.extend(features)
+    unique_features = list(set(combined_features))
+
+    return unique_features
+
+def combine_like_features(contrib, varnames):
+        """
+        Combine the contributions of like features. E.g.,
+        multiple statistics of a single variable
+        """
+        duplicate_vars = {}
+        for var in varnames:
+            duplicate_vars[var] = [idx for idx, v in enumerate(varnames) if v == var]
+
+        new_contrib = []
+        new_varnames = []
+        for var in list(duplicate_vars.keys()):
+            idxs = duplicate_vars[var]
+            new_varnames.append(var)
+            new_contrib.append(np.array(contrib)[idxs].sum())
+
+        return new_contrib, new_varnames
+#----------------------------------------------------------------------------#
 
 
+#----------------------------------------------------------------------------#
+#I can't find where this routine is used. I would remove
+
+def is_outlier(points, thresh=3.5):
+    """
+    Returns a boolean array with True if points are outliers and False
+    otherwise.
+
+    Parameters:
+    -----------
+        points : An numobservations by numdimensions array of observations
+        thresh : The modified z-score to use as a threshold. Observations with
+            a modified z-score (based on the median absolute deviation) greater
+            than this value will be classified as outliers.
+
+    Returns:
+    --------
+        mask : A numobservations-length boolean array.
+
+    References:
+    ----------
+        Boris Iglewicz and David Hoaglin (1993), "Volume 16: How to Detect and
+        Handle Outliers", The ASQC Basic References in Quality Control:
+        Statistical Techniques, Edward F. Mykytka, Ph.D., Editor.
+    """
+    if len(points.shape) == 1:
+        points = points[:, None]
+    median = np.median(points, axis=0)
+    diff = np.sum((points - median)**2, axis=-1)
+    diff = np.sqrt(diff)
+    med_abs_deviation = np.median(diff)
+
+    modified_z_score = 0.6745 * diff / med_abs_deviation
+
+    return modified_z_score > thresh
+#----------------------------------------------------------------------------#
