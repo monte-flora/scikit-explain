@@ -5,6 +5,14 @@ The package is under active development and will likely contain bugs or errors. 
 This package is largely original code, but also includes snippets from preexisting packages. Our goal is not take credit from other code authors, but to
 make a single source for computing several machine learning interpretation methods. 
 
+### Install
+MintPy can be installed from XXX
+```
+pip install mintpy
+or 
+conda install -c conda-forge mintpy
+```
+
 ### Dependencies 
 ```
 numpy 
@@ -16,6 +24,9 @@ shap
 
 
 ### Initializing MintPy
+The interface of MintPy is the ```InterpretToolkit```, which houses the computations and plotting methods
+for all the interpretability methods contained within. 
+
 ```python
 require 'redcarpet'
 markdown = Redcarpet.new("Hello World!")
@@ -23,25 +34,25 @@ puts markdown.to_html
 ```
 
 ```python
-from model_clarify import ModelClarifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.datasets import load_breast_cancer
+import mintpy
 
-data = load_breast_cancer()
-X, y = data.data, data.target
-X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+myInterpreter = mintpy.InterpretToolkit(model=model_objs,
+                                 model_names=model_names,
+                                 examples=examples,
+                                 targets=targets,
+                                )
 
-clf = RandomForestClassifier(n_estimators=100, random_state=42)
-clf.fit(X_train, y_train)
-
-mc = ModelClarifier(model=clf, examples=X_train, targets=y_train)
 ```
+### Permutation Importance
+
 ### Partial dependence 
 
 ### Accumulated local effect 
 
-### Permutation Importance 
+### Feature Contributions 
 
-### Feature Contributions (Tree-based Method Only)
+### Tutorial notebooks
+
+The notebooks provide package documentation and demonstrate MintPy API. 
 
 
