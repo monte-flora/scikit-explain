@@ -25,13 +25,9 @@ shap
 
 ### Initializing MintPy
 The interface of MintPy is the ```InterpretToolkit```, which houses the computations and plotting methods
-for all the interpretability methods contained within. 
-
-```python
-require 'redcarpet'
-markdown = Redcarpet.new("Hello World!")
-puts markdown.to_html
-```
+for all the interpretability methods contained within. See permutation_importance_tutorial notebook 
+for initializing ```InterpretToolkit``` (set a link!). Once initialized ```InterpretToolkit``` can 
+compute a variety of interpretability methods and plot them.
 
 ```python
 import mintpy
@@ -41,9 +37,9 @@ myInterpreter = mintpy.InterpretToolkit(model=model_objs,
                                  examples=examples,
                                  targets=targets,
                                 )
-
 ```
 ### Permutation Importance
+For predictor ranking, we use the permutation importance method. 
 
 ### Partial dependence 
 
