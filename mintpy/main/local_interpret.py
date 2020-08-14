@@ -18,7 +18,42 @@ list_of_acceptable_tree_models = [
     "ExtraTreesRegressor",
 ]
 
-class ExplainLocalPrediction(Attributes):
+class LocalInterpret(Attributes):
+    
+    """
+    LocalInterpret incorporates important methods for explaining local model behavior 
+    for select examples. The calculations are primarily based on SHAP (source), but also 
+    includes treeinterpreter (source) for random forests and for other select tree-based methods in 
+    scikit-learn (see list_of_acceptable_tree_models). 
+    
+    Attributes:
+        model : pre-fit scikit-learn model object, or list of 
+            Provide a list of model objects to compute the global methods for.
+        
+        model_names : str, list 
+            List of model names for the model objects in model. 
+            For internal and plotting purposes. 
+            
+        examples : pandas.DataFrame or ndnumpy.array. 
+            Examples to explain. Typically, one should use the training dataset for 
+            the global methods. 
+            
+        feature_names : list of strs
+            If examples are ndnumpy.array, then provide the feature_names 
+            (default is None; assumes examples are pandas.DataFrame).
+            
+        model_output : 'probability' or 'regression' 
+            What is the expected model output. 'probability' uses the positive class of 
+            the .predict_proba() method while 'regression' uses .predict(). 
+            
+        checked_attributes : boolean 
+            Ignore this parameter; For internal purposes only
+    
+    Reference: 
+        SHAP
+        treeinterpreter
+    """
+    
     def __init__(self, model, model_names, examples, targets, model_output, 
                  feature_names=None, checked_attributes=False):
         # These functions come from the inherited Attributes class  

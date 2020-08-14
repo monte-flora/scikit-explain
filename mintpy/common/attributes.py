@@ -49,6 +49,8 @@ class Attributes:
         else:
             if targets is not None:
                 raise TypeError('Target variable must be numpy array or pandas.DataFrame.')
+            else:
+                self.targets=None
             
     def set_examples_attribute(self, examples, feature_names=None):
         """
