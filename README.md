@@ -24,7 +24,7 @@ markdown = Redcarpet.new("Hello World!")
 puts markdown.to_html
 ```
 
-```
+```python
 from model_clarify import ModelClarifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.datasets import load_breast_cancer
