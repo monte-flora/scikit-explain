@@ -21,10 +21,8 @@ from ..common.utils import (compute_bootstrap_indices,
                    )
 from ..common.multiprocessing_utils import run_parallel, to_iterator
 from ..common.attributes import Attributes
-from .PermutationImportance.permutation_importance import sklearn_permutation_importance
 
-
-
+from .PermutationImportance import sklearn_permutation_importance
 
 class GlobalInterpret(Attributes):
 

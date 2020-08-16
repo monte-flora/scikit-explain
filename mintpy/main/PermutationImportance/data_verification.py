@@ -66,6 +66,7 @@ def determine_variable_names(data, variable_names):
     :param variable_names: either a list of variable names or None
     :returns: a list of variable names
     """
+    print(data, np.shape(data), variable_names) 
     if variable_names is not None:
         try:
             iter(variable_names)
