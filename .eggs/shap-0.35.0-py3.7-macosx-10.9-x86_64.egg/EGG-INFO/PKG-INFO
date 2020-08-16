@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: shap
+Version: 0.35.0
+Summary: A unified approach to explain the output of any machine learning model.
+Home-page: http://github.com/slundberg/shap
+Author: Scott Lundberg
+Author-email: slund1@cs.washington.edu
+License: MIT
+Description: SHAP (SHapley Additive exPlanations) is a unified approach to explain the output of any machine learning model. SHAP connects game theory with local explanations, uniting several previous methods and representing the only possible consistent and locally accurate additive feature attribution method based on expectations.
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Description-Content-Type: text/markdown
+Provides-Extra: plots
+Provides-Extra: others
+Provides-Extra: all

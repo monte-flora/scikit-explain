@@ -46,7 +46,6 @@ if sys.platform == 'darwin':
         if python_target < '10.9' and current_system >= '10.9':
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
 
-
 def find_version(*file_paths):
     version_file = read(*file_paths)
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
@@ -68,7 +67,6 @@ try:
         long_description = '\n' + f.read()
 except FileNotFoundError:
     long_description = DESCRIPTION
-
 
 class UploadCommand(Command):
     """Support setup.py upload."""
@@ -117,13 +115,7 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-	packages = ['mintpy.common', 'mintpy.main', 'mintpy.plot']
-    # If your package is a single module, use this instead of 'packages':
-    # py_modules=['mypackage'],
-
-    # entry_points={
-    #     'console_scripts': ['mycli=mymodule:cli'],
-    # },
+	  packages = ['mintpy.common', 'mintpy.main', 'mintpy.plot'],
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     setup_requires=['flake8'], 
