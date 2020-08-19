@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from math import sqrt
+from scipy.spatial import cKDTree
+import itertools
+from functools import reduce
+from operator import add
 
 from sklearn.metrics import (roc_auc_score,
                              roc_curve,
@@ -344,9 +348,10 @@ class GlobalInterpret(Attributes):
         results = { features: {model_name : {}}}
         results[features][model_name]['values'] = pd_values
         results[features][model_name]['xdata1'] = grid[0]
+        results[features][model_name]['xdata1_hist'] = feature_values[0]
         if np.shape(grid)[0] > 1:
             results[features][model_name]['xdata2'] = grid[1]
-        results[features][model_name]['hist_data'] = feature_values
+            results[features][model_name]['xdata2_hist'] = feature_values[1]
         
         return results
 
@@ -354,8 +359,8 @@ class GlobalInterpret(Attributes):
         """
         Computes first-order ALE function on single continuous feature data.
         
-        Script is based on the _first_order_ale_quant from 
-        https://github.com/blent-ai/ALEPython/
+        Script is largely the _first_order_ale_quant from 
+        https://github.com/blent-ai/ALEPython/ with small modifications. 
         
         Args:
         ----------
@@ -365,7 +370,7 @@ class GlobalInterpret(Attributes):
                 The name of the feature to consider.
             nbins : int 
             subsample : float [0,1]
-            nbootstrap
+            nbootstrap : int
                 
         Returns: 
         ----------
@@ -396,6 +401,7 @@ class GlobalInterpret(Attributes):
                                 )
                                 )
         
+        # Initialize an empty ale array 
         ale = np.zeros((nbootstrap, len(bin_edges)-1))
         
         # for each bootstrap set
@@ -421,9 +427,6 @@ class GlobalInterpret(Attributes):
                 examples_temp = examples.copy()
                 examples_temp[feature] = bin_edges[indices + offset]
                 if self.model_output == 'probability':
-                    # Assumes we only care about the positive class of a binary classification.
-                    # And converts to percentage (e.g., multiply by 100%) 
-                    # TODO : may need to FIX THIS! 
                     predictions.append(model.predict_proba(examples_temp.values)[:,1]*100.) 
                 elif self.model_output == 'raw':
                     predictions.append(model.predict(examples_temp.values))
@@ -439,21 +442,26 @@ class GlobalInterpret(Attributes):
             # Compute the mean local effect for each bin 
             mean_effects = index_groupby.mean().to_numpy().flatten()
             
-            # Accumulate (cumulative sum) the mean local effects
-            # Essentially intergrating the derivative to regain
-            # the original function. 
-            ale_uncentered = mean_effects.cumsum()
+            # Accumulate (cumulative sum) the mean local effects.
+            # Adding a 0 at the lower boundary of the first bin 
+            # for the interpolation step in the next step
+            ale_uninterpolated = np.array([0, *np.cumsum(mean_effects)])
+
+            # Interpolate the ale to the center of the bins. 
+            ale[k,:] = 0.5*(ale_uninterpolated[1:] + ale_uninterpolated[:-1])
             
-            # Now we have to center ALE function in order to 
-            # obtain null expectation for ALE function
-            ale[k,:] = ale_uncentered - np.mean(ale_uncentered) 
+            # Center the ALE by substracting the bin-size weighted mean. 
+            ale[k,:] -= np.sum(ale[k,:]  * index_groupby.size() / examples.shape[0]) 
             
         results = {feature : {model_name :{}}}
         results[feature][model_name]['values'] = np.array(ale)
         results[feature][model_name]['xdata1'] = 0.5 * (bin_edges[1:] + bin_edges[:-1])
-        results[feature][model_name]['hist_data'] = feature_values
+        results[feature][model_name]['xdata1_hist'] = feature_values
         
         return results
+    
+    def _get_centers(self, x):
+        return 0.5*(x[1:] + x[:-1]) 
     
     def compute_second_order_ale(self, model_name, features, nbins=30, subsample=1.0, nbootstrap=1):
         """
@@ -491,29 +499,39 @@ class GlobalInterpret(Attributes):
             raise TypeError(f'Feature {features[1]} is not a valid feature')
 
         # create bins for computation for both features
-        feature_values = [self.examples[features[i]].values for i in range(2)]
-        bin_edges = [np.percentile(f, np.linspace(0, 100.0, nbins+1)) for f in feature_values]
+        original_feature_values = [self.examples[features[i]].values for i in range(2)]
+        bin_edges = [ np.unique( np.percentile(original_feature_values, 
+                                  np.linspace(0.0, 100.0, nbins+1),
+                                  interpolation="lower")
+                                )
+                     for f in original_feature_values]
 
         # get the bootstrap samples
-        if nbootstrap > 1:
-            bootstrap_indices = compute_bootstrap_samples(self.examples, 
+        if nbootstrap > 1 or float(subsample) != 1.0:
+            bootstrap_indices = compute_bootstrap_indices(self.examples, 
                                         subsample=subsample, 
                                         nbootstrap=nbootstrap)
         else:
             bootstrap_indices = [self.examples.index.to_list()]
 
-        # define ALE array as 3D
-        ale = np.zeros((nbootstrap, len(bin_edges[0]) - 1, len(bin_edges[1]) - 1))
-
+        feature1_nbin_edges = len(bin_edges[0]) 
+        feature2_nbin_edges = len(bin_edges[1]) 
+            
+        ale_set = [ ]    
+        
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
 
+            ale = np.ma.MaskedArray(
+                np.zeros((feature1_nbin_edges, feature2_nbin_edges)),
+                mask=np.ones(( feature1_nbin_edges, feature2_nbin_edges)),
+            )    
+            
             # get samples
             examples = self.examples.iloc[idx, :]
             
             # create bins for computation for both features
             feature_values = [examples[features[i]].values for i in range(2)]
-            bin_edges = [np.percentile(f, np.linspace(0, 100.0, nbins+1)) for f in feature_values]
             
             # Define the bins the feature samples fall into. Shift and clip to ensure we are
             # getting the index of the left bin edge and the smallest sample retains its index
@@ -526,12 +544,12 @@ class GlobalInterpret(Attributes):
             # Invoke the predictor at the corners of the bins. Then compute the second order
             # difference between the predictions at the bin corners.
             predictions = {}
-            for shifts in product(*(range(2),) * 2):
+            for shifts in itertools.product(*(range(2),) * 2):
                 examples_temp = examples.copy()
                 for i in range(2):
                     examples_temp[features[i]] = bin_edges[i][indices_list[i] + shifts[i]]
                 if self.model_output == 'probability':
-                    predictions[shifts] = model.predict_proba(examples_temp)[:,1]
+                    predictions[shifts] = model.predict_proba(examples_temp)[:,1]*100.
                 elif self.model_output == 'raw':
                     predictions[shifts] = model.predict(examples_temp)
             
@@ -548,59 +566,127 @@ class GlobalInterpret(Attributes):
             # Compute mean effects.
             mean_effects = index_groupby.mean()
             
-            # Get the number of samples in each bin.
-            n_samples = index_groupby.size().to_numpy()
-
             # Get the indices of the mean values.
             group_indices = mean_effects.index
             valid_grid_indices = tuple(zip(*group_indices))
-            
-            # Create a 2D array of the number of samples in each bin.
-            #samples_grid = np.zeros(ale.shape[1:])
-            #samples_grid[valid_grid_indices] = n_samples
-           
             # Extract only the data.
             mean_effects = mean_effects.to_numpy().flatten()
-            ale[k,:,:][valid_grid_indices] = mean_effects
-           
-            # Compute the cumulative sums.
-            ale[k,:,:] = np.cumsum(np.cumsum(ale[k,:,:], axis=0), axis=1)
+            
+            # Get the number of samples in each bin.
+            n_samples = index_groupby.size().to_numpy()
 
+            # Create a 2D array of the number of samples in each bin.
+            samples_grid = np.zeros((feature1_nbin_edges-1, feature2_nbin_edges-1))
+            samples_grid[valid_grid_indices] = n_samples
+           
+            
+            # Mark the first row/column as valid, since these are meant to contain 0s.
+            ale.mask[0, :] = False
+            ale.mask[:, 0] = False
+            
+             # Place the mean effects into the final array.
+            # Since `ale` contains `len(quantiles)` rows/columns the first of which are
+            # guaranteed to be valid (and filled with 0s), ignore the first row and column.
+            ale[1:, 1:][valid_grid_indices] = mean_effects
+            
             """
+            # Record where elements were missing.
+            missing_bin_mask = ale.mask.copy()[1:, 1:]
+            
+            if np.any(missing_bin_mask):
+                # Replace missing entries with their nearest neighbours.
+
+                # Calculate the dense location matrices (for both features) of all bin centres.
+                centers_list = np.meshgrid(
+                    *(self._get_centers(quantiles) for quantiles in bin_edges), indexing="ij"
+                )
+
+                # Select only those bin centres which are valid (had observation).
+                valid_indices_list = np.where(~missing_bin_mask)
+                tree = cKDTree(
+                    np.hstack(
+                        tuple(
+                            centers[valid_indices_list][:, np.newaxis]
+                            for centers in centers_list
+                        )
+                    )
+                )
+
+                row_indices = np.hstack(
+                    [inds.reshape(-1, 1) for inds in np.where(missing_bin_mask)]
+                )
+                # Select both columns for each of the rows above.
+                column_indices = np.hstack(
+                    (
+                        np.zeros((row_indices.shape[0], 1), dtype=np.int8),
+                    np.ones((row_indices.shape[0], 1), dtype=np.int8),
+                    )
+                )
+
+                # Determine the indices of the points which are nearest to the empty bins.
+                nearest_points = tree.query(tree.data[row_indices, column_indices])[1]
+
+                nearest_indices = tuple(
+                    valid_indices[nearest_points] for valid_indices in valid_indices_list
+                )
+
+                # Replace the invalid bin values with the nearest valid ones.
+                ale[1:, 1:][missing_bin_mask] = ale[1:, 1:][nearest_indices]
+            """
+            
+            # Compute the cumulative sums.
+            ale = np.cumsum(np.cumsum(ale, axis=0), axis=1)
+            
             # Subtract first order effects along both axes separately.
             for i in range(2):
                 # Depending on `i`, reverse the arguments to operate on the opposite axis.
                 flip = slice(None, None, 1 - 2 * i)
 
                 # Undo the cumulative sum along the axis.
-                ale_temp = ale[k,:,:]
                 first_order = ale[(slice(1, None), ...)[flip]] - ale[(slice(-1), ...)[flip]]
                 # Average the diffs across the other axis.
                 first_order = (
                     first_order[(..., slice(1, None))[flip]]
                     + first_order[(..., slice(-1))[flip]]
-                    ) / 2
+                ) / 2
                 # Weight by the number of samples in each bin.
-                #first_order *= samples_grid
-                ## Take the sum along the axis.
-                #first_order = np.sum(first_order, axis=1 - i)
+                first_order *= samples_grid
+                # Take the sum along the axis.
+                first_order = np.sum(first_order, axis=1 - i)
                 # Normalise by the number of samples in the bins along the axis.
-                #first_order /= np.sum(samples_grid, axis=1 - i)
+                first_order /= np.sum(samples_grid, axis=1 - i)
                 # The final result is the cumulative sum (with an additional 0).
                 first_order = np.array([0, *np.cumsum(first_order)]).reshape((-1, 1)[flip])
 
                 # Subtract the first order effect.
-                ale[k,:,:] -= first_order
-            """
-            # Now we have to center ALE function in order to obtain null expectation for ALE function
-            ale[k,:,:] -= ale[k,:,:].mean()
+                ale -= first_order
             
-            results = {features : {model_name :{}}}
-            results[features][model_name]['values'] = ale
-            results[features][model_name]['xdata1'] = 0.5 * (bin_edges[0][1:] + bin_edges[0][:-1])
-            results[features][model_name]['xdata2'] = 0.5 * (bin_edges[1][1:] + bin_edges[1][:-1])
+            # Compute the ALE at the bin centres.
+            ale = (
+                reduce(
+                    add,
+                    (
+                        ale[i : ale.shape[0] - 1 + i, j : ale.shape[1] - 1 + j]
+                        for i, j in list(itertools.product(*(range(2),) * 2))
+                    ),
+                )
+                / 4
+            )
+            
+            # Center the ALE by subtracting its expectation value.
+            ale -= np.sum(samples_grid * ale) /  len(examples)
+            
+            ale_set.append(ale)
+
+        results = {features : {model_name :{}}}
+        results[features][model_name]['values'] = np.array(ale) 
+        results[features][model_name]['xdata1'] = 0.5 * (bin_edges[0][1:] + bin_edges[0][:-1])
+        results[features][model_name]['xdata2'] = 0.5 * (bin_edges[1][1:] + bin_edges[1][:-1])
+        results[features][model_name]['xdata1_hist'] = feature_values[0]
+        results[features][model_name]['xdata2_hist'] = feature_values[1]
         
-            return results
+        
+        return results
             
     
     def friedman_h_statistic(self, model_name, feature_tuple, nbins=15):

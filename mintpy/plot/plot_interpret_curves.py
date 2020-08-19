@@ -58,7 +58,7 @@ class PlotInterpretCurves(PlotStructure):
         elif n_panels == 2:
             kwargs['figsize'] = (6, 2.5)
         elif n_panels == 3: 
-            kwargs['figsize'] = (6, 3)
+            kwargs['figsize'] = (8, 5)
             hspace = 0.6
         else:
             kwargs['figsize'] = kwargs.get("figsize", (8,5))
@@ -76,7 +76,7 @@ class PlotInterpretCurves(PlotStructure):
 
             # Pull the x-values and histogram from the first model. 
             xdata = feature_dict[feature][model_names[0]]["xdata1"]
-            hist_data = feature_dict[feature][model_names[0]]["hist_data"]
+            hist_data = feature_dict[feature][model_names[0]]["xdata1_hist"]
             if unnormalize is not None:
                 hist_data = unnormalize(hist_data)
             # add histogram
@@ -109,7 +109,7 @@ class PlotInterpretCurves(PlotStructure):
             lineplt_ax.axhline(y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle='dashed')
             lineplt_ax.set_yticks(self.calculate_ticks(lineplt_ax, 5, center=True))
 
-        kwargs['fontsize'] = majoraxis_fontsize
+        #kwargs['fontsize'] = majoraxis_fontsize
         major_ax = self.set_major_axis_labels(
             fig,
             xlabel=None,

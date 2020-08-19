@@ -45,7 +45,7 @@ class PlotImportance(PlotStructure):
         multipass=True,
         readable_feature_names={},
         feature_colors=None,
-        num_vars_to_plot=15,
+        num_vars_to_plot=10,
         metric=None,
         **kwargs,
     ):
@@ -82,9 +82,12 @@ class PlotImportance(PlotStructure):
             figsize = (3,2.5)
         elif n_panels == 2:
             figsize = (6,2.5)
+        elif n_panels == 3:
+            figsize = kwargs.get("figsize", (6,2.5))
         else:
-            figsize = kwargs.get("figsize", (6,2))
-        
+            figsize = kwargs.get("figsize", (8,5))
+            hspace = 0.2
+            
         # create subplots, one for each feature
         fig, axes = self.create_subplots(
             n_panels=n_panels, hspace=hspace, wspace=wspace, figsize=figsize
@@ -171,7 +174,12 @@ class PlotImportance(PlotStructure):
                         color=colors_to_plot,
                         zorder=2,
                     )
-
+                    
+                if num_vars_to_plot > 10:
+                    size = self.FONT_SIZES["teensie"] - 1
+                else:
+                    size = self.FONT_SIZES["teensie"]
+                    
                 # Put the variable names _into_ the plot
                 for i in range(len(variable_names_to_plot)):
                     ax.text(
@@ -180,21 +188,23 @@ class PlotImportance(PlotStructure):
                         variable_names_to_plot[i],
                         va="center",
                         ha="left",
-                        size=self.FONT_SIZES["teensie"]-2,
+                        size=size,
                         alpha=0.8,
                     )
 
-                    ax.axvline(original_score_mean, linestyle=":", color="grey")
-                    ax.text(
+                # Add vertical line 
+                ax.axvline(original_score_mean, linestyle="dashed", 
+                           color="grey", linewidth=0.7, alpha=0.7)
+                ax.text(
                         original_score_mean,
                         len(variable_names_to_plot) / 2,
                         "Original Score",
                         va="center",
                         ha="left",
-                        size=self.FONT_SIZES["teensie"]-2,
+                        size=self.FONT_SIZES["teensie"],
                         rotation=270,
-                        alpha=0.6
-                    )
+                        alpha=0.7
+                )
 
                 ax.tick_params(axis="both", which="both", length=0)
                 ax.set_yticks([])

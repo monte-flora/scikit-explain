@@ -1,12 +1,14 @@
 #import matplotlib
 #matplotlib.use('Agg')
 
-import matplotlib.pyplot as plt
 import numpy as np
+
+import matplotlib.pyplot as plt
 from matplotlib.ticker import (MaxNLocator, FormatStrFormatter,
                                AutoMinorLocator)
 from matplotlib import rcParams
 from matplotlib.colors import ListedColormap
+from matplotlib.gridspec import GridSpec
 
 from ..common.utils import combine_like_features, is_outlier
 import shap 
@@ -20,7 +22,7 @@ class PlotStructure:
     rcParams['font.family'] = 'serif'
     
     # Set up the font sizes for matplotlib
-    BASE_FONT_SIZE = 14
+    BASE_FONT_SIZE = 12
 
     GENERIC_FONT_SIZE_NAMES = ['teensie',
                             'tiny',
@@ -35,9 +37,9 @@ class PlotStructure:
 
     FONT_SIZES = {name : size for name, size in zip(GENERIC_FONT_SIZE_NAMES,
                                   FONT_SIZES_ARRAY)} 
-
+    
     plt.rc("font", size=FONT_SIZES['normal'])        # controls default text sizes
-    plt.rc("axes", titlesize=FONT_SIZES['normal'])   # fontsize of the axes title
+    plt.rc("axes", titlesize=FONT_SIZES['tiny'])     # fontsize of the axes title
     plt.rc("axes", labelsize=FONT_SIZES['normal'])   # fontsize of the x and y labels
     plt.rc("xtick", labelsize=FONT_SIZES['teensie']) # fontsize of the x-axis tick marks
     plt.rc("ytick", labelsize=FONT_SIZES['teensie']) # fontsize of the y-axis tick marks
@@ -64,6 +66,8 @@ class PlotStructure:
                 sharex : boolean 
                 sharey : boolean 
         """
+        # figsize = width, height in inches
+        
         figsize = kwargs.get("figsize", (6.4, 4.8))
         wspace = kwargs.get("wspace", 0.4)
         hspace = kwargs.get("hspace", 0.3)
@@ -99,11 +103,85 @@ class PlotStructure:
 
         return fig, axes
     
+    def _create_joint_subplots(self, n_panels, **kwargs):
+        """
+        Create grid for multipanel drawing a bivariate plots with marginal
+        univariate plots on the top and right hand side. 
+        """
+        figsize = kwargs.get("figsize", (6.4, 4.8))
+        ratio = kwargs.get("ratio", 5)
+        n_columns = kwargs.get("n_columns", 3)
+        
+        fig = plt.figure(figsize=figsize, dpi=300)
+    
+        extra_row = 0 if (n_panels % n_columns) == 0 else 1
+        
+        nrows = ratio * ( int(n_panels / n_columns) + extra_row )
+        ncols = ratio * n_columns 
+        
+        gs = GridSpec(ncols=ncols, nrows=nrows)
+    
+        main_ax_len = ratio-1 
+
+        main_axes = [ ]
+        top_axes = [ ]
+        rhs_axes = [ ]
+
+        col_offset_idx= list(range(n_columns))*int(nrows/ratio)
+    
+        row_offset = 0
+        for i in range(n_panels):
+            col_offset = ratio*col_offset_idx[i] 
+    
+            row_idx=1
+            if i % n_columns == 0 and i > 0: 
+                row_offset += ratio
+
+            main_ax = fig.add_subplot(gs[row_idx+row_offset:main_ax_len+row_offset, 
+                                     col_offset:main_ax_len+col_offset-1], 
+                                     frameon=False)
+
+            top_ax = fig.add_subplot(gs[row_idx+row_offset-1, 
+                                    col_offset:main_ax_len+col_offset-1], 
+                                 frameon=False, 
+                                 sharex=main_ax)
+
+            rhs_ax = fig.add_subplot(gs[row_idx+row_offset:main_ax_len+row_offset, 
+                                    main_ax_len+col_offset-1], 
+                                 frameon=False, 
+                                 sharey=main_ax)
+
+            ax_marg = [top_ax, rhs_ax]
+            for ax in ax_marg:
+                # Turn off tick visibility for the measure axis on the marginal plots
+                plt.setp(ax.get_xticklabels(), visible=False)
+                plt.setp(ax.get_yticklabels(), visible=False)
+                 # Turn off the ticks on the density axis for the marginal plots
+                plt.setp(ax.yaxis.get_majorticklines(), visible=False)
+                plt.setp(ax.xaxis.get_majorticklines(), visible=False)
+                plt.setp(ax.yaxis.get_minorticklines(), visible=False)
+                plt.setp(ax.xaxis.get_minorticklines(), visible=False)
+                ax.yaxis.grid(False)
+                ax.xaxis.grid(False)
+                for axis in [ax.xaxis, ax.yaxis]:
+                    axis.label.set_visible(False)
+
+            main_axes.append(main_ax)
+            top_axes.append(top_ax)
+            rhs_axes.append(rhs_ax)
+            
+        n_rows = int(nrows/ratio)     
+        
+        return fig, main_axes, top_axes, rhs_axes, n_rows
+    
+    
     def axes_to_iterator(self, n_panels, axes):
         """Turns axes list into iterable """
-        ax_iterator = [axes] if n_panels == 1 else axes.flat
-        
-        return ax_iterator
+        if isinstance(axes, list):
+            return axes
+        else:
+            ax_iterator = [axes] if n_panels == 1 else axes.flat
+            return ax_iterator
     
     def set_major_axis_labels(
         self, fig, xlabel=None, ylabel_left=None, ylabel_right=None, **kwargs
@@ -114,7 +192,7 @@ class PlotStructure:
         """
         fontsize = kwargs.get("fontsize", self.FONT_SIZES['normal'])
         labelpad = kwargs.get("labelpad", 15)
-
+       
         # add a big axis, hide frame
         ax = fig.add_subplot(111, frameon=False)
 
@@ -174,13 +252,15 @@ class PlotStructure:
                     transform=ax.transAxes,
                 )
     
-    def calculate_ticks(self, ax, nticks, round_to=1, center=False):
+    def calculate_ticks(self, nticks, ax=None, upperbound=None, lowerbound=None, 
+                        round_to=1, center=False):
         """
         Calculate the y-axis ticks marks for the line plots
         """
-        upperbound = round(ax.get_ybound()[1], round_to)
-        lowerbound = round(ax.get_ybound()[0], round_to)
-        
+        if upperbound is None and lower_bound is None and ax is None:
+            upperbound = round(ax.get_ybound()[1], round_to)
+            lowerbound = round(ax.get_ybound()[0], round_to)
+
         max_value = max(abs(upperbound), abs(lowerbound))
         if max_value > 10:
             round_to = 0
@@ -231,7 +311,7 @@ class PlotStructure:
             else:
                 xaxis_label_with_units = fr'{xaxis_label_pretty} ({units})'
         
-            ax.set_xlabel(xaxis_label_with_units, fontsize=8)
+            ax.set_xlabel(xaxis_label_with_units, fontsize=self.FONT_SIZES['tiny'])
         
         if yaxis_label is not None: 
             yaxis_label_pretty = self.readable_feature_names.get(yaxis_label, yaxis_label)
@@ -241,7 +321,7 @@ class PlotStructure:
             else:
                 yaxis_label_with_units = fr'{yaxis_label_pretty} ({units})'
 
-            ax.set_ylabel(yaxis_label_with_units, fontsize=10)
+            ax.set_ylabel(yaxis_label_with_units, fontsize=self.FONT_SIZES['tiny'])
         
     def set_legend(self, n_panels, fig, ax, major_ax):
         """
@@ -291,6 +371,17 @@ class PlotStructure:
         ax.spines["top"].set_visible(False)
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
+        
+        
+    def add_colorbar(self, fig, plot_obj, ax, colorbar_label, ticks=MaxNLocator(5)):
+        """ Adds a colorbar to the right of a panel"""
+        # Add a colobar
+        cbar = plt.colorbar(plot_obj, ax=ax, pad=0.1, ticks=ticks, shrink=1.1)
+        cbar.ax.tick_params(labelsize=self.FONT_SIZES['teensie'])
+        cbar.set_label(colorbar_label, size=self.FONT_SIZES['tiny'])
+        cbar.outline.set_visible(False)
+        #bbox = cbar.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        #cbar.ax.set_aspect((bbox.height - 0.7) * 20)
     
     def save_figure(self, fname, fig=None, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """

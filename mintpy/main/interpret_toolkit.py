@@ -10,6 +10,7 @@ from .global_interpret import GlobalInterpret
 from ..plot.plot_interpret_curves import PlotInterpretCurves
 from ..plot.plot_permutation_importance import PlotImportance
 from ..plot.plot_feature_contributions import PlotFeatureContributions
+from ..plot.plot_2D import PlotInterpret2D
 
 from ..common.utils import (
     get_indices_based_on_performance,
@@ -193,11 +194,9 @@ class InterpretToolkit(Attributes):
         """
         Handles 1D or 2D PD/ALE plots. 
         """
-        # initialize a plotting object
-        plot_obj = PlotInterpretCurves()
-        
         # plot the data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance( list( data.keys() )[0] , tuple):
+            plot_obj = PlotInterpret2D()
             return plot_obj.plot_contours(data, 
                                           model_names=self.model_names,
                                           features=self.features_used,
@@ -205,6 +204,7 @@ class InterpretToolkit(Attributes):
                                           feature_units=feature_units, 
                                           **kwargs)
         else:
+            plot_obj = PlotInterpretCurves()
             return plot_obj.plot_1d_curve(data, 
                                           model_names=self.model_names,
                                           features=self.features_used,
@@ -365,19 +365,18 @@ class InterpretToolkit(Attributes):
         Method for plotting the permutation importance results
         
         Args:
-            result_dict : dict 
+            result_dict : dict or list of dicts
             kwargs : keyword arguments 
         """
         # initialize a plotting object
         plot_obj = PlotImportance()
         
-        if hasattr(self, 'pi_dict'):
+        if hasattr(self, 'pi_dict') and result_dict is None:
             result = self.pi_dict
+        elif result_dict is None:
+            raise ValueError('result_dict is None! Either set it or run the .calc_permutation_importance method first!')
         else:
             result = result_dict
-        
-        if result is None:
-            raise ValueError('result_dict is None! Either set it or run the .permutation_importance method first!')
 
         return plot_obj.plot_variable_importance(result, 
                                                  model_names=self.model_names, 
@@ -403,6 +402,7 @@ class InterpretToolkit(Attributes):
         """ Load results of a computation (permutation importance, calc_ale, calc_pd, etc).
             and sets the data as class attribute, which is used for plotting. 
         """
+        print(f'Loading results from {fnames}...')
         results = load_pickle(fnames=fnames)
         self.set_results(results=results, 
                           option=option
@@ -422,6 +422,7 @@ class InterpretToolkit(Attributes):
             data : InterpretToolkit results
                 the results of a InterpretToolkit calculation 
         """
+        print(f'Saving data to {fname}...')
         save_pickle(fname=fname,data=data)
     
     def set_results(self, results, option):
