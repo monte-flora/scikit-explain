@@ -14,7 +14,7 @@ from setuptools import find_packages, setup, Command
 import platform
 from distutils.sysconfig import get_config_var
 from distutils.version import LooseVersion
-import re
+
 
 # Package meta-data.
 NAME = 'mintpy'
@@ -28,12 +28,12 @@ VERSION = '0.0.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-	'numpy',
-        'pandas',
-        'scikit-learn',
-        'matplotlib',
-        'shap'
-        ] 
+    'numpy',
+    'pandas',
+    'scikit-learn',
+    'matplotlib',
+    'shap'
+] 
 
 # What packages are optional?
 EXTRAS = {
@@ -47,19 +47,6 @@ if sys.platform == 'darwin':
         if python_target < '10.9' and current_system >= '10.9':
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
 
-def find_version(*file_paths):
-    version_file = read(*file_paths)
-    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
-    if version_match:
-        return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
-
-def find_version(*file_paths):
-    version_file = read(*file_paths)
-    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
-    if version_match:
-        return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
@@ -76,7 +63,16 @@ try:
 except FileNotFoundError:
     long_description = DESCRIPTION
 
-
+# Load the package's __version__.py module as a dictionary.
+about = {}
+if not VERSION:
+    project_slug = NAME.lower().replace("-", "_").replace(" ", "_")
+    with open(os.path.join(here, project_slug, '__init__.py')) as f:
+        exec(f.read(), about)
+else:
+    about['__version__'] = VERSION
+    
+    
 class UploadCommand(Command):
     """Support setup.py upload."""
 
@@ -116,7 +112,7 @@ class UploadCommand(Command):
 # Where the magic happens:
 setup(
     name=NAME,
-    version=find_version('mintpy', '__init__.py'),
+    version=about['__version__'],
     description=DESCRIPTION,
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -124,7 +120,7 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-	  packages = ['mintpy.common', 'mintpy.main', 'mintpy.plot'],
+    packages = ['mintpy.common', 'mintpy.main', 'mintpy.plot'],
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     setup_requires=['flake8'], 

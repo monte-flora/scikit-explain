@@ -177,7 +177,7 @@ class InterpretToolkit(Attributes):
         """
             Runs the Friedman's H-statistic for computing feature interactions
         """
-		global_obj = GlobalInterpret(model=self.models,
+        global_obj = GlobalInterpret(model=self.models,
                                       model_names=self.model_names,
                                       examples=self.examples,
                                       targets =self.targets,
