@@ -1,8 +1,0 @@
-numpy
-pandas
-scikit-learn
-matplotlib
-shap
-
-[interactive]
-jupyter

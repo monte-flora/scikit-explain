@@ -1,2 +1,0 @@
-mintpy
-tutorial_notebooks

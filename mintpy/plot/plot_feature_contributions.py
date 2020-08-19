@@ -1,6 +1,7 @@
 import numpy as np
 
 from .base_plotting import PlotStructure
+from ..common.utils import combine_like_features
 
 class PlotFeatureContributions(PlotStructure):
     

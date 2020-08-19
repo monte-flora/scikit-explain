@@ -11,8 +11,8 @@ import warnings
 # models like RandomForest 
 warnings.simplefilter("ignore", UserWarning)
 
-def update(*a):
-    pbar.update()
+#def update(*a):
+#    pbar.update()
 
 def error(msg, *args):
     """ Shortcut to multiprocessing's logger """

@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import pandas as pd
 from collections import ChainMap
+from sklearn.metrics import brier_score_loss
 
 
 def brier_skill_score(target_values, forecast_probabilities):

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
 import itertools
 import scipy.stats as sps
+import numpy as np 
 
 class PlotInterpret2D(PlotStructure):
     

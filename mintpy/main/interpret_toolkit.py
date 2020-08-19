@@ -177,13 +177,14 @@ class InterpretToolkit(Attributes):
         """
             Runs the Friedman's H-statistic for computing feature interactions
         """
-        pd_object = PartialDependence(model=self.models, 
+		global_obj = GlobalInterpret(model=self.models,
                                       model_names=self.model_names,
-                                      examples=self.examples,  
-                                      model_output=self.model_output, 
-                                      checked_attributes=self.checked_attributes)
-        
-        results = pd_object.friedman_h_statistic(model_name, 
+                                      examples=self.examples,
+                                      targets =self.targets,
+                                      model_output=self.model_output,
+                                     checked_attributes=self.checked_attributes)       
+ 
+        results = global_obj.friedman_h_statistic(model_name, 
                                                  feature_tuple=features, 
                                                  nbins=nbins
                                                 )
@@ -332,7 +333,7 @@ class InterpretToolkit(Attributes):
         
         model = list(self.models.items())[0][1]
         
-        elp.data_for_shap = data_for_shap
+        local_obj.data_for_shap = data_for_shap
         if performance_based:
             performance_dict = get_indices_based_on_performance(model, 
                                                                 examples=self.examples, 

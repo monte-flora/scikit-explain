@@ -257,7 +257,7 @@ class PlotStructure:
         """
         Calculate the y-axis ticks marks for the line plots
         """
-        if upperbound is None and lower_bound is None and ax is None:
+        if upperbound is None and lowerbound is None and ax is None:
             upperbound = round(ax.get_ybound()[1], round_to)
             lowerbound = round(ax.get_ybound()[0], round_to)
 

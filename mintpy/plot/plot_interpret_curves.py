@@ -1,5 +1,6 @@
 from .base_plotting import PlotStructure
 from math import log10
+import numpy as np
 
 class PlotInterpretCurves(PlotStructure):
     """
@@ -164,7 +165,7 @@ class PlotInterpretCurves(PlotStructure):
         linestyle = kwargs.get("linestyle", "-")
 
         if "color" not in kwargs:
-            kwargs["color"] = blue
+            kwargs["color"] = 'xkcd:darkish blue'
 
         ax.plot(xdata, ydata, linewidth=linewidth, linestyle=linestyle, 
                 label=label, alpha=0.8, **kwargs, zorder=2)

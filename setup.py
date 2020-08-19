@@ -14,6 +14,7 @@ from setuptools import find_packages, setup, Command
 import platform
 from distutils.sysconfig import get_config_var
 from distutils.version import LooseVersion
+import re
 
 # Package meta-data.
 NAME = 'mintpy'
