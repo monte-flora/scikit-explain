@@ -47,7 +47,7 @@ class PlotImportance(PlotStructure):
         feature_colors=None,
         num_vars_to_plot=10,
         metric=None,
-        **kwargs,
+        **kwargs
     ):
 
         """Plots any variable importance method for a particular estimator

@@ -396,7 +396,7 @@ class GlobalInterpret(Attributes):
         # calculate the bin edges to be used in the bootstrapping. 
         original_feature_values = self.examples[feature].values
         bin_edges = np.unique( np.percentile(original_feature_values, 
-                                  np.linspace(0.0, 100.0, nbins+1),
+                                  np.linspace(1.0, 99., nbins+1),
                                   interpolation="lower"
                                 )
                                 )
@@ -499,13 +499,15 @@ class GlobalInterpret(Attributes):
             raise TypeError(f'Feature {features[1]} is not a valid feature')
 
         # create bins for computation for both features
+        
         original_feature_values = [self.examples[features[i]].values for i in range(2)]
-        bin_edges = [ np.unique( np.percentile(original_feature_values, 
+
+        bin_edges = [ np.unique( np.percentile(v, 
                                   np.linspace(0.0, 100.0, nbins+1),
                                   interpolation="lower")
                                 )
-                     for f in original_feature_values]
-
+                     for v in original_feature_values]
+        
         # get the bootstrap samples
         if nbootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(self.examples, 
@@ -682,8 +684,8 @@ class GlobalInterpret(Attributes):
         results[features][model_name]['values'] = np.array(ale) 
         results[features][model_name]['xdata1'] = 0.5 * (bin_edges[0][1:] + bin_edges[0][:-1])
         results[features][model_name]['xdata2'] = 0.5 * (bin_edges[1][1:] + bin_edges[1][:-1])
-        results[features][model_name]['xdata1_hist'] = feature_values[0]
-        results[features][model_name]['xdata2_hist'] = feature_values[1]
+        results[features][model_name]['xdata1_hist'] = original_feature_values[0]
+        results[features][model_name]['xdata2_hist'] = original_feature_values[1]
         
         
         return results

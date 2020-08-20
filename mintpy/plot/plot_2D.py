@@ -10,7 +10,8 @@ import numpy as np
 class PlotInterpret2D(PlotStructure):
     
     def add_histogram_axis(self, ax, data, bins=15, min_value=None, 
-            max_value=None, density=True, orientation="vertical", **kwargs):
+            max_value=None, density=True, orientation="vertical", 
+                           **kwargs):
         """
         Adds a background histogram of data for a given feature. 
         """
@@ -30,16 +31,17 @@ class PlotInterpret2D(PlotStructure):
             zorder=1
         )
         
-        data = np.sort(np.random.choice(data, size=1000))
-        kde = sps.gaussian_kde(data)
-        kde_pdf = kde.pdf(data)
+        #data = np.sort(np.random.choice(data, size=10000), replace=True)
+        #kde = sps.gaussian_kde(data)
+        #kde_pdf = kde.pdf(data)
         
-        if orientation == 'vertical': 
-            ax.plot(data, kde_pdf, linewidth=0.5, color='xkcd:darkish blue', alpha=0.9)
-            ax.set_ylim([0, 1.75*np.amax(kde_pdf)])       
-        else:
-            ax.plot(kde_pdf, data, linewidth=0.5, color='xkcd:darkish blue', alpha=0.9)
-            ax.set_xlim([0,1.75*np.amax(kde_pdf)])
+        #if orientation == 'vertical': 
+            #ax.plot(data, kde_pdf, linewidth=0.5, color='xkcd:darkish blue', alpha=0.9)
+            #ax.set_ylim([0, 1.75*np.amax(kde_pdf)])       
+        #else:
+            #ax.plot(kde_pdf, data, linewidth=0.5, color='xkcd:darkish blue', alpha=0.9)
+            #ax.set_xlim([0,1.75*np.amax(kde_pdf)])
+    
     
     def plot_contours(self,
                       feature_dict,
@@ -66,6 +68,8 @@ class PlotInterpret2D(PlotStructure):
 
         if colorbar_label == 'Accumulated Local Effect (%)':
             colorbar_label = '2nd Order ALE (%)' 
+        if colorbar_label == 'Centered PD (%)':
+            colorbar_label = '2nd Order Centered PD (%)'
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(features)*len(model_names)
@@ -112,9 +116,9 @@ class PlotInterpret2D(PlotStructure):
         i=0 
         for feature_set, model_name in itertools.product(features, model_names):
             
-            max_value = np.amax(feature_levels[feature_set]['max'])
-            min_value = np.amin(feature_levels[feature_set]['min']) 
-            
+            max_value = np.amin(feature_levels[feature_set]['max'])
+            min_value = np.amax(feature_levels[feature_set]['min']) 
+           
             levels = self.calculate_ticks(nticks=50, 
                                           upperbound=max_value, 
                                           lowerbound=min_value, 
@@ -145,12 +149,13 @@ class PlotInterpret2D(PlotStructure):
             if np.ndim(zdata) > 2:
                 zdata= np.mean(zdata, axis=0)
 
-            cf = main_ax.pcolormesh(x1, x2, zdata, 
+            cf = main_ax.pcolormesh(x1, x2, zdata.T, 
                                     cmap=cmap, 
                                     alpha=0.8,
                                     norm=BoundaryNorm(levels, ncolors=cmap.N, clip=True)
                                    )
        
+            #main_ax.scatter(xdata1_hist[::25], xdata2_hist[::25], alpha=0.3, color='grey', s=1) 
             self.add_histogram_axis(top_ax, 
                                     xdata1_hist, 
                                     bins=30, 
@@ -166,8 +171,8 @@ class PlotInterpret2D(PlotStructure):
                                     min_value=xdata2[1],
                                     max_value=xdata2[-2])
 
-            main_ax.set_ylim([xdata2[1],xdata2[-2]])
-            main_ax.set_xlim([xdata1[1],xdata1[-2]])                       
+            main_ax.set_ylim([xdata2[0],xdata2[-1]])
+            main_ax.set_xlim([xdata1[0],xdata1[-1]])                       
             
             self.set_minor_ticks(main_ax)
             self.set_axis_label(main_ax, 
