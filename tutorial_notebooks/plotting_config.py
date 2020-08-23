@@ -52,5 +52,5 @@ color_dict = { 'dllwave_flux':'xkcd:light light green',
             'd_rad_u':'xkcd:light light green',
             'hrrr_dT':'xkcd:powder blue' }
 
-feature_units = {c : u for c,u in zip(cols_to_use, units)}
-readable_feature_names = {c : u for c,u in zip(cols_to_use, pretty_names)}
+display_units = {c : u for c,u in zip(cols_to_use, units)}
+display_feature_names = {c : u for c,u in zip(cols_to_use, pretty_names)}

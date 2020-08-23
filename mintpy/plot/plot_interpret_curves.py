@@ -19,8 +19,8 @@ class PlotInterpretCurves(PlotStructure):
                       feature_dict,
                       features, 
                       model_names, 
-                      readable_feature_names={}, 
-                      feature_units={}, 
+                      display_feature_names={}, 
+                      display_units={}, 
                       unnormalize=None, 
                       **kwargs):
         """
@@ -33,8 +33,8 @@ class PlotInterpretCurves(PlotStructure):
                 List of the features to be plotted.
             model_names : list of strs
                 List of models to be plotted
-            readable_feature_names : dict or list
-            feature_units : dict or list 
+            display_feature_names : dict or list
+            display_units : dict or list 
             unnormalize : callable
                 Function used to unnormalize data for the 
                 background histogram plot 
@@ -43,9 +43,10 @@ class PlotInterpretCurves(PlotStructure):
                 
                 
         """
-        self.readable_feature_names = readable_feature_names
-        self.feature_units = feature_units
+        self.display_feature_names = display_feature_names
+        self.display_units = display_units
         hspace = kwargs.get("hspace", 0.5)
+        wspace = kwargs.get("wspace", 0.5)
         facecolor = kwargs.get("facecolor", "gray")
         left_yaxis_label = kwargs.get("left_yaxis_label")
 
@@ -67,7 +68,8 @@ class PlotInterpretCurves(PlotStructure):
         
         # create subplots, one for each feature
         fig, axes = self.create_subplots(
-            n_panels=n_panels, hspace=hspace, **kwargs
+            n_panels=n_panels, hspace=hspace, wspace=wspace, 
+            **kwargs
         )
 
         ax_iterator = self.axes_to_iterator(n_panels, axes)
@@ -108,7 +110,7 @@ class PlotInterpretCurves(PlotStructure):
             self.set_minor_ticks(lineplt_ax)
             self.set_axis_label(lineplt_ax, xaxis_label=''.join(feature))
             lineplt_ax.axhline(y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle='dashed')
-            lineplt_ax.set_yticks(self.calculate_ticks(lineplt_ax, 5, center=True))
+            lineplt_ax.set_yticks(self.calculate_ticks(ax=lineplt_ax, nticks=5, center=True))
 
         #kwargs['fontsize'] = majoraxis_fontsize
         major_ax = self.set_major_axis_labels(

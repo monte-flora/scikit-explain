@@ -61,14 +61,14 @@ class LocalInterpret(Attributes):
             self.set_model_attribute(model, model_names)
             self.set_examples_attribute(examples, feature_names)
             self.set_target_attribute(targets)
+            self.set_model_output(model_output, model)
         else:
             self.models = model
             self.model_names = model_names
             self.examples = examples
             self.targets = targets
             self.feature_names = list(examples.columns)
-           
-        self.model_output = model_output
+            self.model_output = model_output
         
     def _get_local_prediction(self, method='treeinterpreter', data_for_shap=None,
                               performance_based=True, n_examples=100, shap_sample_size=1000):
@@ -141,9 +141,6 @@ class LocalInterpret(Attributes):
                          subsample_method='random'):
         """
         """
-        if self.model_output == 'regression':
-            self.model_output = 'raw'
-
         if subsample_method=='kmeans':   
             print(f'Performing K-means clustering (K={subsample_size}) to subset the data for the background dataset...')
             data_for_shap = shap.kmeans(self.data_for_shap, subsample_size)
@@ -167,6 +164,7 @@ class LocalInterpret(Attributes):
             else:
                 fun = model.predict
                 link = 'identity'
+                
             print('TreeExplainer failed, starting KernelExplainer...')
             explainer = shap.KernelExplainer(func, 
                                              data_for_shap, 

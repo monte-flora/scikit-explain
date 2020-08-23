@@ -1,4 +1,5 @@
 import numpy as np
+import shap
 
 from .base_plotting import PlotStructure
 from ..common.utils import combine_like_features
@@ -11,7 +12,7 @@ class PlotFeatureContributions(PlotStructure):
         key,
         ax=None,
         to_only_varname=None,
-        readable_feature_names={}, 
+        display_feature_names={}, 
         n_vars=12,
         other_label="Other Predictors",
     ):
@@ -74,7 +75,7 @@ class PlotFeatureContributions(PlotStructure):
             ax.axvline(x=tick, linestyle="dashed", alpha=0.4, color="#eeeeee", zorder=1)
 
         ax.set_yticks(y_index)
-        self.set_tick_labels(ax, varnames, readable_feature_names)
+        self.set_tick_labels(ax, varnames, display_feature_names)
 
         neg_factor = 2.25 if np.max(np.abs(contrib)) > 1.0 else 0.08
         factor = 0.25 if np.max(contrib) > 1.0 else 0.01
@@ -157,7 +158,7 @@ class PlotFeatureContributions(PlotStructure):
         ax.invert_yaxis()
 
     def plot_contributions(self, result_dict, to_only_varname=None, 
-                           readable_feature_names={}, **kwargs):
+                           display_feature_names={}, **kwargs):
         """
         Plot the results of feature contributions
 
@@ -169,7 +170,7 @@ class PlotFeatureContributions(PlotStructure):
         """
 
         hspace = kwargs.get("hspace", 0.4)
-        wspace = kwargs.get("wspace", 1.0)
+        wspace = kwargs.get("wspace", 0.5)
 
         # get the number of panels which will be the number of ML models in dictionary
         n_panels = len(result_dict.keys())
@@ -193,7 +194,7 @@ class PlotFeatureContributions(PlotStructure):
                 fig = self._contribution_plot(
                     result_dict[model_name]["non_performance"], 
                     to_only_varname=to_only_varname,
-                    readable_feature_names=readable_feature_names,
+                    display_feature_names=display_feature_names,
                     key='',
                     ax=ax
                 )
@@ -219,9 +220,92 @@ class PlotFeatureContributions(PlotStructure):
                         ax=ax,
                         key=perf_key,
                         to_only_varname=to_only_varname,
-                        readable_feature_names=readable_feature_names
+                        display_feature_names=display_feature_names
                     )
                     ax.set_title(perf_key.upper().replace("_", " "), fontsize=15)
 
         return fig
     
+    def plot_shap(self, shap_values, 
+                           examples, 
+                           features, 
+                           plot_type,
+                           display_feature_names=None,
+                           display_units={},
+                           **kwargs
+                          ):
+        """
+        Plot SHAP summary or dependence plot. 
+        
+        """
+        if display_feature_names is None:
+            self.display_feature_names = {}
+        else:
+            self.display_feature_names = display_feature_names
+        self.display_units = display_units
+        
+        if plot_type == 'summary':
+            shap.summary_plot(shap_values, 
+                              features=examples, 
+                              feature_names=display_feature_names, 
+                              max_display=15, 
+                              plot_type="dot",
+                              alpha=1, 
+                              show=False, 
+                              sort=True,
+                             )
+            
+        elif plot_type == 'dependence':
+            
+            left_yaxis_label = 'SHAP values (%)\n(Feature Contributions)'
+            n_panels = len(features)
+            fig, axes = self.create_subplots(
+                    n_panels=n_panels,
+                    sharex=False,
+                    sharey=False,
+                    figsize=(8,5),
+                    wspace = 1.0,
+                    hspace=0.6
+                )
+            
+            ax_iterator = self.axes_to_iterator(n_panels, axes)
+
+            if display_feature_names is not None:
+                display_features = [display_feature_names[f] for f in self.feature_names] 
+            else:
+                display_features = self.feature_names
+            
+            for ax, feature in zip(ax_iterator, features):
+                ind = self.feature_names.index(feature)
+                
+                shap.dependence_plot(ind=ind, 
+                                shap_values=shap_values, 
+                                features=examples, 
+                                feature_names = display_features,
+                                interaction_index="auto",
+                                color="#1E88E5", 
+                                axis_color="#333333", 
+                                cmap=None,
+                                dot_size=16, 
+                                x_jitter=0, 
+                                alpha=1, 
+                                ax=ax,
+                                show=False)
+                
+                self.set_n_ticks(ax)
+                self.set_minor_ticks(ax)
+                self.set_axis_label(ax, xaxis_label=''.join(feature), yaxis_label='')
+                ax.axhline(y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle='dashed')
+                ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=True))
+
+            major_ax = self.set_major_axis_labels(
+                fig,
+                xlabel=None,
+                ylabel_left=left_yaxis_label,
+                labelpad = 25,
+                **kwargs,
+            )
+            
+            self.add_alphabet_label(n_panels, axes)
+            
+            return fig, axes 

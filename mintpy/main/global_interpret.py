@@ -396,7 +396,7 @@ class GlobalInterpret(Attributes):
         # calculate the bin edges to be used in the bootstrapping. 
         original_feature_values = self.examples[feature].values
         bin_edges = np.unique( np.percentile(original_feature_values, 
-                                  np.linspace(1.0, 99., nbins+1),
+                                  np.linspace(0, 100, nbins+1),
                                   interpolation="lower"
                                 )
                                 )
@@ -527,6 +527,7 @@ class GlobalInterpret(Attributes):
             ale = np.ma.MaskedArray(
                 np.zeros((feature1_nbin_edges, feature2_nbin_edges)),
                 mask=np.ones(( feature1_nbin_edges, feature2_nbin_edges)),
+                fill_value = np.nan
             )    
             
             # get samples
@@ -591,7 +592,6 @@ class GlobalInterpret(Attributes):
             # guaranteed to be valid (and filled with 0s), ignore the first row and column.
             ale[1:, 1:][valid_grid_indices] = mean_effects
             
-            """
             # Record where elements were missing.
             missing_bin_mask = ale.mask.copy()[1:, 1:]
             
@@ -634,7 +634,6 @@ class GlobalInterpret(Attributes):
 
                 # Replace the invalid bin values with the nearest valid ones.
                 ale[1:, 1:][missing_bin_mask] = ale[1:, 1:][nearest_indices]
-            """
             
             # Compute the cumulative sums.
             ale = np.cumsum(np.cumsum(ale, axis=0), axis=1)
@@ -660,8 +659,11 @@ class GlobalInterpret(Attributes):
                 # The final result is the cumulative sum (with an additional 0).
                 first_order = np.array([0, *np.cumsum(first_order)]).reshape((-1, 1)[flip])
 
+                #print(first_order) 
+                
                 # Subtract the first order effect.
                 ale -= first_order
+            
             
             # Compute the ALE at the bin centres.
             ale = (
@@ -681,7 +683,7 @@ class GlobalInterpret(Attributes):
             ale_set.append(ale)
 
         results = {features : {model_name :{}}}
-        results[features][model_name]['values'] = np.array(ale) 
+        results[features][model_name]['values'] = ale_set
         results[features][model_name]['xdata1'] = 0.5 * (bin_edges[0][1:] + bin_edges[0][:-1])
         results[features][model_name]['xdata2'] = 0.5 * (bin_edges[1][1:] + bin_edges[1][:-1])
         results[features][model_name]['xdata1_hist'] = original_feature_values[0]
@@ -691,7 +693,7 @@ class GlobalInterpret(Attributes):
         return results
             
     
-    def friedman_h_statistic(self, model_name, feature_tuple, nbins=15):
+    def friedman_h_statistic(self, model_name, feature_tuple, nbins=15, subsample=1.0):
         """
         Compute the H-statistic for two-way interactions between two features. 
         
@@ -702,13 +704,21 @@ class GlobalInterpret(Attributes):
         
         Returns:
         """
+        self.model_names = [model_name]
         feature1, feature2 = feature_tuple
         
-        feature1_results = self.compute_partial_dependence(model_name, feature1, nbins=nbins)
-        feature2_results = self.compute_partial_dependence(model_name, feature2, nbins=nbins)
+        features = [feature1, feature2] 
         
-        feature1_pd = feature1_results[feature1][model_name]['values'].squeeze()
-        feature2_pd = feature2_results[feature2][model_name]['values'].squeeze()
+        results = self._run_interpret_curves(method='pd', 
+                                             features=features, 
+                                             nbins=nbins, 
+                                             njobs=2, 
+                                             subsample=subsample, 
+                                             nbootstrap=1
+                                            )
+        
+        feature1_pd = results[feature1][model_name]['values'].squeeze()
+        feature2_pd = results[feature2][model_name]['values'].squeeze()
 
         combined_results = self.compute_partial_dependence(model_name, feature_tuple, nbins)
         combined_pd = combined_results[feature_tuple][model_name]['values'].squeeze()

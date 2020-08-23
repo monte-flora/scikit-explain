@@ -54,15 +54,14 @@ class InterpretToolkit(Attributes):
 
     def __init__(self, model=None, model_names=None, 
                  examples=None, targets=None, 
-                 model_output='probability',
+                 model_output=None,
                  feature_names=None):
 
         self.set_model_attribute(model, model_names)
         self.set_target_attribute(targets)
         self.set_examples_attribute(examples, feature_names)
         
-        # TODO: Check that all the models given have the requested model_output
-        self.model_output = model_output 
+        self.set_model_output(model_output, model)
         
         self.checked_attributes = True
     
@@ -191,7 +190,7 @@ class InterpretToolkit(Attributes):
         return results 
     
     
-    def _plot_interpret_curves(self, data, readable_feature_names={}, feature_units={}, **kwargs):
+    def _plot_interpret_curves(self, data, display_feature_names={}, display_units={}, **kwargs):
         """
         Handles 1D or 2D PD/ALE plots. 
         """
@@ -201,21 +200,21 @@ class InterpretToolkit(Attributes):
             return plot_obj.plot_contours(data, 
                                           model_names=self.model_names,
                                           features=self.features_used,
-                                          readable_feature_names=readable_feature_names, 
-                                          feature_units=feature_units, 
+                                          display_feature_names=display_feature_names, 
+                                          display_units=display_units, 
                                           **kwargs)
         else:
             plot_obj = PlotInterpretCurves()
             return plot_obj.plot_1d_curve(data, 
                                           model_names=self.model_names,
                                           features=self.features_used,
-                                          readable_feature_names=readable_feature_names, 
-                                          feature_units=feature_units, 
+                                          display_feature_names=display_feature_names, 
+                                          display_units=display_units, 
                                           **kwargs)
         
     
     
-    def plot_pd(self, readable_feature_names={}, feature_units={}, **kwargs):
+    def plot_pd(self, display_feature_names={}, display_units={}, **kwargs):
         """ Alias function for user-friendly API. Runs the partial dependence plotting.
             See _plot_interpret_curves for details. 
         """
@@ -226,14 +225,13 @@ class InterpretToolkit(Attributes):
             data = self.pd_dict
         
         kwargs['left_yaxis_label'] = 'Centered PD (%)'
-        kwargs['wspace'] = 0.6
         
         return self._plot_interpret_curves(data, 
-                               readable_feature_names=readable_feature_names, 
-                               feature_units=feature_units,
+                               display_feature_names=display_feature_names, 
+                               display_units=display_units,
                                **kwargs)
 
-    def plot_ale(self, readable_feature_names={}, feature_units={}, add_shap=False, **kwargs):
+    def plot_ale(self, display_feature_names={}, display_units={}, add_shap=False, **kwargs):
         """ Alias function for user-friendly API. Runs the accumulated local effects plotting.
             See _plot_interpret_curves for details. 
         """
@@ -244,11 +242,10 @@ class InterpretToolkit(Attributes):
             data = self.ale_dict
         
         kwargs['left_yaxis_label'] = 'Accumulated Local Effect (%)'
-        kwargs['wspace'] = 0.6
         
         return self._plot_interpret_curves(data, 
-                               readable_feature_names=readable_feature_names, 
-                               feature_units=feature_units,
+                               display_feature_names=display_feature_names, 
+                               display_units=display_units,
                                **kwargs)
 
         
@@ -300,7 +297,7 @@ class InterpretToolkit(Attributes):
         return results                  
            
     def plot_contributions(self, to_only_varname=None, 
-                              readable_feature_names={}, **kwargs):
+                              display_feature_names={}, **kwargs):
         """
         Plots the feature contributions. 
         """
@@ -313,7 +310,7 @@ class InterpretToolkit(Attributes):
         
         return plot_obj.plot_contributions(self.contributions_dict, 
                                            to_only_varname=to_only_varname,
-                                           readable_feature_names=readable_feature_names, 
+                                           display_feature_names=display_feature_names, 
                                            **kwargs)
         
         
@@ -352,7 +349,8 @@ class InterpretToolkit(Attributes):
             shap_values *= 100.    
         
         # initialize a plotting object
-        plot_obj = PlotFeatureContributions()
+        plot_obj = PlotFeatureContributions() 
+        plot_obj.feature_names = self.feature_names
         plot_obj.plot_shap(shap_values=shap_values, 
                            examples=examples, 
                            features=features, 

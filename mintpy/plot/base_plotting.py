@@ -177,7 +177,7 @@ class PlotStructure:
     
     def axes_to_iterator(self, n_panels, axes):
         """Turns axes list into iterable """
-        if isinstance(axes, list):
+        if isinstance(axes, list): 
             return axes
         else:
             ax_iterator = [axes] if n_panels == 1 else axes.flat
@@ -239,7 +239,7 @@ class PlotStructure:
         alphabet_list = [chr(x) for x in range(ord("a"), ord("z") + 1)]
 
         ax_iterator = self.axes_to_iterator(n_panels, axes)
-    
+
         for i, ax in enumerate(ax_iterator):
             ax.text(
                     0.9,
@@ -257,7 +257,7 @@ class PlotStructure:
         """
         Calculate the y-axis ticks marks for the line plots
         """
-        if upperbound is None and lowerbound is None and ax is None:
+        if ax is not None: 
             upperbound = round(ax.get_ybound()[1], round_to)
             lowerbound = round(ax.get_ybound()[0], round_to)
 
@@ -283,16 +283,16 @@ class PlotStructure:
             
         return values 
     
-    def set_tick_labels(self, ax, feature_names, readable_feature_names):
+    def set_tick_labels(self, ax, feature_names, display_feature_names):
         """
         Setting the tick labels for the tree interpreter plots. 
         """
-        if isinstance(readable_feature_names, dict):
-            labels = [readable_feature_names.get(feature_name, 
+        if isinstance(display_feature_names, dict):
+            labels = [display_feature_names.get(feature_name, 
                                              feature_name) 
                       for feature_name in feature_names ]
         else:
-            labels = readable_feature_names 
+            labels = display_feature_names 
         
         labels = [fr'{l}' for l in labels] 
         ax.set_yticklabels(labels)
@@ -304,8 +304,8 @@ class PlotStructure:
         physical units) 
         """
         if xaxis_label is not None: 
-            xaxis_label_pretty = self.readable_feature_names.get(xaxis_label, xaxis_label)
-            units = self.feature_units.get(xaxis_label, '')
+            xaxis_label_pretty = self.display_feature_names.get(xaxis_label, xaxis_label)
+            units = self.display_units.get(xaxis_label, '')
             if units == '':
                 xaxis_label_with_units = fr'{xaxis_label_pretty}'
             else:
@@ -314,8 +314,8 @@ class PlotStructure:
             ax.set_xlabel(xaxis_label_with_units, fontsize=self.FONT_SIZES['tiny'])
         
         if yaxis_label is not None: 
-            yaxis_label_pretty = self.readable_feature_names.get(yaxis_label, yaxis_label)
-            units = self.feature_units.get(yaxis_label, '')
+            yaxis_label_pretty = self.display_feature_names.get(yaxis_label, yaxis_label)
+            units = self.display_units.get(yaxis_label, '')
             if units == '':
                 yaxis_label_with_units = fr'{yaxis_label_pretty}'
             else:

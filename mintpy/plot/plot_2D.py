@@ -47,29 +47,26 @@ class PlotInterpret2D(PlotStructure):
                       feature_dict,
                       features,
                       model_names, 
-                      readable_feature_names={}, 
-                      feature_units={}, 
+                      display_feature_names={}, 
+                      display_units={}, 
                       **kwargs):
 
         """
         Generic function for 2-D PDP/ALE
         """
-        self.readable_feature_names = readable_feature_names
-        self.feature_units = feature_units
+        self.display_feature_names = display_feature_names
+        self.display_units = display_units
         
         if not isinstance(features, list):
             features = [features]
         
         hspace = kwargs.get("hspace", 0.4)
         wspace = kwargs.get("wspace", 0.7)
-        
-        cmap = "seismic" 
+        cmap = kwargs.get("cmap", 'seismic') 
         colorbar_label = kwargs.get("left_yaxis_label")
 
         if colorbar_label == 'Accumulated Local Effect (%)':
             colorbar_label = '2nd Order ALE (%)' 
-        if colorbar_label == 'Centered PD (%)':
-            colorbar_label = '2nd Order Centered PD (%)'
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(features)*len(model_names)
@@ -143,19 +140,41 @@ class PlotInterpret2D(PlotStructure):
             zdata = feature_dict[feature_set][model_name]["values"]
 
             # can only do a contour plot with 2-d data
-            x1, x2 = np.meshgrid(xdata1, xdata2)
+            x1, x2 = np.meshgrid(xdata1, xdata2, indexing="xy")
 
             # Get the mean of the bootstrapping. 
             if np.ndim(zdata) > 2:
                 zdata= np.mean(zdata, axis=0)
+            else:
+                zdata = zdata[0]
 
+            mark_empty=False
+            
             cf = main_ax.pcolormesh(x1, x2, zdata.T, 
                                     cmap=cmap, 
                                     alpha=0.8,
                                     norm=BoundaryNorm(levels, ncolors=cmap.N, clip=True)
                                    )
        
-            #main_ax.scatter(xdata1_hist[::25], xdata2_hist[::25], alpha=0.3, color='grey', s=1) 
+            if mark_empty and np.any(zdata.mask):
+                # Do not autoscale, so that boxes at the edges (contourf only plots the bin
+                # centres, not their edges) don't enlarge the plot.
+                plt.autoscale(False)
+                # Add rectangles to indicate cells without samples.
+                for i, j in zip(*np.where(ale.mask)):
+                    main_ax.add_patch(
+                        Rectangle(
+                        [xdata1[i], xdata2[j]],
+                        xdata1[i + 1] - xdata1[i],
+                        xdata2[j + 1] - xdata2[j],
+                        linewidth=1,
+                        edgecolor="k",
+                        facecolor="none",
+                        alpha=0.4,)
+                    )
+    
+    
+            main_ax.scatter(xdata1_hist[::5], xdata2_hist[::5], alpha=0.3, color='grey', s=1) 
             self.add_histogram_axis(top_ax, 
                                     xdata1_hist, 
                                     bins=30, 

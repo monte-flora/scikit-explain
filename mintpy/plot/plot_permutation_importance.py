@@ -43,7 +43,7 @@ class PlotImportance(PlotStructure):
         importance_dict_set,
         model_names,
         multipass=True,
-        readable_feature_names={},
+        display_feature_names={},
         feature_colors=None,
         num_vars_to_plot=10,
         metric=None,
@@ -56,7 +56,7 @@ class PlotImportance(PlotStructure):
             importance_dict_set : list 
             multipass : boolean
                 if True, plots the multipass results
-            readable_feature_names : dict
+            display_feature_names : dict
                 A dict mapping feature names to readable, "pretty" feature names
             feature_colors : dict
                 A dict mapping features to various colors. Helpful for color coding groups of features
@@ -129,7 +129,7 @@ class PlotImportance(PlotStructure):
                 # Get the predictor names
                 variable_names_to_plot = [" {}".format(var)
                     for var in self.convert_vars_to_readable(
-                        ["No Permutations",] + sorted_var_names, readable_feature_names
+                        ["No Permutations",] + sorted_var_names, display_feature_names
                         )
                         ]
 

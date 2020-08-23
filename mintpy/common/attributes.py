@@ -67,3 +67,33 @@ class Attributes:
         
         if examples is not None:
             self.feature_names  = self.examples.columns.to_list()
+    
+    def set_model_output(self, model_output, model):
+        """
+        Check the model output is given and if not try to 
+        assume the correct model output 
+        """
+        model_obj = model[0]
+        available_options = ['raw', 'probability']
+        
+        if model_output is None:
+            if hasattr(model_obj, 'predict_proba'):
+                self.model_output = 'probability'
+            else:
+                self.model_output = 'raw'
+            
+        else:
+            if model_output in available_options:
+                self.model_output = model_output
+            else:
+                raise ValueError(f"""
+                                {model_output} is not an accepted options. 
+                                 The available options are {available_options}.
+                                 Check for syntax errors!
+                                 """
+                                )
+
+        
+        
+        
+        
