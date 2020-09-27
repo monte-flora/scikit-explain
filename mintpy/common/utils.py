@@ -2,12 +2,33 @@ import numpy as np
 import pickle
 import pandas as pd
 from collections import ChainMap
-from sklearn.metrics import brier_score_loss
+from sklearn.metrics import brier_score_loss, average_precision_score
 
 
 def brier_skill_score(target_values, forecast_probabilities):
     climo = np.mean((target_values - np.mean(target_values))**2)
     return 1.0 - brier_score_loss(target_values, forecast_probabilities) / climo
+
+def norm_aupdc(targets, predictions):
+    """
+    Compute the normalized average precision.
+    Equations come from Boyd et al. (2012)
+
+    Unachievable Region in Precision-Recall Space and Its Effect on Empirical Evaluation
+    """
+    skew = np.mean(targets)
+
+    # Number of positive examples
+    pos = np.count_nonzero(targets)
+    # Number of negative examples
+    neg = len(targets) - pos
+
+    ap_min = (1./pos) * np.sum([i/(i+neg) for i in range(pos)])
+
+    ap = average_precision_score(targets, predictions)
+    norm_aupdc = (ap - ap_min) / (1. - ap_min)
+
+    return norm_aupdc
 
 def cartesian(arrays, out=None):
     """Generate a cartesian product of input arrays.
@@ -125,7 +146,7 @@ def load_pickle(fnames):
     for f in fnames:
         with open(f,'rb') as pkl_file:
             data.append( pickle.load(pkl_file) )
-       
+    
     if is_all_dict(data):
         return merge_dict(data)
     else:

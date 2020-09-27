@@ -21,7 +21,8 @@ from ..common.utils import (compute_bootstrap_indices,
                     is_regressor,
                     is_classifier, 
                     cartesian,
-                    brier_skill_score
+                    brier_skill_score,
+                    norm_aupdc
                    )
 from ..common.multiprocessing_utils import run_parallel, to_iterator
 from ..common.attributes import Attributes
@@ -125,7 +126,7 @@ class GlobalInterpret(Attributes):
             nbootstrap: integer
                 number of bootstrapp resamples
         """
-        available_scores = ['auc', 'auprc', 'bss', 'mse']
+        available_scores = ['auc', 'auprc', 'bss', 'mse', 'norm_aupdc']
         
         if not isinstance(evaluation_fn.lower(),str) and scoring_strategy is None:
             raise ValueError(
@@ -141,6 +142,9 @@ class GlobalInterpret(Attributes):
             scoring_strategy = "argmin_of_mean"
         elif evaluation_fn.lower() == "auprc":
             evaluation_fn = average_precision_score
+            scoring_strategy = "argmin_of_mean"
+        elif evaluation_fn.lower() == "norm_aupdc":
+            evaluation_fn = norm_aupdc
             scoring_strategy = "argmin_of_mean"
         elif evaluation_fn.lower() == 'bss':
             evaluation_fn = brier_skill_score

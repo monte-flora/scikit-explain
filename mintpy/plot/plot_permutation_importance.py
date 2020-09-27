@@ -73,10 +73,13 @@ class PlotImportance(PlotStructure):
         xticks = kwargs.get("xticks", [0, 0.2, 0.4, 0.6, 0.8, 1.0])
         ylabels = kwargs.get('ylabels', '')
         title = kwargs.get('title', '')
+        n_columns = kwargs.get('n_columns', 3) 
 
         # get the number of panels which will be the number of ML models in dictionary
         n_keys = [list(importance_dict.keys()) for importance_dict in importance_dict_set]
         n_panels = len([item for sublist in n_keys for item in sublist])
+
+        print(f'n_panels : {n_panels}') 
 
         if n_panels == 1:
             figsize = (3,2.5)
@@ -90,7 +93,8 @@ class PlotImportance(PlotStructure):
             
         # create subplots, one for each feature
         fig, axes = self.create_subplots(
-            n_panels=n_panels, hspace=hspace, wspace=wspace, figsize=figsize
+            n_panels=n_panels, n_columns = n_columns, 
+            hspace=hspace, wspace=wspace, figsize=figsize
         )
         
         if n_panels==1:
