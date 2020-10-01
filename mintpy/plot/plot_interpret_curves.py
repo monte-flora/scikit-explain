@@ -21,7 +21,6 @@ class PlotInterpretCurves(PlotStructure):
                       model_names, 
                       display_feature_names={}, 
                       display_units={}, 
-                      unnormalize=None, 
                       **kwargs):
         """
         Generic function for 1-D ALE and PD plots. 
@@ -49,6 +48,7 @@ class PlotInterpretCurves(PlotStructure):
         wspace = kwargs.get("wspace", 0.5)
         facecolor = kwargs.get("facecolor", "gray")
         left_yaxis_label = kwargs.get("left_yaxis_label")
+        unnormalize = kwargs.get('unnormalize', None) 
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(feature_dict.keys())
@@ -81,7 +81,8 @@ class PlotInterpretCurves(PlotStructure):
             xdata = feature_dict[feature][model_names[0]]["xdata1"]
             hist_data = feature_dict[feature][model_names[0]]["xdata1_hist"]
             if unnormalize is not None:
-                hist_data = unnormalize(hist_data)
+                hist_data = unnormalize.inverse_transform(hist_data, feature)
+                xdata = unnormalize.inverse_transform(xdata, feature)
             # add histogram
             hist_ax = self.make_twin_ax(lineplt_ax)
             twin_yaxis_label=self.add_histogram_axis(hist_ax, hist_data, 
