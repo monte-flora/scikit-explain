@@ -164,10 +164,10 @@ def combine_top_features(results_dict,nvars=None):
         nvars=1000
     combined_features = []
     for model_name in results_dict.keys():
-        features = results_dict[model_name][:nvars]
-        combined_features.extend(features)
-    unique_features = list(set(combined_features))
-    
+        features = results_dict[model_name]
+        combined_features.append(features)
+    unique_features = list(set.intersection(*map(set, combined_features)))[:nvars]
+
     return unique_features
     
 def compute_bootstrap_indices(examples, subsample=1.0, nbootstrap=1):
