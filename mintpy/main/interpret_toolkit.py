@@ -107,7 +107,8 @@ class InterpretToolkit(Attributes):
                              nbins=25, 
                              njobs=1, 
                              subsample=1.0, 
-                             nbootstrap=1):
+                             nbootstrap=1,
+                             ):
         """
             Runs the partial dependence or accumulated local effect calculation and 
             populates a dictionary with all necessary inputs for plotting.
@@ -152,7 +153,7 @@ class InterpretToolkit(Attributes):
         """
         results = self._calc_interpret_curve(method='pd', features=features, 
                                         nbins=nbins, njobs=njobs,subsample=subsample, 
-                                             nbootstrap=nbootstrap
+                                             nbootstrap=nbootstrap, 
                                         )
         self.pd_dict = results
         self.features_used = features
@@ -165,7 +166,7 @@ class InterpretToolkit(Attributes):
         """
         results = self._calc_interpret_curve(method='ale', features=features, 
                                         nbins=nbins, njobs=njobs,subsample=subsample, 
-                                             nbootstrap=nbootstrap
+                                             nbootstrap=nbootstrap,
                                             )
         self.ale_dict = results
         self.features_used = features
@@ -214,7 +215,7 @@ class InterpretToolkit(Attributes):
         
     
     
-    def plot_pd(self, display_feature_names={}, display_units={}, **kwargs):
+    def plot_pd(self, display_feature_names={}, display_units={}, to_probability=False, **kwargs):
         """ Alias function for user-friendly API. Runs the partial dependence plotting.
             See _plot_interpret_curves for details. 
         """
@@ -229,9 +230,10 @@ class InterpretToolkit(Attributes):
         return self._plot_interpret_curves(data, 
                                display_feature_names=display_feature_names, 
                                display_units=display_units,
+                               to_probability=to_probability,
                                **kwargs)
 
-    def plot_ale(self, display_feature_names={}, display_units={}, add_shap=False, **kwargs):
+    def plot_ale(self, display_feature_names={}, display_units={}, add_shap=False, to_probability=False, **kwargs):
         """ Alias function for user-friendly API. Runs the accumulated local effects plotting.
             See _plot_interpret_curves for details. 
         """
@@ -246,6 +248,7 @@ class InterpretToolkit(Attributes):
         return self._plot_interpret_curves(data, 
                                display_feature_names=display_feature_names, 
                                display_units=display_units,
+                               to_probability=to_probability,
                                **kwargs)
 
         
@@ -320,6 +323,8 @@ class InterpretToolkit(Attributes):
         """
         Plot the SHAP summary plot or dependence plots for various features.  
         """
+        print('inside plot_shap: ', kwargs) 
+
         local_obj = LocalInterpret(model=self.models,
                             model_names=self.model_names,
                             examples=self.examples,

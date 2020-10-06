@@ -241,7 +241,7 @@ class PlotImportance(PlotStructure):
           
         self.set_major_axis_labels(
                 fig,
-                xlabel=metric,
+                xlabel=metric.replace('_', ''),
                 ylabel_left='',
                 labelpad=5,
                 fontsize=self.FONT_SIZES['tiny'],

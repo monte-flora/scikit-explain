@@ -283,25 +283,29 @@ def get_indices_based_on_performance(model, examples, targets, model_output='pro
     data = {'targets': targets, 'predictions': predictions, 'diff': diff}
     df = pd.DataFrame(data)
 
-    nonevent_examples = df[targets==0]
-    event_examples = df[targets==1]
+    if model_output == 'probability':
+        nonevent_examples = df[targets==0]
+        event_examples = df[targets==1]
 
-    event_examples_sorted_indices = event_examples.sort_values(by='diff',ascending=True).index.values
-    nonevent_examples_sorted_indices = nonevent_examples.sort_values(by='diff',ascending=False).index.values
+        event_examples_sorted_indices = event_examples.sort_values(by='diff',ascending=True).index.values
+        nonevent_examples_sorted_indices = nonevent_examples.sort_values(by='diff',ascending=False).index.values
 
-    best_hit_indices = event_examples_sorted_indices[:n_examples].astype(int)
-    worst_miss_indices = event_examples_sorted_indices[-n_examples:][::-1].astype(int)
-    best_corr_neg_indices = nonevent_examples_sorted_indices[:n_examples].astype(int)
-    worst_false_alarm_indices = nonevent_examples_sorted_indices[-n_examples:][::-1].astype(int)
+        best_hit_indices = event_examples_sorted_indices[:n_examples].astype(int)
+        worst_miss_indices = event_examples_sorted_indices[-n_examples:][::-1].astype(int)
+        best_corr_neg_indices = nonevent_examples_sorted_indices[:n_examples].astype(int)
+        worst_false_alarm_indices = nonevent_examples_sorted_indices[-n_examples:][::-1].astype(int)
 
-    sorted_dict = {
-                    'hits':  best_hit_indices,
-                    'misses': worst_miss_indices,
-                    'false_alarms': worst_false_alarm_indices,
-                    'corr_negs': best_corr_neg_indices
+        sorted_dict = {
+                    'High Confidence Forecasts Matched to an Event':  best_hit_indices,
+                    'Low Confidence Forecasts Matched to an Event': worst_miss_indices,
+                    'High Confidence Forecasts NOT Matched to an Event': worst_false_alarm_indices,
+                    'Low Confidence Forecasts NOT Matched to an Event': best_corr_neg_indices
                       }
 
-    return sorted_dict
+        return sorted_dict
+    else:
+        print('Mintpy currently does not support performance-based indexing for regression problems')
+        pass
 
 def avg_and_sort_contributions(the_dict):
     """

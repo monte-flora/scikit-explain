@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (MaxNLocator, FormatStrFormatter,
                                AutoMinorLocator)
+import matplotlib.ticker as mticker
+
 from matplotlib import rcParams
 from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
@@ -251,7 +253,25 @@ class PlotStructure:
                     va="center",
                     transform=ax.transAxes,
                 )
-    
+
+    def _to_sci_notation(self,ydata,ax=None, xdata=None, colorbar=False):
+        """
+        Convert decimals (less 0.01) to 10^e notation 
+        """
+        f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
+        g = lambda x,pos : "${}$".format(f._formatSciNotation('%1.10e' % x))
+        
+        if colorbar and np.absolute(np.amax(ydata)) <= 0.01:
+            colorbar.ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+            colorbar.ax.tick_params(axis='y', labelsize=5)
+        elif ax:
+            if np.absolute(np.amax(xdata)) <= 0.01:
+                ax.xaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.tick_params(axis='x', labelsize=5, rotation=45)
+            if np.absolute(np.amax(ydata)) <= 0.01:
+                ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.tick_params(axis='y', labelsize=5, rotation=45)
+
     def calculate_ticks(self, nticks, ax=None, upperbound=None, lowerbound=None, 
                         round_to=1, center=False):
         """
@@ -386,7 +406,5 @@ class PlotStructure:
     def save_figure(self, fname, fig=None, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """
         plt.savefig(fname=fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
-        if fig is not None:
-            plt.closefig(fig)
     
     
