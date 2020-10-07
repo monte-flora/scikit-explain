@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (MaxNLocator, FormatStrFormatter,
                                AutoMinorLocator)
+import matplotlib.ticker as mticker
+
 from matplotlib import rcParams
 from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
@@ -216,34 +218,35 @@ class PlotStructure:
         
         return ax
     
-    def set_row_labels(self, labels, axes, pos=-1):
+    def set_row_labels(self, labels, axes, pos=-1, pad=1.15, rotation=270, **kwargs):
         """
         Give a label to each row in a series of subplots
         """
-        pad=1.15
-        
+        colors = kwargs.get('colors', ['xkcd:darkish blue'] * len(labels))
+        fontsize = kwargs.get('fontsize', self.FONT_SIZES['small'])
         if np.ndim(axes) == 2:
             iterator = axes[:,pos]
         else:
             iterator = [axes[pos]]
         
-        for ax, row in zip(iterator, labels):
+        for ax, row, color in zip(iterator, labels, colors):
             ax.yaxis.set_label_position("right")
-            ax.annotate(row, xy=(1, 1), xytext=(pad, 0.5), xycoords = ax.transAxes, rotation=270,
-                    size=8, ha='center', va='center', color='xkcd:vermillion', alpha=0.65)
+            ax.annotate(row, xy=(1, 1), xytext=(pad, 0.5), xycoords = ax.transAxes, rotation=rotation,
+                    size=8, ha='center', va='center', color=color, alpha=0.65)
     
-    def add_alphabet_label(self, n_panels, axes):
+    def add_alphabet_label(self, n_panels, axes, pos=(0.9, 0.09), **kwargs):
         """
         A alphabet character to each subpanel.
         """
+        fontsize = kwargs.get('fontsize', 10)
         alphabet_list = [chr(x) for x in range(ord("a"), ord("z") + 1)]
 
         ax_iterator = self.axes_to_iterator(n_panels, axes)
 
         for i, ax in enumerate(ax_iterator):
             ax.text(
-                    0.9,
-                    0.09,
+                    pos[0],
+                    pos[1],
                     f"({alphabet_list[i]})",
                     fontsize=10,
                     alpha=0.8,
@@ -251,7 +254,25 @@ class PlotStructure:
                     va="center",
                     transform=ax.transAxes,
                 )
-    
+
+    def _to_sci_notation(self,ydata,ax=None, xdata=None, colorbar=False):
+        """
+        Convert decimals (less 0.01) to 10^e notation 
+        """
+        f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
+        g = lambda x,pos : "${}$".format(f._formatSciNotation('%1.10e' % x))
+        
+        if colorbar and np.absolute(np.amax(ydata)) <= 0.01:
+            colorbar.ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+            colorbar.ax.tick_params(axis='y', labelsize=5)
+        elif ax:
+            if np.absolute(np.amax(xdata)) <= 0.01:
+                ax.xaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.tick_params(axis='x', labelsize=5, rotation=45)
+            if np.absolute(np.amax(ydata)) <= 0.01:
+                ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.tick_params(axis='y', labelsize=5, rotation=45)
+
     def calculate_ticks(self, nticks, ax=None, upperbound=None, lowerbound=None, 
                         round_to=1, center=False):
         """
@@ -328,6 +349,7 @@ class PlotStructure:
         Set a single legend on the bottom of a figure 
         for a set of subplots. 
         """
+        
         handles, labels = ax.get_legend_handles_labels()
         
         if n_panels > 3:
@@ -386,7 +408,4 @@ class PlotStructure:
     def save_figure(self, fname, fig=None, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """
         plt.savefig(fname=fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
-        if fig is not None:
-            plt.closefig(fig)
-    
     

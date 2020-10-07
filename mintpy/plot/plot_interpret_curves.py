@@ -20,7 +20,8 @@ class PlotInterpretCurves(PlotStructure):
                       features, 
                       model_names, 
                       display_feature_names={}, 
-                      display_units={}, 
+                      display_units={},
+                      to_probability=False,
                       **kwargs):
         """
         Generic function for 1-D ALE and PD plots. 
@@ -92,7 +93,9 @@ class PlotInterpretCurves(PlotStructure):
             for i, model_name in enumerate(model_names):
                 
                 ydata = feature_dict[feature][model_name]["values"]
-                
+                if to_probability:
+                    ydata *= 100.
+
                 # depending on number of bootstrap examples, do CI plot or just mean
                 if ydata.shape[0] > 1:
                     self.confidence_interval_plot(

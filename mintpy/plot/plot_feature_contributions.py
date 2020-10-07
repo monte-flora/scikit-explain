@@ -3,6 +3,9 @@ import shap
 
 from .base_plotting import PlotStructure
 from ..common.utils import combine_like_features
+import matplotlib.pyplot as plt
+from .dependence import dependence_plot
+from matplotlib.lines import Line2D
 
 class PlotFeatureContributions(PlotStructure):
     
@@ -68,7 +71,7 @@ class PlotFeatureContributions(PlotStructure):
             y=y_index, width=contrib, height=0.8, alpha=0.8, color=bar_colors, zorder=2
         )
 
-        ax.tick_params(axis="both", which="both", length=0)
+        ax.tick_params(axis="both", which="both", length=0, labelsize=7)
 
         vals = ax.get_xticks()
         for tick in vals:
@@ -89,7 +92,7 @@ class PlotFeatureContributions(PlotStructure):
                     color="k",
                     fontweight="bold",
                     alpha=0.8,
-                    fontsize=8,
+                    fontsize=6,
                 )
             else:
                 ax.text(
@@ -99,7 +102,7 @@ class PlotFeatureContributions(PlotStructure):
                     color="k",
                     fontweight="bold",
                     alpha=0.8,
-                    fontsize=8,
+                    fontsize=6,
                 )
 
         ax.set_xlim([np.min(contrib) - neg_factor, np.max(contrib) + factor])
@@ -111,7 +114,7 @@ class PlotFeatureContributions(PlotStructure):
                 0.7,
                 0.1,
                 f"Bias : {bias:.2f}",
-                fontsize=7,
+                fontsize=6,
                 alpha=0.7,
                 ha="left",
                 va="center",
@@ -122,7 +125,7 @@ class PlotFeatureContributions(PlotStructure):
                 0.7,
                 0.15,
                 f"Final Pred. : {final_pred:.2f}",
-                fontsize=7,
+                fontsize=6,
                 alpha=0.7,
                 ha="left",
                 va="center",
@@ -135,7 +138,7 @@ class PlotFeatureContributions(PlotStructure):
                 0.1,
                 0.90,
                 f"Bias : {bias:.2f}",
-                fontsize=7,
+                fontsize=6,
                 alpha=0.7,
                 ha="left",
                 va="center",
@@ -146,7 +149,7 @@ class PlotFeatureContributions(PlotStructure):
                 0.1,
                 0.95,
                 f"Final Pred. : {final_pred:.2f}",
-                fontsize=7,
+                fontsize=6,
                 alpha=0.7,
                 ha="left",
                 va="center",
@@ -157,7 +160,7 @@ class PlotFeatureContributions(PlotStructure):
         # make the horizontal plot go with the highest value at the top
         ax.invert_yaxis()
 
-    def plot_contributions(self, result_dict, to_only_varname=None, 
+    def plot_contributions(self, result_dict, model_names, to_only_varname=None, 
                            display_feature_names={}, **kwargs):
         """
         Plot the results of feature contributions
@@ -172,57 +175,86 @@ class PlotFeatureContributions(PlotStructure):
         hspace = kwargs.get("hspace", 0.4)
         wspace = kwargs.get("wspace", 0.5)
 
-        # get the number of panels which will be the number of ML models in dictionary
-        n_panels = len(result_dict.keys())
+        if "non_performance" in result_dict[model_names[0]].keys():
+            n_panels=1
+            n_columns=1
+            figsize = (3, 2.5)
+        else:
+            n_panels = len(result_dict.keys()) * 4
+            n_columns = 4 
+            figsize= (12, 8)
+            wspace=1.5
 
-        # loop over each model creating one panel per model
-        for model_name in result_dict.keys():
-
-            # try for all_data/average data
-            if "non_performance" in result_dict[model_name].keys():
-                # create subplots, one for each feature
-                fig, ax = self.create_subplots(
-                    n_panels=1,
-                    n_columns=1,
+        # create subplots, one for each feature
+        fig, axes = self.create_subplots(
+                    n_panels=n_panels,
+                    n_columns=n_columns,
                     hspace=hspace,
                     wspace=wspace,
                     sharex=False,
                     sharey=False,
-                    figsize=(3, 2.5),
+                    figsize=figsize,
                 )
-
+        
+        # try for all_data/average data
+        if "non_performance" in result_dict[model_names[0]].keys():
                 fig = self._contribution_plot(
-                    result_dict[model_name]["non_performance"], 
+                    result_dict[model_name]["non_performance"],
                     to_only_varname=to_only_varname,
                     display_feature_names=display_feature_names,
                     key='',
                     ax=ax
                 )
+                return fig
 
-            # must be performanced based
-            else:
-
-                # create subplots, one for each feature
-                fig, axes = self.create_subplots(
-                    n_panels=4,
-                    n_columns=2,
-                    hspace=hspace,
-                    wspace=wspace,
-                    sharex=False,
-                    sharey=False,
-                    figsize=(8, 6),
-                )
-
-                for ax, perf_key in zip(axes.flat, result_dict[model_name].keys()):
-                    print(perf_key)
-                    self._contribution_plot(
+        # loop over each model creating one panel per model
+        c=0
+        for i, model_name in enumerate(model_names):
+            k=0
+            for perf_key in result_dict[model_name].keys():
+                ax = axes[i,k] 
+                #print(perf_key)
+                self._contribution_plot(
                         result_dict[model_name][perf_key],
                         ax=ax,
                         key=perf_key,
                         to_only_varname=to_only_varname,
                         display_feature_names=display_feature_names
                     )
-                    ax.set_title(perf_key.upper().replace("_", " "), fontsize=15)
+                if c == 0:
+                    ax.set_title(perf_key.replace("Forecasts ", "Forecasts\n").upper(), 
+                                 fontsize=10,
+                                color='xkcd:darkish blue')
+                k+=1
+            c+=1
+                
+        major_ax = self.set_major_axis_labels(
+                fig,
+                xlabel='',
+                ylabel_left='',
+                labelpad=5,
+                fontsize=self.FONT_SIZES['tiny'],
+            )
+        
+        self.set_row_labels(labels=model_names, 
+                            axes=axes, 
+                            pos=0,
+                            rotation=90, 
+                            pad=-1.0,
+                            fontsize=15
+                           )
+        
+        #additional_handles = [
+        #                        Line2D([0], [0], color="xkcd:pastel red", alpha=0.8),
+        #                         Line2D([0], [0], color='xkcd:powder blue', alpha=0.8),
+        #                          ]
+        
+        additional_labels = ['Positive Contributions', 'Negative Contributions']
+        #self.set_legend(n_panels, fig, axes[0,0], 
+        #                major_ax, additional_handles, 
+        #                additional_labels, bbox_to_anchor=(0.5, -0.25))
+        
+        self.add_alphabet_label(n_panels, axes, pos=(1.05, 0.0))
 
         return fig
     
@@ -256,16 +288,21 @@ class PlotFeatureContributions(PlotStructure):
                              )
             
         elif plot_type == 'dependence':
-            
+            # Set up the font sizes for matplotlib
             left_yaxis_label = 'SHAP values (%)\n(Feature Contributions)'
             n_panels = len(features)
+            if n_panels <= 6:
+                figsize=(8,5)
+            else:
+                figsize=(10,8)
+
             fig, axes = self.create_subplots(
                     n_panels=n_panels,
                     sharex=False,
                     sharey=False,
-                    figsize=(8,5),
-                    wspace = 1.0,
-                    hspace=0.6
+                    figsize=figsize,
+                    wspace = 0.4,
+                    hspace=0.5
                 )
             
             ax_iterator = self.axes_to_iterator(n_panels, axes)
@@ -278,25 +315,40 @@ class PlotFeatureContributions(PlotStructure):
             for ax, feature in zip(ax_iterator, features):
                 ind = self.feature_names.index(feature)
                 
-                shap.dependence_plot(ind=ind, 
+                dependence_plot(ind=ind, 
                                 shap_values=shap_values, 
                                 features=examples, 
-                                feature_names = display_features,
+                                display_features=display_features,
                                 interaction_index="auto",
                                 color="#1E88E5", 
                                 axis_color="#333333", 
                                 cmap=None,
-                                dot_size=16, 
+                                dot_size=10, 
                                 x_jitter=0, 
                                 alpha=1, 
                                 ax=ax,
-                                show=False)
+                                fig=fig,
+                                **kwargs)
                 
                 self.set_n_ticks(ax)
                 self.set_minor_ticks(ax)
                 self.set_axis_label(ax, xaxis_label=''.join(feature), yaxis_label='')
                 ax.axhline(y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle='dashed')
                 ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=True))
+                ax.tick_params(axis='both', labelsize=8) 
+                vertices = ax.collections[0].get_offsets()
+                self._to_sci_notation(ax=ax, ydata=vertices[:,1], xdata=vertices[:,0], colorbar=False)
+
+                # Unnormalize the xdata 
+                #if unnormalize is not None:
+                #    vertices = ax.collections[0].get_offsets()
+                #    xdata = unnormalize.inverse_transform(vertices[:,0], feature)
+                #    vertices[:,0] = xdata
+
+                #    ax.collections[0].set_offsets(vertices)
+                #    min_value = np.min(vertices[:,0])*0.95
+                #    max_value = np.max(vertices[:,0])*1.05
+                #    ax.set_xlim([min_value, max_value])
 
             major_ax = self.set_major_axis_labels(
                 fig,

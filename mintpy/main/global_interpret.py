@@ -335,7 +335,7 @@ class GlobalInterpret(Attributes):
                 # Binary classification, shape is (2, n_points).
                 # we output the effect of **positive** class
                 # and convert to percentages
-                averaged_predictions = averaged_predictions[1] * 100. 
+                averaged_predictions = averaged_predictions[1]  
             
             # Center the predictions 
             averaged_predictions -= np.mean(averaged_predictions)
@@ -431,7 +431,7 @@ class GlobalInterpret(Attributes):
                 examples_temp = examples.copy()
                 examples_temp[feature] = bin_edges[indices + offset]
                 if self.model_output == 'probability':
-                    predictions.append(model.predict_proba(examples_temp.values)[:,1]*100.) 
+                    predictions.append(model.predict_proba(examples_temp.values)[:,1]) 
                 elif self.model_output == 'raw':
                     predictions.append(model.predict(examples_temp.values))
         
@@ -556,7 +556,7 @@ class GlobalInterpret(Attributes):
                 for i in range(2):
                     examples_temp[features[i]] = bin_edges[i][indices_list[i] + shifts[i]]
                 if self.model_output == 'probability':
-                    predictions[shifts] = model.predict_proba(examples_temp)[:,1]*100.
+                    predictions[shifts] = model.predict_proba(examples_temp)[:,1]
                 elif self.model_output == 'raw':
                     predictions[shifts] = model.predict(examples_temp)
             
