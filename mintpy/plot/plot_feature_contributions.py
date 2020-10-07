@@ -5,6 +5,7 @@ from .base_plotting import PlotStructure
 from ..common.utils import combine_like_features
 import matplotlib.pyplot as plt
 from .dependence import dependence_plot
+from matplotlib.lines import Line2D
 
 class PlotFeatureContributions(PlotStructure):
     
@@ -70,7 +71,7 @@ class PlotFeatureContributions(PlotStructure):
             y=y_index, width=contrib, height=0.8, alpha=0.8, color=bar_colors, zorder=2
         )
 
-        ax.tick_params(axis="both", which="both", length=0)
+        ax.tick_params(axis="both", which="both", length=0, labelsize=7)
 
         vals = ax.get_xticks()
         for tick in vals:
@@ -91,7 +92,7 @@ class PlotFeatureContributions(PlotStructure):
                     color="k",
                     fontweight="bold",
                     alpha=0.8,
-                    fontsize=8,
+                    fontsize=6,
                 )
             else:
                 ax.text(
@@ -101,7 +102,7 @@ class PlotFeatureContributions(PlotStructure):
                     color="k",
                     fontweight="bold",
                     alpha=0.8,
-                    fontsize=8,
+                    fontsize=6,
                 )
 
         ax.set_xlim([np.min(contrib) - neg_factor, np.max(contrib) + factor])
@@ -113,7 +114,7 @@ class PlotFeatureContributions(PlotStructure):
                 0.7,
                 0.1,
                 f"Bias : {bias:.2f}",
-                fontsize=7,
+                fontsize=6,
                 alpha=0.7,
                 ha="left",
                 va="center",
@@ -124,7 +125,7 @@ class PlotFeatureContributions(PlotStructure):
                 0.7,
                 0.15,
                 f"Final Pred. : {final_pred:.2f}",
-                fontsize=7,
+                fontsize=6,
                 alpha=0.7,
                 ha="left",
                 va="center",
@@ -137,7 +138,7 @@ class PlotFeatureContributions(PlotStructure):
                 0.1,
                 0.90,
                 f"Bias : {bias:.2f}",
-                fontsize=7,
+                fontsize=6,
                 alpha=0.7,
                 ha="left",
                 va="center",
@@ -148,7 +149,7 @@ class PlotFeatureContributions(PlotStructure):
                 0.1,
                 0.95,
                 f"Final Pred. : {final_pred:.2f}",
-                fontsize=7,
+                fontsize=6,
                 alpha=0.7,
                 ha="left",
                 va="center",
@@ -159,7 +160,7 @@ class PlotFeatureContributions(PlotStructure):
         # make the horizontal plot go with the highest value at the top
         ax.invert_yaxis()
 
-    def plot_contributions(self, result_dict, to_only_varname=None, 
+    def plot_contributions(self, result_dict, model_names, to_only_varname=None, 
                            display_feature_names={}, **kwargs):
         """
         Plot the results of feature contributions
@@ -174,7 +175,6 @@ class PlotFeatureContributions(PlotStructure):
         hspace = kwargs.get("hspace", 0.4)
         wspace = kwargs.get("wspace", 0.5)
 
-        model_names = list(result_dict.keys())
         if "non_performance" in result_dict[model_names[0]].keys():
             n_panels=1
             n_columns=1
@@ -183,6 +183,7 @@ class PlotFeatureContributions(PlotStructure):
             n_panels = len(result_dict.keys()) * 4
             n_columns = 4 
             figsize= (12, 8)
+            wspace=1.5
 
         # create subplots, one for each feature
         fig, axes = self.create_subplots(
@@ -207,11 +208,12 @@ class PlotFeatureContributions(PlotStructure):
                 return fig
 
         # loop over each model creating one panel per model
-        for i, model_name in enumerate(result_dict.keys()):
+        c=0
+        for i, model_name in enumerate(model_names):
             k=0
             for perf_key in result_dict[model_name].keys():
                 ax = axes[i,k] 
-                print(perf_key)
+                #print(perf_key)
                 self._contribution_plot(
                         result_dict[model_name][perf_key],
                         ax=ax,
@@ -219,8 +221,40 @@ class PlotFeatureContributions(PlotStructure):
                         to_only_varname=to_only_varname,
                         display_feature_names=display_feature_names
                     )
-                #ax.set_title(perf_key.upper().replace("_", " "), fontsize=15)
+                if c == 0:
+                    ax.set_title(perf_key.replace("Forecasts ", "Forecasts\n").upper(), 
+                                 fontsize=10,
+                                color='xkcd:darkish blue')
                 k+=1
+            c+=1
+                
+        major_ax = self.set_major_axis_labels(
+                fig,
+                xlabel='',
+                ylabel_left='',
+                labelpad=5,
+                fontsize=self.FONT_SIZES['tiny'],
+            )
+        
+        self.set_row_labels(labels=model_names, 
+                            axes=axes, 
+                            pos=0,
+                            rotation=90, 
+                            pad=-1.0,
+                            fontsize=15
+                           )
+        
+        #additional_handles = [
+        #                        Line2D([0], [0], color="xkcd:pastel red", alpha=0.8),
+        #                         Line2D([0], [0], color='xkcd:powder blue', alpha=0.8),
+        #                          ]
+        
+        additional_labels = ['Positive Contributions', 'Negative Contributions']
+        #self.set_legend(n_panels, fig, axes[0,0], 
+        #                major_ax, additional_handles, 
+        #                additional_labels, bbox_to_anchor=(0.5, -0.25))
+        
+        self.add_alphabet_label(n_panels, axes, pos=(1.05, 0.0))
 
         return fig
     

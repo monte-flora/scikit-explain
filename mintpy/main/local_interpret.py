@@ -157,7 +157,7 @@ class LocalInterpret(Attributes):
             contributions = explainer.shap_values(examples)
             
         except Exception as e:
-            traceback.print_exc()
+            #traceback.print_exc()
             if self.model_output == 'probability':
                 func = model.predict_proba
                 link = 'identity'
