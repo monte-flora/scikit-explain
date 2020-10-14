@@ -48,12 +48,14 @@ class PlotInterpret2D(PlotStructure):
                       features,
                       model_names, 
                       display_feature_names={}, 
-                      display_units={}, 
+                      display_units={},
+                      to_probability=True,
                       **kwargs):
 
         """
         Generic function for 2-D PDP/ALE
         """
+        unnormalize = kwargs.get('unnormalize', None)
         self.display_feature_names = display_feature_names
         self.display_units = display_units
         
@@ -101,28 +103,30 @@ class PlotInterpret2D(PlotStructure):
         
         for feature_set, model_name in itertools.product(features, model_names):
             zdata = feature_dict[feature_set][model_name]["values"]
-            
+            zdata = np.ma.getdata(zdata)
+            if to_probability:
+                zdata *= 100.
+
             feature_levels[feature_set]['max'].append(np.nanmax(zdata))
             feature_levels[feature_set]['min'].append(np.nanmin(zdata))
         
         cmap = plt.get_cmap(cmap)
-        
         counter = 0
-        
         n=1
         i=0 
+        #{('shear_v_0to6_ens_mean_spatial_mean', 'cape_ml_ens_mean_spatial_mean'): {'max': [0.0017650298618386495], 'min': [-0.0012944842102455589]}}
         for feature_set, model_name in itertools.product(features, model_names):
             
-            max_value = np.amin(feature_levels[feature_set]['max'])
-            min_value = np.amax(feature_levels[feature_set]['min']) 
-           
+            # We want to lowest maximum value and the highest minimum value
+            max_value = np.nanmin(feature_levels[feature_set]['max'])
+            min_value = np.nanmax(feature_levels[feature_set]['min']) 
             levels = self.calculate_ticks(nticks=50, 
                                           upperbound=max_value, 
                                           lowerbound=min_value, 
-                                          round_to=1, 
+                                          round_to=5, 
                                           center=True
                                          )
-            
+        
             main_ax = main_axes[i] 
             top_ax = top_axes[i]
             rhs_ax = rhs_axes[i]
@@ -136,8 +140,16 @@ class PlotInterpret2D(PlotStructure):
                 
             xdata1_hist = feature_dict[feature_set][model_name]["xdata1_hist"]
             xdata2_hist = feature_dict[feature_set][model_name]["xdata2_hist"]
-                
+            if unnormalize is not None:
+                xdata1_hist = unnormalize.inverse_transform(xdata1_hist, feature_set[0])
+                xdata2_hist = unnormalize.inverse_transform(xdata2_hist, feature_set[1])
+                xdata1 = unnormalize.inverse_transform(xdata1, feature_set[0])
+                xdata2 = unnormalize.inverse_transform(xdata2, feature_set[1])
+
             zdata = feature_dict[feature_set][model_name]["values"]
+            zdata = np.ma.getdata(zdata)
+            if to_probability:
+                zdata *= 100.
 
             # can only do a contour plot with 2-d data
             x1, x2 = np.meshgrid(xdata1, xdata2, indexing="xy")
@@ -172,9 +184,8 @@ class PlotInterpret2D(PlotStructure):
                         facecolor="none",
                         alpha=0.4,)
                     )
-    
-    
-            main_ax.scatter(xdata1_hist[::5], xdata2_hist[::5], alpha=0.3, color='grey', s=1) 
+     
+            #main_ax.scatter(xdata1_hist[::5], xdata2_hist[::5], alpha=0.3, color='grey', s=1) 
             self.add_histogram_axis(top_ax, 
                                     xdata1_hist, 
                                     bins=30, 

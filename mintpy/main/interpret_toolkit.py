@@ -195,6 +195,7 @@ class InterpretToolkit(Attributes):
         """
         Handles 1D or 2D PD/ALE plots. 
         """
+        print(kwargs) 
         # plot the data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance( list( data.keys() )[0] , tuple):
             plot_obj = PlotInterpret2D()
@@ -319,7 +320,7 @@ class InterpretToolkit(Attributes):
         
     def plot_shap(self, features=None, display_feature_names=None, 
                   plot_type='summary', data_for_shap=None, subsample_size=1000, 
-                  performance_based=False, n_examples=100, **kwargs):
+                  performance_based=False, n_examples=100, feature_values=None, **kwargs):
         """
         Plot the SHAP summary plot or dependence plots for various features.  
         """
@@ -361,6 +362,7 @@ class InterpretToolkit(Attributes):
                            features=features, 
                            plot_type=plot_type,
                            display_feature_names=display_feature_names,
+                           feature_values=feature_values,
                            **kwargs
                           )
 
