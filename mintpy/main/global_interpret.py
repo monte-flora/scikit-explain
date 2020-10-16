@@ -3,9 +3,11 @@ import pandas as pd
 from copy import deepcopy
 from math import sqrt
 from scipy.spatial import cKDTree
+from scipy.interpolate import interp1d
 import itertools
 from functools import reduce
 from operator import add
+from joblib import delayed, Parallel
 
 from sklearn.metrics import (roc_auc_score,
                              roc_curve,
@@ -536,10 +538,10 @@ class GlobalInterpret(Attributes):
             
             # get samples
             examples = self.examples.iloc[idx, :]
-            
+
             # create bins for computation for both features
             feature_values = [examples[features[i]].values for i in range(2)]
-            
+
             # Define the bins the feature samples fall into. Shift and clip to ensure we are
             # getting the index of the left bin edge and the smallest sample retains its index
             # of 0.
@@ -555,10 +557,11 @@ class GlobalInterpret(Attributes):
                 examples_temp = examples.copy()
                 for i in range(2):
                     examples_temp[features[i]] = bin_edges[i][indices_list[i] + shifts[i]]
+                
                 if self.model_output == 'probability':
-                    predictions[shifts] = model.predict_proba(examples_temp)[:,1]
+                    predictions[shifts] = model.predict_proba(examples_temp.values)[:,1]
                 elif self.model_output == 'raw':
-                    predictions[shifts] = model.predict(examples_temp)
+                    predictions[shifts] = model.predict(examples_temp.values)
             
             # The individual (local) effects.
             effects = (predictions[(1, 1)] - predictions[(1, 0)]) - (
@@ -585,8 +588,7 @@ class GlobalInterpret(Attributes):
             # Create a 2D array of the number of samples in each bin.
             samples_grid = np.zeros((feature1_nbin_edges-1, feature2_nbin_edges-1))
             samples_grid[valid_grid_indices] = n_samples
-           
-            
+               
             # Mark the first row/column as valid, since these are meant to contain 0s.
             ale.mask[0, :] = False
             ale.mask[:, 0] = False
@@ -683,7 +685,7 @@ class GlobalInterpret(Attributes):
             
             # Center the ALE by subtracting its expectation value.
             ale -= np.sum(samples_grid * ale) /  len(examples)
-            
+           
             ale_set.append(ale)
 
         results = {features : {model_name :{}}}
@@ -692,8 +694,7 @@ class GlobalInterpret(Attributes):
         results[features][model_name]['xdata2'] = 0.5 * (bin_edges[1][1:] + bin_edges[1][:-1])
         results[features][model_name]['xdata1_hist'] = original_feature_values[0]
         results[features][model_name]['xdata2_hist'] = original_feature_values[1]
-        
-        
+         
         return results
             
     
@@ -734,9 +735,74 @@ class GlobalInterpret(Attributes):
         
         return sqrt(H_squared)
 
+    def interaction_strength(self, model_name, features, nbins=25, subsample=1.0, njobs=1, nbootstrap=1):
+        """
+        Compute the interaction strenth of a ML model (based on IAS from 
+        Quantifying Model Complexity via Functional
+        Decomposition for Better Post-Hoc Interpretability). 
+        """
+        # Get the model predictions 
+        model =  self.models[model_name]
+        feature_names = list(self.examples.columns)
+        results = self._run_interpret_curves(method='ale',
+                                             features=features,
+                                             nbins=nbins,
+                                             njobs=njobs,
+                                             subsample=1.0,
+                                             nbootstrap=1
+                                            )
         
+        # Get the interpolated ALE curves 
+        ale_main_effects = {}
+        for f in features:
+            main_effect = results[f][model_name]['values'].squeeze()
+            # Get the bootstrap mean effect (if applicable)
+            #if main_effect.shape[0] > 1
+            #   main_effect = np.mean(mean_effect, axis=0)
+            x_values =  results[f][model_name]['xdata1']
+            ale_main_effects[f] = interp1d(x_values, main_effect, fill_value="extrapolate")
+
         
+        # get the bootstrap samples
+        if nbootstrap > 1 or float(subsample) != 1.0:
+            bootstrap_indices = compute_bootstrap_indices(self.examples,
+                                        subsample=subsample,
+                                        nbootstrap=nbootstrap)
+        else:
+            bootstrap_indices = [self.examples.index.to_list()]
+
+        ias = []
+        parallel = Parallel(n_jobs=njobs)
+        for k, idx in enumerate(bootstrap_indices):
+            examples = self.examples.iloc[idx, :].values
         
-        
-        
-        
+            if self.model_output == 'probability':
+                predictions = model.predict_proba(examples)[:,1]
+            else:
+                predictions = model.predict(examples)
+
+            # Get the average model prediction
+            avg_prediction = np.mean(predictions)
+
+            # Compute the interaction strength
+            main_effects = parallel(delayed(
+                combine_ale_effects)(examples[i,:], ale_main_effects, feature_names) for i in range(len(examples))
+                )
+            main_effects = np.array(main_effects)
+
+            ias.append( np.sum((predictions - main_effects)**2) / np.sum( (predictions - avg_prediction)**2) )
+            
+        return np.array(ias) 
+
+def combine_ale_effects(example, ale_main_effects, feature_names):
+    """
+    Combine all first-order ALE effects for a given example
+    """
+    return np.sum([ale_main_effects[f](example[j]) for j, f in enumerate(feature_names)])
+
+
+
+
+
+
+
