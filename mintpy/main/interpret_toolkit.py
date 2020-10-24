@@ -108,6 +108,7 @@ class InterpretToolkit(Attributes):
                              njobs=1, 
                              subsample=1.0, 
                              nbootstrap=1,
+                             **kwargs
                              ):
         """
             Runs the partial dependence or accumulated local effect calculation and 
@@ -131,9 +132,16 @@ class InterpretToolkit(Attributes):
                 dictionary of PD/ALE values for each model and feature set specified. Will be
                 used for plotting.
         """
+        if method == 'ice':
+            subsample_size = kwargs.get('subsample_size', 100) 
+            idx = np.random.choice(len(self.examples), size=subsample_size)
+            examples = self.examples.iloc[idx,:]
+        else:
+            examples = self.examples
+
         global_obj = GlobalInterpret(model=self.models, 
                                       model_names=self.model_names,
-                                      examples=self.examples,  
+                                      examples=examples,  
                                       targets =self.targets,
                                       model_output=self.model_output, 
                                      checked_attributes=self.checked_attributes)
@@ -146,7 +154,31 @@ class InterpretToolkit(Attributes):
                                    nbootstrap=nbootstrap)
 
         return results 
-        
+
+
+    def calc_ice(self, features, nbins=30, njobs=1, subsample=1.0, nbootstrap=1, subsample_size=100):
+        """
+        Compute the indiviudal conditional expectations. 
+
+        Args:
+            feautres, 
+            nbins, 
+            njobs,
+            subsample, 
+            nbootstrap,
+            subsample_size=100
+
+        """
+        results = self._calc_interpret_curve(method='ice', features=features,
+                                        nbins=nbins, njobs=njobs,subsample=subsample,
+                                             nbootstrap=nbootstrap,
+                                             subsample_size=subsample_size
+                                        )
+        self.ice_dict = results
+        self.feature_used=features
+
+        return results 
+
     def calc_pd(self, features, nbins=25, njobs=1, subsample=1.0, nbootstrap=1):
         """ Alias function for user-friendly API. Runs the partial dependence calcuations.
             See _calc_interpret_curve for details. 
@@ -195,7 +227,6 @@ class InterpretToolkit(Attributes):
         """
         Handles 1D or 2D PD/ALE plots. 
         """
-        print(kwargs) 
         # plot the data. Use first feature key to see if 1D (str) or 2D (tuple)
         if isinstance( list( data.keys() )[0] , tuple):
             plot_obj = PlotInterpret2D()
@@ -227,7 +258,7 @@ class InterpretToolkit(Attributes):
             data = self.pd_dict
         
         kwargs['left_yaxis_label'] = 'Centered PD (%)'
-        
+
         return self._plot_interpret_curves(data, 
                                display_feature_names=display_feature_names, 
                                display_units=display_units,
@@ -317,16 +348,36 @@ class InterpretToolkit(Attributes):
                                            display_feature_names=display_feature_names, 
                                            **kwargs)
         
+    
+    def calc_shap(self, data_for_shap=None, subsample_size=100, **kwargs):
+        """
+        Compute the SHAP values.
+        """
+        local_obj = LocalInterpret(model=self.models,
+                            model_names=self.model_names,
+                            examples=self.examples,
+                            targets=self.targets,
+                            model_output=self.model_output,
+                            checked_attributes=self.checked_attributes
+                            )
         
-    def plot_shap(self, features=None, display_feature_names=None, 
+        model = list(self.models.items())[0][1]
+        local_obj.data_for_shap = data_for_shap
+        shap_values, bias = local_obj._get_shap_values(model=model,
+                                                 examples=self.examples,
+                                                 subsample_size=subsample_size)
+        return shap_values 
+
+
+    def plot_shap(self, shap_values=None, 
+                  features=None, display_feature_names=None, 
                   plot_type='summary', data_for_shap=None, subsample_size=1000, 
                   performance_based=False, n_examples=100, feature_values=None, **kwargs):
         """
         Plot the SHAP summary plot or dependence plots for various features.  
         """
-        print('inside plot_shap: ', kwargs) 
-
-        local_obj = LocalInterpret(model=self.models,
+        if shap_values is None:
+            local_obj = LocalInterpret(model=self.models,
                             model_names=self.model_names,
                             examples=self.examples,
                             targets=self.targets,
@@ -334,26 +385,28 @@ class InterpretToolkit(Attributes):
                             checked_attributes=self.checked_attributes         
                             )
         
-        model = list(self.models.items())[0][1]
+            model = list(self.models.items())[0][1]
         
-        local_obj.data_for_shap = data_for_shap
-        if performance_based:
-            performance_dict = get_indices_based_on_performance(model, 
+            local_obj.data_for_shap = data_for_shap
+            if performance_based:
+                performance_dict = get_indices_based_on_performance(model, 
                                                                 examples=self.examples, 
                                                                 targets=self.targets, 
                                                                 n_examples=n_examples)
-            indices = performance_dict['hits']
-            examples = self.examples.iloc[indices,:]
-        else:
-            examples=self.examples
+                indices = performance_dict['hits']
+                examples = self.examples.iloc[indices,:]
+            else:
+                examples=self.examples
             
-        shap_values, bias = local_obj._get_shap_values(model=model, 
+            shap_values, bias = local_obj._get_shap_values(model=model, 
                                                  examples=examples,
                                                  subsample_size=subsample_size)
-                  
+        
+        else:
+            examples=self.examples
+        
         if self.model_output == 'probability':
             shap_values *= 100.    
-        
         # initialize a plotting object
         plot_obj = PlotFeatureContributions() 
         plot_obj.feature_names = self.feature_names

@@ -227,7 +227,9 @@ class GlobalInterpret(Attributes):
                 func = self.compute_first_order_ale
         elif method == 'pd':
             func = self.compute_partial_dependence
-            
+        elif method == 'ice':
+            func = self.compute_individual_cond_expect
+
 
         args_iterator = to_iterator(self.model_names, 
                                     features,
@@ -248,7 +250,57 @@ class GlobalInterpret(Attributes):
             results = merge_dict(results)
                 
         return results
-    
+   
+    def compute_individual_cond_expect(self, model_name, features, nbins=30, subsample=1.0, nbootstrap=1):
+        """
+        Compute the Individual Conditional Expectations (see https://christophm.github.io/interpretable-ml-book/ice.html)
+        """
+         # Retrieve the model object from the models dict attribute 
+        model =  self.models[model_name]
+
+         #Check if features is a string
+        if is_str(features):
+            features = [features]
+
+        # Check if feature is valid
+        is_valid_feature(features, self.feature_names)
+
+        # Extract the values for the features 
+        feature_values = [self.examples[f].to_numpy() for f in features]
+
+        # Create a grid of values 
+        grid = [np.linspace(np.amin(f),
+                           np.amax(f),
+                           nbins
+                          ) for f in feature_values]
+
+        if self.model_output=='probability':
+            prediction_method = model.predict_proba
+        elif self.model_output == 'raw':
+            prediction_method = model.predict
+        
+        ice_values = [ ]
+        for value_set in cartesian(grid):
+            examples_temp = self.examples.copy()
+            examples_temp.loc[:, features[0]] = value_set[0]
+            ice_values.append( prediction_method(examples_temp.values))
+            
+        ice_values = np.array(ice_values).T
+        if self.model_output=='probability':
+            # Binary classification, shape is (2, n_points).
+            # we output the effect of **positive** class
+            # and convert to percentages
+            ice_values = ice_values[1]
+
+        #center the ICE plots
+        ice_values -= np.mean(ice_values, axis=1).reshape(len(ice_values), 1)
+
+        results = { features[0]: {model_name : {}}}
+        results[features[0]][model_name]['values'] = ice_values
+        results[features[0]][model_name]['xdata1'] = grid[0]
+        
+        return results 
+
     def compute_partial_dependence(self, model_name, features, nbins=30, subsample=1.0, nbootstrap=1):
 
         """
@@ -384,7 +436,6 @@ class GlobalInterpret(Attributes):
                 
         """
         model =  self.models[model_name]
-        
         # check to make sure feature is valid
         if feature not in self.feature_names:
             raise Exception(f"Feature {feature} is not a valid feature")
@@ -735,12 +786,14 @@ class GlobalInterpret(Attributes):
         
         return sqrt(H_squared)
 
-    def interaction_strength(self, model_name, features, nbins=25, subsample=1.0, njobs=1, nbootstrap=1):
+    def interaction_strength(self, model_name, features, nbins=25, subsample=1.0, njobs=1, nbootstrap=1, **kwargs):
         """
         Compute the interaction strenth of a ML model (based on IAS from 
         Quantifying Model Complexity via Functional
         Decomposition for Better Post-Hoc Interpretability). 
         """
+        ale_subsample = kwargs.get('ale_subsample', subsample)
+
         # Get the model predictions 
         model =  self.models[model_name]
         feature_names = list(self.examples.columns)
@@ -748,7 +801,7 @@ class GlobalInterpret(Attributes):
                                              features=features,
                                              nbins=nbins,
                                              njobs=njobs,
-                                             subsample=1.0,
+                                             subsample=ale_subsample,
                                              nbootstrap=1
                                             )
         
@@ -772,10 +825,8 @@ class GlobalInterpret(Attributes):
             bootstrap_indices = [self.examples.index.to_list()]
 
         ias = []
-        parallel = Parallel(n_jobs=njobs)
         for k, idx in enumerate(bootstrap_indices):
             examples = self.examples.iloc[idx, :].values
-        
             if self.model_output == 'probability':
                 predictions = model.predict_proba(examples)[:,1]
             else:
@@ -784,21 +835,26 @@ class GlobalInterpret(Attributes):
             # Get the average model prediction
             avg_prediction = np.mean(predictions)
 
-            # Compute the interaction strength
-            main_effects = parallel(delayed(
-                combine_ale_effects)(examples[i,:], ale_main_effects, feature_names) for i in range(len(examples))
-                )
+            # Combine the main effects
+            main_effects = [ ]
+            for i in range(len(examples)):
+                main_effects.append( combine_ale_effects(examples[i,:], ale_main_effects, feature_names, avg_prediction))
+
             main_effects = np.array(main_effects)
 
-            ias.append( np.sum((predictions - main_effects)**2) / np.sum( (predictions - avg_prediction)**2) )
+            num = np.sum((predictions - main_effects)**2)
+            denom = np.sum((predictions - avg_prediction)**2)
+
+            # Compute the interaction strength
+            ias.append(num/denom)
             
         return np.array(ias) 
 
-def combine_ale_effects(example, ale_main_effects, feature_names):
+def combine_ale_effects(example, ale_main_effects, feature_names, avg_prediction):
     """
     Combine all first-order ALE effects for a given example
     """
-    return np.sum([ale_main_effects[f](example[j]) for j, f in enumerate(feature_names)])
+    return np.sum([ale_main_effects[f](example[j]) for j, f in enumerate(feature_names)] + [avg_prediction])
 
 
 

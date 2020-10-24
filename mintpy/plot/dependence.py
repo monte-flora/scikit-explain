@@ -33,10 +33,10 @@ labels = {
 }
 
 
-def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
-                    interaction_index="auto",
+def dependence_plot(ind, shap_values, features, feature_names=None, feature_values=None, display_features=None,
+                    interaction_index="auto", target_values=None, 
                     color="#1E88E5", axis_color="#333333", cmap=None,
-                    dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, fig=None, **kwargs):
+                    dot_size=5, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, fig=None, **kwargs):
     """ Create a SHAP dependence plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -96,10 +96,14 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     cmap = colors.red_blue
     
     original_feature_names = list(features.columns)
-    original_feature_values = features.values
+    if feature_values is None:
+        original_feature_values = features_values
+    else:
+        original_feature_values = features.values
+
     if unnormalize is not None:
         feature_values = unnormalize._full_inverse_transform(original_feature_values)
-        
+
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
         shap_values = np.reshape(shap_values, len(shap_values), 1)
@@ -125,6 +129,8 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     
     xdata = feature_values[oinds, ind].astype(np.float64)
     s = shap_values[oinds, ind]
+    if target_values is not None:
+        target_values = target_values[oinds] 
 
     # get both the raw and display color values
     if interaction_index is not None:
@@ -162,6 +168,12 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             rasterized=len(xdata) > 500
         )
         p.set_array(cdata[xdata_notnan])
+    elif target_values is not None:
+        p = ax.scatter(
+            xdata[xdata_notnan], s[xdata_notnan], s=dot_size, linewidth=0, c=target_values[xdata_notnan],
+            cmap=cmap, alpha=alpha, vmin=np.min(target_values), vmax=np.max(target_values),
+            rasterized=len(xdata) > 500
+        )
     else:
         p = ax.scatter(xdata, s, s=dot_size, linewidth=0, color=color,
                        alpha=alpha, rasterized=len(xdata) > 500)
@@ -194,7 +206,6 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
 
     xmin = np.nanmin(xdata)
     xmax = np.nanmax(xdata)
-
     ax.set_xlim([xmin,xmax]) 
 
     # make the plot more readable

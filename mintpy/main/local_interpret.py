@@ -138,41 +138,39 @@ class LocalInterpret(Attributes):
     
     
     def _get_shap_values(self, model, examples, subsample_size, 
-                         subsample_method='random'):
+                         subsample_method='kmeans'):
         """
         """
-        if subsample_method=='kmeans':   
+        if subsample_method=='kmeans':
             print(f'Performing K-means clustering (K={subsample_size}) to subset the data for the background dataset...')
             data_for_shap = shap.kmeans(self.data_for_shap, subsample_size)
         elif subsample_method=='random':
             print(f'Performing random sampling (N={subsample_size}) to subset the data for the background dataset...')
             data_for_shap = shap.sample(self.data_for_shap, subsample_size)
-        
+
         try: 
             print('trying TreeExplainer...')
             explainer = shap.TreeExplainer(model, 
-                                       data = data_for_shap, 
+                                       data=data_for_shap,
+                                       feature_perturbation = "interventional",
                                        model_output=self.model_output
                                           )
             contributions = explainer.shap_values(examples)
             
         except Exception as e:
-            #traceback.print_exc()
+            traceback.print_exc()
             if self.model_output == 'probability':
                 func = model.predict_proba
-                link = 'identity'
             else:
                 fun = model.predict
-                link = 'identity'
                 
             print('TreeExplainer failed, starting KernelExplainer...')
             explainer = shap.KernelExplainer(func, 
                                              data_for_shap, 
-                                             link=link
+                                             link='identity'
                                             )
             
-            contributions = explainer.shap_values(examples, l1_reg="num_features(10)")
-        
+            contributions = explainer.shap_values(examples, l1_reg="num_features(30)")
         
         if self.model_output == 'probability':
             # Neccesary for XGBoost, which only outputs a scalar, not a list like scikit-learn 

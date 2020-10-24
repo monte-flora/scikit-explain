@@ -83,8 +83,10 @@ class PlotInterpret2D(PlotStructure):
         
         if n_panels == 1:
             figsize=(6, 3)
+            fontsize = 8
         else:
-            figsize=(8, 5)
+            figsize=(10, 5)
+            fontsize=4
             
         
         # create subplots, one for each feature
@@ -118,8 +120,8 @@ class PlotInterpret2D(PlotStructure):
         for feature_set, model_name in itertools.product(features, model_names):
             
             # We want to lowest maximum value and the highest minimum value
-            max_value = np.nanmin(feature_levels[feature_set]['max'])
-            min_value = np.nanmax(feature_levels[feature_set]['min']) 
+            max_value = np.nanmean(feature_levels[feature_set]['max'])
+            min_value = np.nanmean(feature_levels[feature_set]['min']) 
             levels = self.calculate_ticks(nticks=50, 
                                           upperbound=max_value, 
                                           lowerbound=min_value, 
@@ -140,11 +142,13 @@ class PlotInterpret2D(PlotStructure):
                 
             xdata1_hist = feature_dict[feature_set][model_name]["xdata1_hist"]
             xdata2_hist = feature_dict[feature_set][model_name]["xdata2_hist"]
-            if unnormalize is not None:
-                xdata1_hist = unnormalize.inverse_transform(xdata1_hist, feature_set[0])
-                xdata2_hist = unnormalize.inverse_transform(xdata2_hist, feature_set[1])
-                xdata1 = unnormalize.inverse_transform(xdata1, feature_set[0])
-                xdata2 = unnormalize.inverse_transform(xdata2, feature_set[1])
+            if unnormalize[model_name] is not None:
+                unnorm_obj = unnormalize[model_name]
+
+                xdata1_hist = unnorm_obj.inverse_transform(xdata1_hist, feature_set[0])
+                xdata2_hist = unnorm_obj.inverse_transform(xdata2_hist, feature_set[1])
+                xdata1 = unnorm_obj.inverse_transform(xdata1, feature_set[0])
+                xdata2 = unnorm_obj.inverse_transform(xdata2, feature_set[1])
 
             zdata = feature_dict[feature_set][model_name]["values"]
             zdata = np.ma.getdata(zdata)
@@ -207,7 +211,8 @@ class PlotInterpret2D(PlotStructure):
             self.set_minor_ticks(main_ax)
             self.set_axis_label(main_ax, 
                                 xaxis_label=feature_set[0], 
-                                yaxis_label=feature_set[1]
+                                yaxis_label=feature_set[1],
+                                fontsize=fontsize
             )
             # Add a colorbar
             if i == (n*n_columns-1) or (i==len(main_axes)-1 and is_even > 1):

@@ -50,6 +50,7 @@ class PlotInterpretCurves(PlotStructure):
         facecolor = kwargs.get("facecolor", "gray")
         left_yaxis_label = kwargs.get("left_yaxis_label")
         unnormalize = kwargs.get('unnormalize', None) 
+        ice_curves = kwargs.get('ice_curves', None)
 
         # get the number of panels which will be length of feature dictionary
         n_panels = len(feature_dict.keys())
@@ -80,10 +81,11 @@ class PlotInterpretCurves(PlotStructure):
 
             # Pull the x-values and histogram from the first model. 
             xdata = feature_dict[feature][model_names[0]]["xdata1"]
-            hist_data = feature_dict[feature][model_names[0]]["xdata1_hist"]
+            hist_data = feature_dict[feature][model_names[0]]["xdata1_hist"] 
             if unnormalize is not None:
                 hist_data = unnormalize.inverse_transform(hist_data, feature)
                 xdata = unnormalize.inverse_transform(xdata, feature)
+
             # add histogram
             hist_ax = self.make_twin_ax(lineplt_ax)
             twin_yaxis_label=self.add_histogram_axis(hist_ax, hist_data, 
@@ -91,7 +93,13 @@ class PlotInterpretCurves(PlotStructure):
                                                      max_value=xdata[-1])
     
             for i, model_name in enumerate(model_names):
-                
+                if ice_curves: 
+                    ice_data = ice_curves[feature][model_name]['values']
+                    if to_probability:
+                        ice_data *=100
+                    for ind_curve in ice_data:
+                        lineplt_ax.plot(xdata, ind_curve, color = 'k', alpha=0.85, linewidth=0.25)
+
                 ydata = feature_dict[feature][model_name]["values"]
                 if to_probability:
                     ydata *= 100.

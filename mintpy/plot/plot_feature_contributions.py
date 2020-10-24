@@ -172,18 +172,18 @@ class PlotFeatureContributions(PlotStructure):
                 result dataframe from tree_interpreter_simple
         """
 
-        hspace = kwargs.get("hspace", 0.4)
-        wspace = kwargs.get("wspace", 0.5)
+        hspace = kwargs.get("hspace", 0.2)
 
         if "non_performance" in result_dict[model_names[0]].keys():
             n_panels=1
             n_columns=1
             figsize = (3, 2.5)
+            wspace = kwargs.get("wspace", 0.5)
         else:
             n_panels = len(result_dict.keys()) * 4
             n_columns = 4 
-            figsize= (12, 8)
-            wspace=1.5
+            figsize= (14, 8)
+            wspace = kwargs.get("wspace", 1.5)
 
         # create subplots, one for each feature
         fig, axes = self.create_subplots(
@@ -222,9 +222,14 @@ class PlotFeatureContributions(PlotStructure):
                         display_feature_names=display_feature_names
                     )
                 if c == 0:
-                    ax.set_title(perf_key.replace("Forecasts ", "Forecasts\n").upper(), 
-                                 fontsize=10,
-                                color='xkcd:darkish blue')
+                    ax.text(0.1, 1.09,
+                            perf_key.replace("Forecasts ", "Forecasts\n").upper(),
+                            transform = ax.transAxes,
+                            fontsize=10,
+                            ha='center',
+                            va='center',
+                            color='xkcd:darkish blue',
+                            alpha=0.95)
                 k+=1
             c+=1
                 
@@ -238,10 +243,10 @@ class PlotFeatureContributions(PlotStructure):
         
         self.set_row_labels(labels=model_names, 
                             axes=axes, 
-                            pos=0,
-                            rotation=90, 
-                            pad=-1.0,
-                            fontsize=15
+                            pos=-1,
+                            rotation=270, 
+                            pad=1.5,
+                            fontsize=12
                            )
         
         #additional_handles = [
@@ -254,7 +259,7 @@ class PlotFeatureContributions(PlotStructure):
         #                major_ax, additional_handles, 
         #                additional_labels, bbox_to_anchor=(0.5, -0.25))
         
-        self.add_alphabet_label(n_panels, axes, pos=(1.05, 0.0))
+        self.add_alphabet_label(n_panels, axes, pos=(1.15, 0.0), fontsize=12)
 
         return fig
     
@@ -264,12 +269,18 @@ class PlotFeatureContributions(PlotStructure):
                            plot_type,
                            display_feature_names=None,
                            display_units={},
+                           feature_values=None,
+                           target_values=None, 
+                           interaction_index="auto",
                            **kwargs
                           ):
         """
         Plot SHAP summary or dependence plot. 
         
         """
+        if feature_values  is None:
+            feature_values=examples
+
         if display_feature_names is None:
             self.display_feature_names = {}
         else:
@@ -314,16 +325,18 @@ class PlotFeatureContributions(PlotStructure):
             
             for ax, feature in zip(ax_iterator, features):
                 ind = self.feature_names.index(feature)
-                
+               
                 dependence_plot(ind=ind, 
                                 shap_values=shap_values, 
-                                features=examples, 
+                                features=examples,
+                                feature_values=feature_values,
                                 display_features=display_features,
-                                interaction_index="auto",
+                                interaction_index=interaction_index,
+                                target_values=target_values,
                                 color="#1E88E5", 
                                 axis_color="#333333", 
                                 cmap=None,
-                                dot_size=10, 
+                                dot_size=5, 
                                 x_jitter=0, 
                                 alpha=1, 
                                 ax=ax,
@@ -338,17 +351,6 @@ class PlotFeatureContributions(PlotStructure):
                 ax.tick_params(axis='both', labelsize=8) 
                 vertices = ax.collections[0].get_offsets()
                 self._to_sci_notation(ax=ax, ydata=vertices[:,1], xdata=vertices[:,0], colorbar=False)
-
-                # Unnormalize the xdata 
-                #if unnormalize is not None:
-                #    vertices = ax.collections[0].get_offsets()
-                #    xdata = unnormalize.inverse_transform(vertices[:,0], feature)
-                #    vertices[:,0] = xdata
-
-                #    ax.collections[0].set_offsets(vertices)
-                #    min_value = np.min(vertices[:,0])*0.95
-                #    max_value = np.max(vertices[:,0])*1.05
-                #    ax.set_xlim([min_value, max_value])
 
             major_ax = self.set_major_axis_labels(
                 fig,
