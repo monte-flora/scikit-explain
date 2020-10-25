@@ -6,6 +6,7 @@ from matplotlib.colors import BoundaryNorm
 import itertools
 import scipy.stats as sps
 import numpy as np 
+from matplotlib.patches import Rectangle
 
 class PlotInterpret2D(PlotStructure):
     
@@ -76,7 +77,7 @@ class PlotInterpret2D(PlotStructure):
         
         if len(model_names) == 1:
             only_one_model = True
-            n_columns = len(features)
+            n_columns = min(len(features), 3) 
         else:
             only_one_model=False
             n_columns = len(model_names)
@@ -109,9 +110,17 @@ class PlotInterpret2D(PlotStructure):
             if to_probability:
                 zdata *= 100.
 
-            feature_levels[feature_set]['max'].append(np.nanmax(zdata))
-            feature_levels[feature_set]['min'].append(np.nanmin(zdata))
-        
+            max_value = np.nanmax(zdata)
+            min_value = np.nanmin(zdata)
+            
+            if max_value == 0. and min_value==0:
+                feature_levels[feature_set]['max'].append(0.01)
+                feature_levels[feature_set]['min'].append(-0.01)
+            else:
+                feature_levels[feature_set]['max'].append(max_value)
+                feature_levels[feature_set]['min'].append(min_value)
+            
+
         cmap = plt.get_cmap(cmap)
         counter = 0
         n=1
@@ -151,6 +160,7 @@ class PlotInterpret2D(PlotStructure):
                 xdata2 = unnorm_obj.inverse_transform(xdata2, feature_set[1])
 
             zdata = feature_dict[feature_set][model_name]["values"]
+            masked = zdata[0].mask
             zdata = np.ma.getdata(zdata)
             if to_probability:
                 zdata *= 100.
@@ -172,12 +182,12 @@ class PlotInterpret2D(PlotStructure):
                                     norm=BoundaryNorm(levels, ncolors=cmap.N, clip=True)
                                    )
        
-            if mark_empty and np.any(zdata.mask):
+            if mark_empty and np.any(masked):
                 # Do not autoscale, so that boxes at the edges (contourf only plots the bin
                 # centres, not their edges) don't enlarge the plot.
                 plt.autoscale(False)
                 # Add rectangles to indicate cells without samples.
-                for i, j in zip(*np.where(ale.mask)):
+                for i, j in zip(*np.where(masked)):
                     main_ax.add_patch(
                         Rectangle(
                         [xdata1[i], xdata2[j]],
@@ -215,7 +225,7 @@ class PlotInterpret2D(PlotStructure):
                                 fontsize=fontsize
             )
             # Add a colorbar
-            if i == (n*n_columns-1) or (i==len(main_axes)-1 and is_even > 1):
+            if i == (n*n_columns-1) or (i==len(main_axes)-1 and is_even > 1) or only_one_model:
                 self.add_colorbar(fig, plot_obj=cf, ax=rhs_ax, 
                                   colorbar_label=colorbar_label
                                  )

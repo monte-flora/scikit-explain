@@ -527,9 +527,6 @@ class GlobalInterpret(Attributes):
         Script is based on the _second_order_ale_quant from 
         https://github.com/blent-ai/ALEPython/
         
-        To Do:
-            NEEDS WORK!!! second bootstrap is all zeros!
-
         Args:
         ----------
             model_name : str
@@ -648,7 +645,7 @@ class GlobalInterpret(Attributes):
             # Since `ale` contains `len(quantiles)` rows/columns the first of which are
             # guaranteed to be valid (and filled with 0s), ignore the first row and column.
             ale[1:, 1:][valid_grid_indices] = mean_effects
-            
+           
             # Record where elements were missing.
             missing_bin_mask = ale.mask.copy()[1:, 1:]
             
@@ -691,7 +688,7 @@ class GlobalInterpret(Attributes):
 
                 # Replace the invalid bin values with the nearest valid ones.
                 ale[1:, 1:][missing_bin_mask] = ale[1:, 1:][nearest_indices]
-            
+
             # Compute the cumulative sums.
             ale = np.cumsum(np.cumsum(ale, axis=0), axis=1)
             
@@ -716,11 +713,8 @@ class GlobalInterpret(Attributes):
                 # The final result is the cumulative sum (with an additional 0).
                 first_order = np.array([0, *np.cumsum(first_order)]).reshape((-1, 1)[flip])
 
-                #print(first_order) 
-                
                 # Subtract the first order effect.
                 ale -= first_order
-            
             
             # Compute the ALE at the bin centres.
             ale = (
@@ -747,9 +741,8 @@ class GlobalInterpret(Attributes):
         results[features][model_name]['xdata2_hist'] = original_feature_values[1]
          
         return results
-            
-    
-    def friedman_h_statistic(self, model_name, feature_tuple, nbins=15, subsample=1.0):
+         
+    def friedman_h_statistic(self, model_name, feature_tuple, nbins=30, subsample=1.0):
         """
         Compute the H-statistic for two-way interactions between two features. 
         
@@ -786,7 +779,7 @@ class GlobalInterpret(Attributes):
         
         return sqrt(H_squared)
 
-    def interaction_strength(self, model_name, features, nbins=25, subsample=1.0, njobs=1, nbootstrap=1, **kwargs):
+    def interaction_strength(self, model_name, features, nbins=30, subsample=1.0, njobs=1, nbootstrap=1, **kwargs):
         """
         Compute the interaction strenth of a ML model (based on IAS from 
         Quantifying Model Complexity via Functional
