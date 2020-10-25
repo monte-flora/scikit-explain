@@ -162,7 +162,7 @@ class LocalInterpret(Attributes):
             if self.model_output == 'probability':
                 func = model.predict_proba
             else:
-                fun = model.predict
+                func = model.predict
                 
             print('TreeExplainer failed, starting KernelExplainer...')
             explainer = shap.KernelExplainer(func, 
