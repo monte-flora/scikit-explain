@@ -224,6 +224,7 @@ class PlotStructure:
         """
         colors = kwargs.get('colors', ['xkcd:darkish blue'] * len(labels))
         fontsize = kwargs.get('fontsize', self.FONT_SIZES['small'])
+        
         if np.ndim(axes) == 2:
             iterator = axes[:,pos]
         else:
@@ -232,7 +233,7 @@ class PlotStructure:
         for ax, row, color in zip(iterator, labels, colors):
             ax.yaxis.set_label_position("right")
             ax.annotate(row, xy=(1, 1), xytext=(pad, 0.5), xycoords = ax.transAxes, rotation=rotation,
-                    size=8, ha='center', va='center', color=color, alpha=0.65)
+                    size=fontsize, ha='center', va='center', color=color, alpha=0.65)
     
     def add_alphabet_label(self, n_panels, axes, pos=(0.9, 0.09), **kwargs):
         """
@@ -248,7 +249,7 @@ class PlotStructure:
                     pos[0],
                     pos[1],
                     f"({alphabet_list[i]})",
-                    fontsize=10,
+                    fontsize=fontsize,
                     alpha=0.8,
                     ha="center",
                     va="center",
@@ -319,11 +320,12 @@ class PlotStructure:
         ax.set_yticklabels(labels)
     
     
-    def set_axis_label(self, ax, xaxis_label=None, yaxis_label = None):
+    def set_axis_label(self, ax, xaxis_label=None, yaxis_label = None, **kwargs):
         """
         Setting the x- and y-axis labels with fancy labels (and optionally 
         physical units) 
         """
+        fontsize = kwargs.get('fontsize', self.FONT_SIZES['tiny'])
         if xaxis_label is not None: 
             xaxis_label_pretty = self.display_feature_names.get(xaxis_label, xaxis_label)
             units = self.display_units.get(xaxis_label, '')
@@ -332,7 +334,7 @@ class PlotStructure:
             else:
                 xaxis_label_with_units = fr'{xaxis_label_pretty} ({units})'
         
-            ax.set_xlabel(xaxis_label_with_units, fontsize=self.FONT_SIZES['tiny'])
+            ax.set_xlabel(xaxis_label_with_units, fontsize=fontsize)
         
         if yaxis_label is not None: 
             yaxis_label_pretty = self.display_feature_names.get(yaxis_label, yaxis_label)
@@ -342,7 +344,7 @@ class PlotStructure:
             else:
                 yaxis_label_with_units = fr'{yaxis_label_pretty} ({units})'
 
-            ax.set_ylabel(yaxis_label_with_units, fontsize=self.FONT_SIZES['tiny'])
+            ax.set_ylabel(yaxis_label_with_units, fontsize=fontsize)
         
     def set_legend(self, n_panels, fig, ax, major_ax):
         """
