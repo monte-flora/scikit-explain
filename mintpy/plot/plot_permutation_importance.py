@@ -70,7 +70,7 @@ class PlotImportance(PlotStructure):
             
         hspace = kwargs.get("hspace", 0.5)
         wspace = kwargs.get("wspace", 0.2)
-        xticks = kwargs.get("xticks", [0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        xticks = kwargs.get("xticks", None)
         ylabels = kwargs.get('ylabels', '')
         title = kwargs.get('title', '')
         n_columns = kwargs.get('n_columns', 3) 
@@ -79,7 +79,9 @@ class PlotImportance(PlotStructure):
         n_keys = [list(importance_dict.keys()) for importance_dict in importance_dict_set]
         n_panels = len([item for sublist in n_keys for item in sublist])
 
-        print(f'n_panels : {n_panels}') 
+        if model_output == 'probability' and xticks is None:
+            # Most probability-based scores are between 0-1 (AUC, BSS, NAUPDC,etc.)
+            xticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
 
         if n_panels == 1:
             figsize = (3,2.5)
@@ -184,22 +186,31 @@ class PlotImportance(PlotStructure):
                 else:
                     size = self.FONT_SIZES["teensie"]
                     
+                 # Put the variable names _into_ the plot
+                if model_output == 'probability':
+                    x_pos = 0
+                    ha = 'left'
+                else:
+                    x_pos = 0.05
+                    ha='right'
+
                 # Put the variable names _into_ the plot
                 for i in range(len(variable_names_to_plot)):
                     ax.text(
-                        0,
+                        x_pos,
                         i,
                         variable_names_to_plot[i],
                         va="center",
-                        ha="left",
+                        ha=ha,
                         size=size,
                         alpha=0.8,
                     )
 
-                # Add vertical line 
-                ax.axvline(original_score_mean, linestyle="dashed", 
+                if model_output == 'probability':
+                    # Add vertical line 
+                    ax.axvline(original_score_mean, linestyle="dashed", 
                            color="grey", linewidth=0.7, alpha=0.7)
-                ax.text(
+                    ax.text(
                         original_score_mean,
                         len(variable_names_to_plot) / 2,
                         "Original Score",
@@ -208,14 +219,21 @@ class PlotImportance(PlotStructure):
                         size=self.FONT_SIZES["teensie"],
                         rotation=270,
                         alpha=0.7
-                )
+                    )
 
                 ax.tick_params(axis="both", which="both", length=0)
                 ax.set_yticks([])
-                ax.set_xticks(xticks)
-
+                if xticks is not None:
+                    ax.set_xticks(xticks)
+                
                 upper_limit = min(1.05 * np.amax(scores_to_plot), 1.0)
-                ax.set_xlim([0, upper_limit])
+                if model_output == 'probability':
+                    upper_limit = min(1.05 * np.amax(scores_to_plot), 1.0)
+                    ax.set_xlim([0, upper_limit])
+                else:
+                    upper_limit = 1.05 * np.amax(scores_to_plot)
+                    ax.set_xlim([upper_limit, 0])
+
 
                 # make the horizontal plot go with the highest value at the top
                 ax.invert_yaxis()

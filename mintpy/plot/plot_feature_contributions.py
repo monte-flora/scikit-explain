@@ -279,7 +279,7 @@ class PlotFeatureContributions(PlotStructure):
         
         """
         if feature_values  is None:
-            feature_values=examples
+            feature_values=examples.values
 
         if display_feature_names is None:
             self.display_feature_names = {}

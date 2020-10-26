@@ -437,7 +437,8 @@ class InterpretToolkit(Attributes):
         else:
             result = result_dict
 
-        return plot_obj.plot_variable_importance(result, 
+        return plot_obj.plot_variable_importance(result,
+                                                 model_output=self.model_output,
                                                  model_names=self.model_names, 
                                                  **kwargs)
 

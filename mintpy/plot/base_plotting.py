@@ -396,17 +396,26 @@ class PlotStructure:
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
         
-        
-    def add_colorbar(self, fig, plot_obj, ax, colorbar_label, ticks=MaxNLocator(5)):
+    def add_colorbar(self, fig, plot_obj, colorbar_label, ticks=MaxNLocator(5), ax=None, cax=None, **kwargs):
         """ Adds a colorbar to the right of a panel"""
         # Add a colobar
-        cbar = plt.colorbar(plot_obj, ax=ax, pad=0.1, ticks=ticks, shrink=1.1)
-        cbar.ax.tick_params(labelsize=self.FONT_SIZES['teensie'])
-        cbar.set_label(colorbar_label, size=self.FONT_SIZES['tiny'])
+        orientation = kwargs.get('orientation', 'vertical') 
+        pad = kwargs.get('pad', 0.1)
+        shrink = kwargs.get('shrink', 1.1)
+        extend = kwargs.get('extend', 'neither')
+
+        if cax:
+            cbar = plt.colorbar(plot_obj, cax=cax, pad=pad, ticks=ticks, shrink=shrink, 
+                    orientation=orientation, extend=extend)
+        else:
+            cbar = plt.colorbar(plot_obj, ax=ax, pad=pad, ticks=ticks, shrink=shrink, 
+                    orientation=orientation, extend=extend)
+        cbar.ax.tick_params(labelsize=self.FONT_SIZES['tiny'])
+        cbar.set_label(colorbar_label, size=self.FONT_SIZES['small'])
         cbar.outline.set_visible(False)
         #bbox = cbar.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
         #cbar.ax.set_aspect((bbox.height - 0.7) * 20)
-    
+
     def save_figure(self, fname, fig=None, bbox_inches="tight", dpi=300, aformat="png"):
         """ Saves the current figure """
         plt.savefig(fname=fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)
