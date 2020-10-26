@@ -297,7 +297,7 @@ class GlobalInterpret(Attributes):
 
         results = { features[0]: {model_name : {}}}
         results[features[0]][model_name]['values'] = ice_values
-        results[features[0]][model_name]['xdata1'] = grid[0]
+        results[features[0]][model_name]['xdata'] = grid[0]
         
         return results 
 

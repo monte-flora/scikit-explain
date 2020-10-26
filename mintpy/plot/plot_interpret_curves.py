@@ -95,10 +95,13 @@ class PlotInterpretCurves(PlotStructure):
             for i, model_name in enumerate(model_names):
                 if ice_curves: 
                     ice_data = ice_curves[feature][model_name]['values']
+                    ice_xdata = ice_curves[feature][model_name]['xdata']
                     if to_probability:
                         ice_data *=100
+                    if unnormalize is not None:
+                        ice_xdata = unnormalize.inverse_transform(ice_xdata, feature)
                     for ind_curve in ice_data:
-                        lineplt_ax.plot(xdata, ind_curve, color = 'k', alpha=0.85, linewidth=0.25)
+                        lineplt_ax.plot(ice_xdata, ind_curve, color = 'k', alpha=0.85, linewidth=0.25)
 
                 ydata = feature_dict[feature][model_name]["values"]
                 if to_probability:
