@@ -41,6 +41,8 @@ myInterpreter = mintpy.InterpretToolkit(model=model_objs,
 ### Permutation Importance
 For predictor ranking, we use the permutation importance method. 
 
+![](images/perm_imp_fig.png?raw=true)
+
 ### Partial dependence 
 
 ### Accumulated local effect 
