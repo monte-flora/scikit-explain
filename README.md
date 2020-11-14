@@ -46,21 +46,21 @@ For predictor ranking, MintPy uses both single-pass and multiple-pass permutatio
 ### Partial dependence and Accumulated Local Effects 
 To compute the expected functional relationship between a predictor and an ML model's prediction, you can use partial dependence or accumulated local effects. 
 
-<a href="url"><img src="images/ale_1d.png" align="center" height="250" width="500" ></a>
+<a href="url"><img src="images/ale_1d.png" align="center" height="500" width="500" ></a>
 
-<a href="url"><img src="images/ale_2d.png" align="center" height="250" width="500" ></a>
+<a href="url"><img src="images/ale_2d.png" align="center" height="500" width="500" ></a>
 
 ### Feature Contributions 
 To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. 
 
 
-<a href="url"><img src="images/feature_contributions_single.png" align="center" height="250" width="500" ></a>
+<a href="url"><img src="images/feature_contributions_single.png" align="center" height="500" width="500" ></a>
 
-<a href="url"><img src="images/feature_contributions_perform.png" align="center" height="250" width="500" ></a>
+<a href="url"><img src="images/feature_contributions_perform.png" align="center" height="500" width="500" ></a>
 
-<a href="url"><img src="images/shap_summary.png" align="center" height="250" width="500" ></a>
+<a href="url"><img src="images/shap_summary.png" align="center" height="500" width="500" ></a>
 
-<a href="url"><img src="images/shap_dependence.png" align="center" height="250" width="500" ></a>
+<a href="url"><img src="images/shap_dependence.png" align="center" height="500" width="500" ></a>
 
 ### Tutorial notebooks
 
