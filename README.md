@@ -41,7 +41,7 @@ myInterpreter = mintpy.InterpretToolkit(model=model_objs,
 ### Permutation Importance
 For predictor ranking, we use the permutation importance method. 
 
-![](https://github.com/monte-flora/mintpy/tree/master/images/multi_pass_perm_imp.png)
+![Hello](https://github.com/monte-flora/mintpy/tree/master/images/multi_pass_perm_imp.png)
 
 ### Partial dependence 
 
