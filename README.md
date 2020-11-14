@@ -71,13 +71,6 @@ Additionally, you can use the same code snippet to compute the second-order ALE 
 ### Feature Contributions 
 To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. MintPy can create the summary and dependence plots from the shap python package, but is adapted for multiple predictors and an easier user interface. It is also possible to plot contributions for a single example or summarized by model performance. 
 
-```
-# Assumes the calc_permutation_importance has already been run.
-important_vars = myInterpreter.get_important_vars(results, multipass=True, nvars=7)
-
-myInterpreter.calc_ale(features=important_vars, nbins=20)
-myInterpreter.plot_ale()
-
 <a href="url"><img src="images/feature_contribution_single.png" align="center" height="500" width="700" ></a>
 
 <a href="url"><img src="images/feature_contributions_perform.png" align="center" height="500" width="700" ></a>
