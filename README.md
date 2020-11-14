@@ -39,20 +39,19 @@ myInterpreter = mintpy.InterpretToolkit(model=model_objs,
                                 )
 ```
 ### Permutation Importance
-For predictor ranking, MintPy uses both single-pass and multiple-pass permutation importance method (Breiman 2001; Lakshmanan et al. 2015; McGovern et al. 2019).  Tutorial notebooks computing and plotting permutation importance results is available here. 
+For predictor ranking, MintPy uses both single-pass and multiple-pass permutation importance method (Breiman 2001; Lakshmanan et al. 2015; McGovern et al. 2019).   
 
 <a href="url"><img src="images/multi_pass_perm_imp.png" align="center" height="250" width="500" ></a>
 
 ### Partial dependence and Accumulated Local Effects 
-To compute the expected functional relationship between a predictor and an ML model's prediction, you can use partial dependence or accumulated local effects. 
+To compute the expected functional relationship between a predictor and an ML model's prediction, you can use partial dependence or accumulated local effects. There is also an option for second-order interaction effects. 
 
 <a href="url"><img src="images/ale_1d.png" align="center" height="500" width="500" ></a>
 
 <a href="url"><img src="images/ale_2d.png" align="center" height="500" width="500" ></a>
 
 ### Feature Contributions 
-To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. 
-
+To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. MintPy can create the summary and dependence plots from the shap python package, but is adapted for multiple predictors and an easier user interface. It is also possible to plot contributions for a single example or summarized by model performance. 
 
 <a href="url"><img src="images/feature_contribution_single.png" align="center" height="500" width="700" ></a>
 
@@ -64,6 +63,6 @@ To explain specific examples, you can use SHAP values. MintPy employs both Kerne
 
 ### Tutorial notebooks
 
-The notebooks provide package documentation and demonstrate MintPy API. 
+The notebooks provides the package documentation and demonstrate MintPy API, which was used to create the above figures. 
 
 
