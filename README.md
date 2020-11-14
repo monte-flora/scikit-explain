@@ -43,7 +43,7 @@ For predictor ranking, we use the permutation importance method.
 
 ![Hello](https://github.com/monte-flora/mintpy/tree/master/images/multi_pass_perm_imp.png)
 
-<img src="https://github.com/monte-flora/mintpy/tree/master/images/multi_pass_perm_imp.png" width="48">
+<img src="https://github.com/monte-flora/mintpy/tree/master/images/multi_pass_perm_imp.png" width="10">
 
 ### Partial dependence 
 
