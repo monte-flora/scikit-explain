@@ -25,9 +25,8 @@ shap
 
 ### Initializing MintPy
 The interface of MintPy is the ```InterpretToolkit```, which houses the computations and plotting methods
-for all the interpretability methods contained within. See permutation_importance_tutorial notebook 
-for initializing ```InterpretToolkit``` (set a link!). Once initialized ```InterpretToolkit``` can 
-compute a variety of interpretability methods and plot them.
+for all the interpretability methods contained within. Once initialized ```InterpretToolkit``` can 
+compute a variety of interpretability methods and plot them. See the tutorial notebooks for examples. 
 
 ```python
 import mintpy
