@@ -203,7 +203,7 @@ class PlotFeatureContributions(PlotStructure):
                     to_only_varname=to_only_varname,
                     display_feature_names=display_feature_names,
                     key='',
-                    ax=ax
+                    ax=axes
                 )
                 return fig
 

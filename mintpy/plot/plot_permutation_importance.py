@@ -74,6 +74,7 @@ class PlotImportance(PlotStructure):
         ylabels = kwargs.get('ylabels', '')
         title = kwargs.get('title', '')
         n_columns = kwargs.get('n_columns', 3) 
+        model_output = kwargs.get('model_output', 'raw') 
 
         # get the number of panels which will be the number of ML models in dictionary
         n_keys = [list(importance_dict.keys()) for importance_dict in importance_dict_set]

@@ -97,9 +97,9 @@ def dependence_plot(ind, shap_values, features, feature_names=None, feature_valu
     
     original_feature_names = list(features.columns)
     if feature_values is None:
-        original_feature_values = features_values
-    else:
         original_feature_values = features.values
+    else:
+        original_feature_values = feature_values
 
     if unnormalize is not None:
         feature_values = unnormalize._full_inverse_transform(original_feature_values)
