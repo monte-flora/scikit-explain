@@ -6,7 +6,7 @@ This package is largely original code, but also includes snippets from preexisti
 make a single source for computing several machine learning interpretation methods. 
 
 ### Install
-MintPy can be installed from XXX
+MintPy can be installed through pip or conda-forge
 ```
 pip install mintpy
 or 
