@@ -54,13 +54,13 @@ To compute the expected functional relationship between a predictor and an ML mo
 To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. 
 
 
-<a href="url"><img src="images/feature_contributions_single.png" align="center" height="500" width="500" ></a>
+<a href="url"><img src="images/feature_contribution_single.png" align="center" height="500" width="700" ></a>
 
-<a href="url"><img src="images/feature_contributions_perform.png" align="center" height="500" width="500" ></a>
+<a href="url"><img src="images/feature_contributions_perform.png" align="center" height="500" width="700" ></a>
 
-<a href="url"><img src="images/shap_summary.png" align="center" height="500" width="500" ></a>
+<a href="url"><img src="images/shap_summary.png" align="center" height="500" width="700" ></a>
 
-<a href="url"><img src="images/shap_dependence.png" align="center" height="500" width="500" ></a>
+<a href="url"><img src="images/shap_dependence.png" align="center" height="500" width="700" ></a>
 
 ### Tutorial notebooks
 
