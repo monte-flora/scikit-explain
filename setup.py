@@ -18,7 +18,7 @@ from distutils.version import LooseVersion
 
 # Package meta-data.
 NAME = 'mintpy'
-DESCRIPTION = 'MintPy (Model INTerpretability in Python) is user-friendly python package' + \
+DESCRIPTION = 'MintPy (Model INTerpretability in Python) is a user-friendly python package' + \
   	      'for computing and plotting machine learning interpretation output.'
 URL = 'https://github.com/monte-flora/mintpy/'
 EMAIL = 'monte.flora@noaa.gov'
