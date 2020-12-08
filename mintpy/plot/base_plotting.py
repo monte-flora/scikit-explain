@@ -24,7 +24,7 @@ class PlotStructure:
     rcParams['font.family'] = 'serif'
     
     # Set up the font sizes for matplotlib
-    BASE_FONT_SIZE = 12
+    BASE_FONT_SIZE = 13
 
     GENERIC_FONT_SIZE_NAMES = ['teensie',
                             'tiny',
@@ -43,9 +43,9 @@ class PlotStructure:
     plt.rc("font", size=FONT_SIZES['normal'])        # controls default text sizes
     plt.rc("axes", titlesize=FONT_SIZES['tiny'])     # fontsize of the axes title
     plt.rc("axes", labelsize=FONT_SIZES['normal'])   # fontsize of the x and y labels
-    plt.rc("xtick", labelsize=FONT_SIZES['teensie']) # fontsize of the x-axis tick marks
-    plt.rc("ytick", labelsize=FONT_SIZES['teensie']) # fontsize of the y-axis tick marks
-    plt.rc("legend", fontsize=FONT_SIZES['teensie']) # legend fontsize
+    plt.rc("xtick", labelsize=FONT_SIZES['tiny']) # fontsize of the x-axis tick marks
+    plt.rc("ytick", labelsize=FONT_SIZES['tiny']) # fontsize of the y-axis tick marks
+    plt.rc("legend", fontsize=FONT_SIZES['tiny']) # legend fontsize
     plt.rc("figure", titlesize=FONT_SIZES['big'])    # fontsize of the figure title 
 
     def create_subplots(self, n_panels, **kwargs):
@@ -325,7 +325,8 @@ class PlotStructure:
         Setting the x- and y-axis labels with fancy labels (and optionally 
         physical units) 
         """
-        fontsize = kwargs.get('fontsize', self.FONT_SIZES['tiny'])
+        fontsize = kwargs.get('fontsize', self.FONT_SIZES['small'])
+
         if xaxis_label is not None: 
             xaxis_label_pretty = self.display_feature_names.get(xaxis_label, xaxis_label)
             units = self.display_units.get(xaxis_label, '')
@@ -355,7 +356,7 @@ class PlotStructure:
         handles, labels = ax.get_legend_handles_labels()
         
         if n_panels > 3:
-            bbox_to_anchor=(0.5, -0.35)
+            bbox_to_anchor=(0.5, -0.45)
         else:
             bbox_to_anchor=(0.5, -0.5)
         
