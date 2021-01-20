@@ -366,7 +366,7 @@ class InterpretToolkit(Attributes):
         shap_values, bias = local_obj._get_shap_values(model=model,
                                                  examples=self.examples,
                                                  subsample_size=subsample_size)
-        return shap_values 
+        return shap_values, bias  
 
 
     def plot_shap(self, shap_values=None, 
