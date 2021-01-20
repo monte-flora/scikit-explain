@@ -199,7 +199,7 @@ class PlotFeatureContributions(PlotStructure):
         # try for all_data/average data
         if "non_performance" in result_dict[model_names[0]].keys():
                 fig = self._contribution_plot(
-                    result_dict[model_name]["non_performance"],
+                    result_dict[model_names[0]]["non_performance"],
                     to_only_varname=to_only_varname,
                     display_feature_names=display_feature_names,
                     key='',
