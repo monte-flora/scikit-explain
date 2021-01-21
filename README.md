@@ -8,7 +8,7 @@ This package is largely original code, but also includes snippets from preexisti
 make a single source for computing several machine learning interpretation methods. 
 
 ### Install
-MintPy can be installed through pip or conda-forge
+MintPy can be installed through pip or conda-forge. 
 ```
 pip install mintpy
 or 
@@ -16,6 +16,7 @@ conda install -c conda-forge mintpy
 ```
 
 ### Dependencies 
+MintPy is compatible with Python 3.6 or newer.  MintPy requires the following packages:
 ```
 numpy 
 pandas
@@ -23,7 +24,6 @@ scikit-learn
 matplotlib
 shap
 ```
-
 
 ### Initializing MintPy
 The interface of MintPy is the ```InterpretToolkit```, which houses the computations and plotting methods
