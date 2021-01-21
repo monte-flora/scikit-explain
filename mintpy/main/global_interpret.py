@@ -265,8 +265,15 @@ class GlobalInterpret(Attributes):
         # Check if feature is valid
         is_valid_feature(features, self.feature_names)
 
+        if (subsample < 1.0):
+            idx = np.random.choice(len(self.examples), size=int(len(self.examples)*subsample))
+            examples = self.examples.iloc[idx,:]
+            examples.reset_index(drop=True, inplace=True)
+        else:
+            examples = self.examples.copy()
+
         # Extract the values for the features 
-        feature_values = [self.examples[f].to_numpy() for f in features]
+        feature_values = [examples[f].to_numpy() for f in features]
 
         # Create a grid of values 
         grid = [np.linspace(np.amin(f),
@@ -281,7 +288,7 @@ class GlobalInterpret(Attributes):
         
         ice_values = [ ]
         for value_set in cartesian(grid):
-            examples_temp = self.examples.copy()
+            examples_temp = examples.copy()
             examples_temp.loc[:, features[0]] = value_set[0]
             ice_values.append( prediction_method(examples_temp.values))
             
