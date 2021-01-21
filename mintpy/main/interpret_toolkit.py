@@ -319,7 +319,7 @@ class InterpretToolkit(Attributes):
         """
 
         model = list(self.models.items())[0][1]
-        local_obj.data_for_shap = data_for_shap
+        self.local_obj.data_for_shap = data_for_shap
         shap_values, bias = self.local_obj._get_shap_values(model=model,
                                                  examples=self.examples,
                                                  subsample_size=subsample_size)
