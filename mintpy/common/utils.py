@@ -1,4 +1,5 @@
 import numpy as np
+import xarray as xr 
 import pickle
 import pandas as pd
 from collections import ChainMap
@@ -9,7 +10,7 @@ def brier_skill_score(target_values, forecast_probabilities):
     climo = np.mean((target_values - np.mean(target_values))**2)
     return 1.0 - brier_score_loss(target_values, forecast_probabilities) / climo
 
-def norm_aupdc(targets, predictions):
+def norm_aupdc(targets, predictions, **kwargs):
     """
     Compute the normalized average precision.
     Equations come from Boyd et al. (2012)
@@ -76,6 +77,11 @@ def cartesian(arrays, out=None):
 
     return out
 
+
+def to_xarray(data):
+    """Converts data dict to xarray.Dataset"""
+    ds = xr.Dataset(data)
+    return ds
 
 def is_str(a):
     """Check if argument is a string"""
@@ -157,6 +163,31 @@ def save_pickle(fname, data):
     with open(fname,'wb') as pkl_file:
         pickle.dump(data, pkl_file)
         
+        
+def load_netcdf(fnames):
+    """Load netcdf file with xarray"""
+    if not isinstance(fnames, list):
+        fnames = [fnames]
+    
+    data = []
+    for f in fnames:
+        ds = xr.open_dataset(f)
+        data.append(ds)
+    
+    ds_set = xr.merge(data, combine_attrs='no_conflicts')
+    
+    print(ds_set)
+    
+    return ds_set 
+
+
+def save_netcdf(fname, ds, complevel=5):
+    """Save netcdf file with xarray"""
+    comp = dict(zlib=True, complevel=complevel)
+    encoding = {var: comp for var in ds.data_vars}
+    ds.to_netcdf(path=fname, encoding=encoding)
+    
+        
 def combine_top_features(results_dict,nvars=None):
     """
     """
@@ -170,13 +201,13 @@ def combine_top_features(results_dict,nvars=None):
 
     return unique_features
     
-def compute_bootstrap_indices(examples, subsample=1.0, nbootstrap=1):
+def compute_bootstrap_indices(examples, subsample=1.0, n_bootstrap=1):
     """
         Routine to generate bootstrap examples
     """
     n_examples = len(examples)
-    size = int(subsample * n_examples)
-    bootstrap_indices = [np.random.choice(range(n_examples), size=size).tolist() for _ in range(nbootstrap)]
+    size = int(n_examples*subsample) if subsample <= 1.0 else subsample
+    bootstrap_indices = [np.random.choice(range(n_examples), size=size).tolist() for _ in range(n_bootstrap)]
     return bootstrap_indices
     
 def combine_like_features(contrib, varnames):
@@ -249,7 +280,7 @@ def is_outlier(points, thresh=3.5):
     return modified_z_score > thresh
 
 
-def get_indices_based_on_performance(model, examples, targets, model_output='probability', n_examples=None):
+def get_indices_based_on_performance(model, examples, targets, model_output, n_examples=None):
     """
        Determines the best hits, worst false alarms, worst misses, and best
        correct negatives using the data provided during initialization.
@@ -276,7 +307,7 @@ def get_indices_based_on_performance(model, examples, targets, model_output='pro
         
     if model_output == 'probability':      
         predictions = model.predict_proba(examples.values)[:,1]
-    elif model_output == 'regression':
+    elif model_output == 'raw':
         predictions = model.predict(examples.values)
         
     diff = (targets-predictions)
@@ -292,6 +323,7 @@ def get_indices_based_on_performance(model, examples, targets, model_output='pro
 
         best_hit_indices = event_examples_sorted_indices[:n_examples].astype(int)
         worst_miss_indices = event_examples_sorted_indices[-n_examples:][::-1].astype(int)
+        
         best_corr_neg_indices = nonevent_examples_sorted_indices[:n_examples].astype(int)
         worst_false_alarm_indices = nonevent_examples_sorted_indices[-n_examples:][::-1].astype(int)
 
@@ -302,12 +334,20 @@ def get_indices_based_on_performance(model, examples, targets, model_output='pro
                     'Low Confidence Forecasts NOT Matched to an Event': best_corr_neg_indices
                       }
 
-        return sorted_dict
     else:
-        print('Mintpy currently does not support performance-based indexing for regression problems')
-        pass
+        examples_sorted_indices = df.sort_values(by='diff',ascending=True).index.values
+        
+        least_error_indices = examples_sorted_indices[:n_examples].astype(int)
+        most_error_indices = examples_sorted_indices[-n_examples:].astype(int)
 
-def avg_and_sort_contributions(the_dict):
+        sorted_dict = {
+                        'Least Error Predictions' : least_error_indices,
+                        'Most Error Predictions' : most_error_indices,
+        }
+    
+    return sorted_dict
+
+def avg_and_sort_contributions(contrib_dict, feature_val_dict):
     """
         Get the mean value (of data for a predictory) and contribution from
         each predictor and sort"
@@ -322,20 +362,32 @@ def avg_and_sort_contributions(the_dict):
 
             a dictionary of mean values and contributions
     """
-    return_dict = {}
+    avg_contrib_dict = {}
+    avg_feature_val_dict = {}
     
     # for hits, misses, etc. 
-    for key in the_dict.keys():
-        df = the_dict[key]
-        series    = df.mean(axis=0)
-        sorted_df = series.reindex(series.abs().sort_values(ascending=False).index)
-        top_vars={var : series[var] for var in list(sorted_df.index)}
+    for key in contrib_dict.keys():
+        contrib_df = contrib_dict[key]
+        feature_val_df = feature_val_dict[key]
+        
+        contrib_series    = contrib_df.mean(axis=0)
+        feature_val_series= feature_val_df.mean(axis=0)
+        feature_val_series['Bias'] = 0.0
+        
+        indices   = contrib_series.abs().sort_values(ascending=False).index
+     
+        sorted_contrib_df = contrib_series.reindex(indices)
+        sorted_feature_val_df = feature_val_series.reindex(indices)
+        
+        top_contrib = {var : contrib_series[var] for var in list(sorted_contrib_df.index)}
+        top_values = {var : feature_val_series[var] for var in list(sorted_feature_val_df.index)}
 
-        return_dict[key] = top_vars
+        avg_contrib_dict[key] = top_contrib
+        avg_feature_val_dict[key] = top_values
 
-    return return_dict
+    return avg_contrib_dict, avg_feature_val_dict
 
-def retrieve_important_vars(results, multipass=True):
+def retrieve_important_vars(results, model_names, multipass=True):
     """
        Return a list of the important features stored in the 
         ImportanceObject 
@@ -353,16 +405,12 @@ def retrieve_important_vars(results, multipass=True):
                 a list of features with order determined by 
                 the permutation importance method
     """
+    perm_method = 'multipass' if multipass else 'singlepass'
+    
     important_vars_dict = {}
-    for model_name in results.keys():
-        perm_imp_obj = results[model_name]
-        rankings = (
-                perm_imp_obj.retrieve_multipass()
-                if multipass
-                else perm_imp_obj.retrieve_singlepass()
-            )
-        features = list(rankings.keys())
-        important_vars_dict[model_name] = features
+    for model_name in model_names:
+        top_features = list(results[f'{perm_method}_rankings__{model_name}'].values)
+        important_vars_dict[model_name] = top_features
             
     return important_vars_dict
 

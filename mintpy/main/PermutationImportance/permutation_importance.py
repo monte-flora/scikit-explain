@@ -23,7 +23,7 @@ __all__ = ["permutation_importance", "sklearn_permutation_importance"]
 #variable_names = ['' for i in range(len(fake_data))]
 #from sklearn.metrics import roc_auc_score
 
-def permutation_importance(scoring_data, scoring_fn, scoring_strategy, variable_names=None, nimportant_vars=None, njobs=1):
+def permutation_importance(scoring_data, scoring_fn, scoring_strategy, variable_names=None, nimportant_vars=None, njobs=1, verbose=False, **kwargs):
 	"""Performs permutation importance over data given a particular
 	set of functions for scoring and determining optimal variables
 
@@ -54,7 +54,9 @@ def permutation_importance(scoring_data, scoring_fn, scoring_strategy, variable_
 					selection_strategy=PermutationImportanceSelectionStrategy, 
 					variable_names=variable_names, 
 					nimportant_vars=nimportant_vars, 
-					njobs=njobs
+					njobs=njobs,
+                    verbose=verbose, 
+                   
 	 	)
 
 def sklearn_permutation_importance( model, 
@@ -62,7 +64,7 @@ def sklearn_permutation_importance( model,
 									evaluation_fn, 
 									scoring_strategy, 
 									variable_names=None, 
-									nimportant_vars=None, njobs=1, nbootstrap=1, subsample=1, **kwargs):
+									nimportant_vars=None, njobs=1, nbootstrap=1, subsample=1, verbose=False, **kwargs):
 	"""Performs permutation importance for a particular model, 
 	``scoring_data``, ``evaluation_fn``, and strategy for determining optimal 
 	variables
@@ -105,4 +107,4 @@ def sklearn_permutation_importance( model,
 		scoring_fn = score_trained_sklearn_model(
 			model, evaluation_fn, nbootstrap=nbootstrap, subsample=subsample, **kwargs)
 
-	return permutation_importance(scoring_data=scoring_data, scoring_fn=scoring_fn, scoring_strategy=scoring_strategy, variable_names=variable_names, nimportant_vars=nimportant_vars, njobs=njobs)
+	return permutation_importance(scoring_data=scoring_data, scoring_fn=scoring_fn, scoring_strategy=scoring_strategy, variable_names=variable_names, nimportant_vars=nimportant_vars, njobs=njobs, verbose=verbose, **kwargs)

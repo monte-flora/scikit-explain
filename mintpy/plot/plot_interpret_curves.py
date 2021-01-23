@@ -1,3 +1,4 @@
+from ..common.utils import to_list, is_list
 from .base_plotting import PlotStructure
 from math import log10
 import numpy as np
@@ -11,24 +12,26 @@ class PlotInterpretCurves(PlotStructure):
     """
     line_colors = ["xkcd:fire engine red", 
                "xkcd:water blue", 
+               "xkcd:very dark purple",
                "xkcd:medium green", 
-               "xkcd:very dark purple", 
                "xkcd:burnt sienna"]
     
-    def plot_1d_curve(self, 
-                      feature_dict,
+    def plot_1d_curve(self,
+                      method,
+                      data,
                       features, 
                       model_names, 
                       display_feature_names={}, 
                       display_units={},
                       to_probability=False,
+                      line_colors=None,
                       **kwargs):
         """
         Generic function for 1-D ALE and PD plots. 
         
         Args:
         --------------
-            feature_dict : dict of data
+            data : dict of data
             features : list of strs
                 List of the features to be plotted.
             model_names : list of strs
@@ -43,6 +46,12 @@ class PlotInterpretCurves(PlotStructure):
                 
                 
         """
+        if line_colors is None:
+            line_colors = self.line_colors 
+            
+        if not is_list(model_names):
+            model_names = to_list(model_names)
+        
         self.display_feature_names = display_feature_names
         self.display_units = display_units
         hspace = kwargs.get("hspace", 0.5)
@@ -53,7 +62,7 @@ class PlotInterpretCurves(PlotStructure):
         ice_curves = kwargs.get('ice_curves', None)
 
         # get the number of panels which will be length of feature dictionary
-        n_panels = len(feature_dict.keys())
+        n_panels = len(features)
         
         majoraxis_fontsize = self.FONT_SIZES['teensie']
         
@@ -62,7 +71,7 @@ class PlotInterpretCurves(PlotStructure):
         elif n_panels == 2:
             kwargs['figsize'] = (6, 2.5)
         elif n_panels == 3: 
-            kwargs['figsize'] = (8, 5)
+            kwargs['figsize'] = (10, 5)
             hspace = 0.6
         else:
             kwargs['figsize'] = kwargs.get("figsize", (8,5))
@@ -70,7 +79,7 @@ class PlotInterpretCurves(PlotStructure):
         
         # create subplots, one for each feature
         fig, axes = self.create_subplots(
-            n_panels=n_panels, hspace=hspace, wspace=wspace, 
+            n_panels=n_panels, 
             **kwargs
         )
 
@@ -80,8 +89,16 @@ class PlotInterpretCurves(PlotStructure):
         for lineplt_ax, feature in zip(ax_iterator, features):
 
             # Pull the x-values and histogram from the first model. 
-            xdata = feature_dict[feature][model_names[0]]["xdata1"]
-            hist_data = feature_dict[feature][model_names[0]]["xdata1_hist"] 
+            #if isinstance(model_names, list):
+            #    choosen_model = model_names[0]
+            #else:
+            #    choosen_model=model_names
+            xdata = data[f'{feature}__bin_values'].values
+            hist_data = data[f'{feature}'].values
+            
+            
+            #xdata = data[feature][choosen_model]["xdata1"]
+            #hist_data = data[feature][choosen_model]["xdata1_hist"] 
             if unnormalize is not None:
                 hist_data = unnormalize.inverse_transform(hist_data, feature)
                 xdata = unnormalize.inverse_transform(xdata, feature)
@@ -94,8 +111,8 @@ class PlotInterpretCurves(PlotStructure):
     
             for i, model_name in enumerate(model_names):
                 if ice_curves: 
-                    ice_data = ice_curves[feature][model_name]['values']
-                    ice_xdata = ice_curves[feature][model_name]['xdata']
+                    #ice_data = ice_curves[feature][model_name]['values']
+                    #ice_xdata = ice_curves[feature][model_name]['xdata']
                     if to_probability:
                         ice_data *=100
                     if unnormalize is not None:
@@ -103,7 +120,9 @@ class PlotInterpretCurves(PlotStructure):
                     for ind_curve in ice_data:
                         lineplt_ax.plot(ice_xdata, ind_curve, color = 'k', alpha=0.85, linewidth=0.25)
 
-                ydata = feature_dict[feature][model_name]["values"]
+                #ydata = data[feature][model_name]["values"]
+                ydata = data[f'{feature}__{model_name}__{method}'].values
+                
                 if to_probability:
                     ydata *= 100.
 
@@ -119,7 +138,7 @@ class PlotInterpretCurves(PlotStructure):
                     )
                 else:
                     self.line_plot(lineplt_ax, xdata, ydata[0, :], 
-                                   color=self.line_colors[i], label=model_name.replace('Classifier',''))
+                                   color=line_colors[i], label=model_name.replace('Classifier',''))
    
             self.set_n_ticks(lineplt_ax)
             self.set_minor_ticks(lineplt_ax)

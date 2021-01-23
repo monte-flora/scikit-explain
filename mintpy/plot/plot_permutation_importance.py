@@ -17,43 +17,28 @@ class PlotImportance(PlotStructure):
             original_score_mean = np.mean(original_score)
         else:
             original_score_mean = original_score    
-            
-    
-        return bootstrapped, original_score_mean
-        
-    def retrieve_ranking(self, importance_obj, multipass):
-        """ retrieve rankings for ImportanceResults object"""
-        rankings = importance_obj.retrieve_multipass()if multipass else importance_obj.retrieve_singlepass()
-        
-        return rankings
-    
-    def sort_rankings(self, rankings, num_vars_to_plot):
-        """Sort by increasing rank"""
-        # Sort by increasing rank
-        sorted_var_names = list(rankings.keys())
-        sorted_var_names.sort(key=lambda k: rankings[k][0])
-        sorted_var_names = sorted_var_names[: min(num_vars_to_plot, len(rankings))]
-        scores = [rankings[var][1] for var in sorted_var_names]     
-        
-        return scores, sorted_var_names               
-                      
+ 
+        return bootstrapped, original_score_mean               
         
     def plot_variable_importance(
         self,
-        importance_dict_set,
-        model_names,
+        data,
+        metrics_used,
         multipass=True,
         display_feature_names={},
         feature_colors=None,
         num_vars_to_plot=10,
-        metric=None,
+        model_output='raw',
+        model_names=None,
         **kwargs
     ):
 
         """Plots any variable importance method for a particular estimator
         
         Args:
-            importance_dict_set : list 
+            data : xarray.Dataset or list of xarray.Dataset 
+                Permutation importance dataset for one or more metrics 
+                
             multipass : boolean
                 if True, plots the multipass results
             display_feature_names : dict
@@ -62,23 +47,50 @@ class PlotImportance(PlotStructure):
                 A dict mapping features to various colors. Helpful for color coding groups of features
             num_vars_to_plot : int
                 Number of top variables to plot (defalut is None and will use number of multipass results)
-            metric : str
+            xaxis_label : str
                 Metric used to compute the predictor importance, which will display as the X-axis label. 
         """
-        if not isinstance(importance_dict_set, list):
-            importance_dict_set = [importance_dict_set]  
-            
         hspace = kwargs.get("hspace", 0.5)
         wspace = kwargs.get("wspace", 0.2)
         xticks = kwargs.get("xticks", None)
-        ylabels = kwargs.get('ylabels', '')
         title = kwargs.get('title', '')
+        ylabels = kwargs.get('ylabels', '')
+        xlabels = kwargs.get('xlabels', '')
         n_columns = kwargs.get('n_columns', 3) 
-        model_output = kwargs.get('model_output', 'raw') 
+        
+        perm_method = 'multipass' if multipass else 'singlepass'
+
+        if not isinstance(data, list):
+            data = [data]  
+            
+        if len(data) != len(metrics_used):
+            raise ValueError("""
+                             The number of metrics used (the different metrics used to compute 
+                             permutation importance) must match the number of dataset given!
+                             """
+                            )
+        
+        if len(model_names) == 1:
+            # Only one model, but one or more metrics
+            only_one_model=True
+            xlabels = metrics_used
+            n_columns = min(len(xlabels), 3)
+            n_panels = len(xlabels)
+            xlabels = metrics_used
+        else:
+            # More than one model, and one or more metrics 
+            only_one_model=False
+            n_columns = min(len(model_names),3)
+            if len(metrics_used) == 1:
+                xlabels = metrics_used
+            else: 
+                ylabels = metrics_used 
+                
+            n_panels = n_columns * len(metrics_used)
 
         # get the number of panels which will be the number of ML models in dictionary
-        n_keys = [list(importance_dict.keys()) for importance_dict in importance_dict_set]
-        n_panels = len([item for sublist in n_keys for item in sublist])
+        #n_keys = [list(importance_dict.keys()) for importance_dict in data]
+        #n_panels = len([item for sublist in n_keys for item in sublist])
 
         if model_output == 'probability' and xticks is None:
             # Most probability-based scores are between 0-1 (AUC, BSS, NAUPDC,etc.)
@@ -101,32 +113,40 @@ class PlotImportance(PlotStructure):
         )
         
         if n_panels==1:
-            axes = [axes]
-        
-        for g, importance_dict in enumerate(importance_dict_set):
+            axes = [axes] 
+
+        # List of data for different metrics
+        for g, results in enumerate(data):
             # loop over each model creating one panel per model
             for k, model_name in enumerate(model_names):
-                if len(importance_dict_set) == 1:
+                if len(data) == 1:
                     ax = axes[k]
                 else:
                     ax = axes[g,k]
+                    
                 if g == 0:
                     ax.set_title(model_name, fontsize=self.FONT_SIZES['small'], alpha=0.8)
                     
-                importance_obj = importance_dict[model_name]
+                if only_one_model:
+                    ax.set_xlabel(xlabels[g])
                 
-                rankings = self.retrieve_ranking(importance_obj, multipass)
-
+                #rankings = self.retrieve_ranking(importance_obj, multipass)
                 if num_vars_to_plot is None:
-                    num_vars_to_plot == len(list(rankings.keys()))
+                    num_vars_to_plot == len(sorted_var_names)
+                
+                sorted_var_names = list(results[f'{perm_method}_rankings__{model_name}'].values) 
+                sorted_var_names = sorted_var_names[: min(num_vars_to_plot, len(sorted_var_names))]
+
+                scores = [results[f'{perm_method}_scores__{model_name}'].values[i,:] 
+                          for i in range(len(sorted_var_names))]
+                
+                # Get the original score (no permutations)
+                original_score = results[f'original_score__{model_name}'].values 
+                
     
                 # Get the original score (no permutations)
-                original_score = importance_obj.original_score
                 # Check if the permutation importance is bootstrapped
                 bootstrapped, original_score_mean = self.is_bootstrapped(original_score)
-
-                # Sort by increasing rank
-                scores, sorted_var_names = self.sort_rankings(rankings, num_vars_to_plot)
 
                 # Get the colors for the plot
                 colors_to_plot = [
@@ -257,16 +277,23 @@ class PlotImportance(PlotStructure):
                                 arrowprops=dict(arrowstyle="->",color='xkcd:blue grey'),
                                 xycoords = ax.transAxes, rotation=90,
                       size=6, ha='center', va='center', color='xkcd:blue grey', alpha=0.65)
-          
-        self.set_major_axis_labels(
+
+        if len(xlabels)==1 and not only_one_model:
+            self.set_major_axis_labels(
                 fig,
-                xlabel=metric.replace('_', ''),
+                xlabel=xlabels[0].replace('_', '').upper(),
                 ylabel_left='',
                 labelpad=5,
                 fontsize=self.FONT_SIZES['tiny'],
-            )
+                )
+
         self.set_row_labels(ylabels, axes)
-        self.add_alphabet_label(n_panels, axes)
+        
+        if model_output == 'probability':
+            pos=(0.9, 0.09)
+        else:
+            pos=(0.05, 0.95)
+        self.add_alphabet_label(n_panels, axes, pos=pos )
 
     # You can fill this in by using a dictionary with {var_name: legible_name}
     def convert_vars_to_readable(self, variables_list, VARIABLE_NAMES_DICT):
@@ -292,5 +319,7 @@ class PlotImportance(PlotStructure):
         else:
             if VARIABLES_COLOR_DICT is None:
                 return "xkcd:powder blue"
+            elif not isinstance(VARIABLES_COLOR_DICT, dict) and isinstance(VARIABLES_COLOR_DICT, str):
+                return VARIABLES_COLOR_DICT
             else:
                 return VARIABLES_COLOR_DICT[var]

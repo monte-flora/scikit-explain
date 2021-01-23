@@ -12,10 +12,12 @@ class PlotFeatureContributions(PlotStructure):
     def _contribution_plot(
         self,
         dict_to_use,
+        feature_values,
         key,
         ax=None,
         to_only_varname=None,
-        display_feature_names={}, 
+        display_feature_names={},
+        display_units={},
         n_vars=12,
         other_label="Other Predictors",
     ):
@@ -23,6 +25,7 @@ class PlotFeatureContributions(PlotStructure):
         Plot the feature contributions. 
         """
         contrib = []
+        feat_values = []
         varnames = []
 
         # return nothing if dictionary is empty
@@ -31,13 +34,14 @@ class PlotFeatureContributions(PlotStructure):
 
         for var in list(dict_to_use.keys()):
             contrib.append(dict_to_use[var])
-
+            feat_values.append(feature_values[var])
+            
             if to_only_varname is None:
                 varnames.append(var)
             else:
                 varnames.append(to_only_varname(var))
 
-        final_pred = np.sum(contrib)
+        final_pred = abs(np.sum(contrib))
 
         if to_only_varname is not None:
             contrib, varnames = combine_like_features(contrib, varnames)
@@ -53,9 +57,11 @@ class PlotFeatureContributions(PlotStructure):
 
         varnames = np.array(varnames)
         contrib = np.array(contrib)
+        feat_values = np.array(feat_values)
 
         varnames = np.append(varnames[:n_vars], other_label)
         contrib = np.append(contrib[:n_vars], sum(contrib[n_vars:]))
+        
 
         sorted_idx = np.argsort(contrib)[::-1]
         contrib = contrib[sorted_idx]
@@ -77,91 +83,103 @@ class PlotFeatureContributions(PlotStructure):
         for tick in vals:
             ax.axvline(x=tick, linestyle="dashed", alpha=0.4, color="#eeeeee", zorder=1)
 
-        ax.set_yticks(y_index)
-        self.set_tick_labels(ax, varnames, display_feature_names)
+        #ax.set_yticks(y_index)
+        tick_labels = self.set_tick_labels(ax, varnames, display_feature_names, return_labels=True)
 
+        ax.set_yticks([])
+        
         neg_factor = 2.25 if np.max(np.abs(contrib)) > 1.0 else 0.08
         factor = 0.25 if np.max(contrib) > 1.0 else 0.01
 
-        for i, c in enumerate(np.round(contrib, 2)):
-            if c > 0:
-                ax.text(
-                    c + factor,
-                    i + 0.25,
-                    str(c),
-                    color="k",
-                    fontweight="bold",
-                    alpha=0.8,
-                    fontsize=6,
-                )
+        for i, pair in enumerate( zip(np.round(contrib, 2), varnames, tick_labels) ):
+            c,v,label = pair
+            if v == other_label:
+                text = other_label
             else:
+                units = display_units.get(v, '')
+                
+                feat_val = feature_values[v]
+                if feat_val <= 1 and feat_val > 0:
+                    # val bewteen 0-1 -> convert to sci. notation
+                    num_and_exp = f'{feat_val:.1e}'.split('e')
+                    base = float(num_and_exp[0])
+                    exp = int(num_and_exp[1])
+                    feat_val = fr"{base} \times 10^{{{exp}}}"
+                else:
+                    feat_val = round(feat_val)
+                
+                if units == '':
+                    text = fr"$\bf{label}$" + fr' $({feat_val})$'
+                else:
+                    #text = fr'$\bf{{{label}}}$'+ fr' (${feat_val} \ {units}$)'
+
+                    text = fr"$\bf{label}$" + fr' $({feat_val}$' + fr' ${units})$'
+                    
+            if c > 0:
+                # Plot the contribution value 
+                c + factor
                 ax.text(
-                    c - neg_factor,
-                    i + 0.25,
+                    c + 0.05,
+                    i + 0.05,
                     str(c),
                     color="k",
                     fontweight="bold",
                     alpha=0.8,
                     fontsize=6,
+                    ha='left'
                 )
+                
+                # Plots the feature name and value 
+                ax.text(
+                        0-0.05,
+                        i + 0.25,
+                        text,
+                        color="xkcd:crimson",
+                        alpha=0.8,
+                        fontsize=6,
+                        ha = 'right'
+                        )
+                
+            else:
+                #c - neg_factor
+                ax.text(
+                    c -0.05 ,
+                    i + 0.05,
+                    str(c),
+                    color="k",
+                    fontweight="bold",
+                    alpha=0.8,
+                    fontsize=6,
+                    ha = 'right'
+                )
+                ax.text(
+                        0+0.05,
+                        i + 0.25,
+                        text,
+                        color='xkcd:medium blue',
+                        alpha=0.8,
+                        fontsize=6,
+                        ha = 'left'
+                        )
 
         ax.set_xlim([np.min(contrib) - neg_factor, np.max(contrib) + factor])
         
         pos_contrib_ratio = abs(np.max(contrib)) > abs(np.min(contrib))
-         
-        if pos_contrib_ratio:
-            ax.text(
-                0.7,
-                0.1,
-                f"Bias : {bias:.2f}",
-                fontsize=6,
-                alpha=0.7,
-                ha="left",
-                va="center",
-                ma="left",
-                transform=ax.transAxes,
-            )
-            ax.text(
-                0.7,
-                0.15,
-                f"Final Pred. : {final_pred:.2f}",
-                fontsize=6,
-                alpha=0.7,
-                ha="left",
-                va="center",
-                ma="left",
-                transform=ax.transAxes,
-            )
-
-        else:
-            ax.text(
-                0.1,
-                0.90,
-                f"Bias : {bias:.2f}",
-                fontsize=6,
-                alpha=0.7,
-                ha="left",
-                va="center",
-                ma="left",
-                transform=ax.transAxes,
-            )
-            ax.text(
-                0.1,
-                0.95,
-                f"Final Pred. : {final_pred:.2f}",
-                fontsize=6,
-                alpha=0.7,
-                ha="left",
-                va="center",
-                ma="left",
-                transform=ax.transAxes,
-            )
 
         # make the horizontal plot go with the highest value at the top
         ax.invert_yaxis()
+        
+        return final_pred, bias 
 
-    def plot_contributions(self, result_dict, model_names, to_only_varname=None, 
-                           display_feature_names={}, **kwargs):
+    def plot_contributions(self, 
+                           contrib_dict,
+                           feature_values,
+                           model_names, 
+                           to_only_varname=None, 
+                           display_feature_names={},
+                           display_units={},
+                           model_output=None,
+                           **kwargs):
         """
         Plot the results of feature contributions
 
@@ -171,20 +189,35 @@ class PlotFeatureContributions(PlotStructure):
                 a single row/example from the 
                 result dataframe from tree_interpreter_simple
         """
-
         hspace = kwargs.get("hspace", 0.2)
 
-        if "non_performance" in result_dict[model_names[0]].keys():
+        only_one_model = True if len(model_names) == 1 else False
+        
+        if "non_performance" in contrib_dict[model_names[0]].keys():
             n_panels=1
             n_columns=1
             figsize = (3, 2.5)
             wspace = kwargs.get("wspace", 0.5)
         else:
-            n_panels = len(result_dict.keys()) * 4
-            n_columns = 4 
-            figsize= (14, 8)
-            wspace = kwargs.get("wspace", 1.5)
-
+            n_perf_keys = len(contrib_dict[model_names[0]].keys())
+            n_panels = len(model_names) * n_perf_keys
+            
+            if only_one_model and model_output=='raw':
+                n_columns = 1 
+            elif only_one_model and model_output=='probability':
+                n_columns = 2 
+            else:
+                n_columns = 4
+              
+            if n_columns == 4:
+                figsize = (14,8)
+            else:
+                figsize= (5, 5) 
+                
+            wspace = kwargs.get("wspace", 0.5)
+            hspace = kwargs.get("hspace", 0.5)
+            
+            
         # create subplots, one for each feature
         fig, axes = self.create_subplots(
                     n_panels=n_panels,
@@ -197,51 +230,69 @@ class PlotFeatureContributions(PlotStructure):
                 )
         
         # try for all_data/average data
-        if "non_performance" in result_dict[model_names[0]].keys():
-                fig = self._contribution_plot(
-                    result_dict[model_names[0]]["non_performance"],
+        if "non_performance" in contrib_dict[model_names[0]].keys():
+                final_pred, bias  = self._contribution_plot(
+                    contrib_dict[model_names[0]]["non_performance"],
+                    feature_values[model_names[0]]["non_performance"],
                     to_only_varname=to_only_varname,
                     display_feature_names=display_feature_names,
+                    display_units=display_units,
                     key='',
                     ax=axes
                 )
-                return fig
+                
+                axes.set_title(f"Prediction : {final_pred:.2f} Bias : {bias:.2f}",
+                              alpha=0.8, 
+                              fontsize=self.FONT_SIZES['small'])
+                
+                return None
 
+        ax_iterator = axes.flat   
+            
         # loop over each model creating one panel per model
         c=0
         for i, model_name in enumerate(model_names):
-            k=0
-            for perf_key in result_dict[model_name].keys():
-                ax = axes[i,k] 
-                #print(perf_key)
-                self._contribution_plot(
-                        result_dict[model_name][perf_key],
+            for perf_key in contrib_dict[model_name].keys():
+                #ax = axes[i,k] 
+                ax = ax_iterator[c]
+                final_pred, bias = self._contribution_plot(
+                        contrib_dict[model_name][perf_key],
+                        feature_values[model_name][perf_key],
                         ax=ax,
                         key=perf_key,
                         to_only_varname=to_only_varname,
-                        display_feature_names=display_feature_names
+                        display_feature_names=display_feature_names,
+                        display_units=display_units,
                     )
-                if c == 0:
-                    ax.text(0.1, 1.09,
-                            perf_key.replace("Forecasts ", "Forecasts\n").upper(),
-                            transform = ax.transAxes,
-                            fontsize=10,
-                            ha='center',
-                            va='center',
-                            color='xkcd:darkish blue',
-                            alpha=0.95)
-                k+=1
-            c+=1
-                
+                if i == 0:
+ 
+                    ax.text(0.5, 1.2,  
+                            perf_key.replace("Forecasts ", "Forecasts\n").upper(), 
+                            color='xkcd:darkish blue', ha='center', transform=ax.transAxes,
+                           fontsize=8,)
+                    ax.text(-0.05, 1.12, 
+                            f"Avg. Prediction : {final_pred:.2f}" , ha='left',
+                            color='xkcd:bluish grey', transform=ax.transAxes,
+                           fontsize=7,)
+                    ax.text(-0.05, 1.05, 
+                            f"Avg. Bias : {bias:.2f}", ha='left',  
+                            color='xkcd:bluish grey', fontsize=7,
+                            transform=ax.transAxes)
+                c+=1
+        
+        
+        xlabel = 'Feature Contributions (%)' if model_output == 'probability' else 'Feature Contributions'
+        
         major_ax = self.set_major_axis_labels(
                 fig,
-                xlabel='',
+                xlabel='Feature Contributions (%)',
                 ylabel_left='',
                 labelpad=5,
-                fontsize=self.FONT_SIZES['tiny'],
+                fontsize=self.FONT_SIZES['normal'],
             )
         
-        self.set_row_labels(labels=model_names, 
+        if not only_one_model:
+            self.set_row_labels(labels=model_names, 
                             axes=axes, 
                             pos=-1,
                             rotation=270, 
@@ -254,7 +305,7 @@ class PlotFeatureContributions(PlotStructure):
         #                         Line2D([0], [0], color='xkcd:powder blue', alpha=0.8),
         #                          ]
         
-        additional_labels = ['Positive Contributions', 'Negative Contributions']
+        #additional_labels = ['Positive Contributions', 'Negative Contributions']
         #self.set_legend(n_panels, fig, axes[0,0], 
         #                major_ax, additional_handles, 
         #                additional_labels, bbox_to_anchor=(0.5, -0.25))
@@ -278,28 +329,32 @@ class PlotFeatureContributions(PlotStructure):
         Plot SHAP summary or dependence plot. 
         
         """
-        if feature_values  is None:
+        if feature_values is None:
             feature_values=examples.values
-
-        if display_feature_names is None:
-            self.display_feature_names = {}
-        else:
-            self.display_feature_names = display_feature_names
+            
         self.display_units = display_units
+        
+        self.display_feature_names = display_feature_names
+        
+        if display_feature_names is not None:
+            display_feature_names_list = [display_feature_names[f] for f in self.feature_names] 
+        else:
+            display_feature_names_lists = self.feature_names
         
         if plot_type == 'summary':
             shap.summary_plot(shap_values, 
                               features=examples, 
-                              feature_names=display_feature_names, 
+                              feature_names=display_feature_names_list, 
                               max_display=15, 
                               plot_type="dot",
                               alpha=1, 
                               show=False, 
                               sort=True,
                              )
-            
+
         elif plot_type == 'dependence':
             # Set up the font sizes for matplotlib
+            self.display_feature_names = display_feature_names
             left_yaxis_label = 'SHAP values (%)\n(Feature Contributions)'
             n_panels = len(features)
             if n_panels <= 6:
@@ -317,11 +372,6 @@ class PlotFeatureContributions(PlotStructure):
                 )
             
             ax_iterator = self.axes_to_iterator(n_panels, axes)
-
-            if display_feature_names is not None:
-                display_features = [display_feature_names[f] for f in self.feature_names] 
-            else:
-                display_features = self.feature_names
             
             for ax, feature in zip(ax_iterator, features):
                 ind = self.feature_names.index(feature)
@@ -330,7 +380,7 @@ class PlotFeatureContributions(PlotStructure):
                                 shap_values=shap_values, 
                                 features=examples,
                                 feature_values=feature_values,
-                                display_features=display_features,
+                                display_features=display_feature_names_list,
                                 interaction_index=interaction_index,
                                 target_values=target_values,
                                 color="#1E88E5", 

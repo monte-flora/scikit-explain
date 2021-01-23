@@ -34,12 +34,16 @@ class Attributes:
 
         self.models = OrderedDict([(name, obj) for name, obj in zip(model_names, model_objs)])
         self.model_names = model_names
+        
+        print(self.models, self.model_names)
 
     def set_target_attribute(self, targets):
         """
         Checks the type of the targets attribute.
         """
          # check that targets are assigned correctly
+        if type(targets) == type(None):
+            raise ValueError('targets are required!')
         if is_list(targets):
             self.targets = np.array(targets)
         elif isinstance(targets, np.ndarray):
@@ -57,6 +61,8 @@ class Attributes:
         Check the type of the examples attribute.
         """
         # make sure data is the form of a pandas dataframe regardless of input type
+        if type(examples) == type(None):
+            raise ValueError('examples are required!')
         if isinstance(examples, np.ndarray):
             if (feature_names is None):
                 raise Exception('Feature names must be specified if using NumPy array.')

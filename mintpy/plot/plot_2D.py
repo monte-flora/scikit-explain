@@ -1,4 +1,5 @@
 from .base_plotting import PlotStructure
+from ..common.utils import to_list, is_list
 
 import numpy as np 
 import matplotlib.pyplot as plt
@@ -81,17 +82,22 @@ class PlotInterpret2D(PlotStructure):
         ax.clabel(cset, cset.levels, inline=True, fontsize=6, fmt=fmt)
 
     def plot_contours(self,
-                      feature_dict,
+                      method,
+                      data,
                       features,
                       model_names, 
                       display_feature_names={}, 
                       display_units={},
-                      to_probability=True,
+                      to_probability=False,
                       **kwargs):
 
         """
         Generic function for 2-D PDP/ALE
         """
+        
+        if not is_list(model_names):
+            model_names = to_list(model_names)
+        
         unnormalize = kwargs.get('unnormalize', None)
         self.display_feature_names = display_feature_names
         self.display_units = display_units
@@ -104,7 +110,7 @@ class PlotInterpret2D(PlotStructure):
         cmap = kwargs.get("cmap", 'seismic') 
         colorbar_label = kwargs.get("left_yaxis_label")
 
-        if colorbar_label == 'Accumulated Local Effect (%)':
+        if colorbar_label == 'Centered ALE (%)':
             colorbar_label = '2nd Order ALE (%)' 
 
         # get the number of panels which will be length of feature dictionary
@@ -137,8 +143,8 @@ class PlotInterpret2D(PlotStructure):
        
         ale_max = []
         ale_min = []
-        for feature_set, model_name in itertools.product(features, model_names):
-            zdata = feature_dict[feature_set][model_name]["values"]
+        for feature_set, model_name in itertools.product(features, model_names): 
+            zdata = data[f'{feature_set[0]}__{feature_set[1]}__{model_name}__{method}'].values
             zdata = np.ma.getdata(zdata)
             if to_probability:
                 zdata *= 100.
@@ -188,12 +194,12 @@ class PlotInterpret2D(PlotStructure):
                 top_ax.set_title(model_name, fontsize=self.FONT_SIZES['normal'], alpha=0.9)
                 counter+=1 
             
-            xdata1 = feature_dict[feature_set][model_name]["xdata1"]
-            xdata2 = feature_dict[feature_set][model_name]["xdata2"]
-                
-            xdata1_hist = feature_dict[feature_set][model_name]["xdata1_hist"]
-            xdata2_hist = feature_dict[feature_set][model_name]["xdata2_hist"]
-            if unnormalize[model_name] is not None:
+            xdata1 = data[f'{feature_set[0]}__bin_values'].values 
+            xdata2 = data[f'{feature_set[1]}__bin_values'].values 
+            
+            xdata1_hist = data[f'{feature_set[0]}'].values 
+            xdata2_hist = data[f'{feature_set[1]}'].values
+            if (unnormalize is not None) and (unnormalize[model_name] is not None):
                 unnorm_obj = unnormalize[model_name]
 
                 xdata1_hist = unnorm_obj.inverse_transform(xdata1_hist, feature_set[0])
@@ -201,12 +207,15 @@ class PlotInterpret2D(PlotStructure):
                 xdata1 = unnorm_obj.inverse_transform(xdata1, feature_set[0])
                 xdata2 = unnorm_obj.inverse_transform(xdata2, feature_set[1])
 
-            zdata = feature_dict[feature_set][model_name]["values"]
-            if 'ALE' in colorbar_label:
-                masked = zdata[0].mask
-                zdata = np.ma.getdata(zdata)
-            else:
-                masked = np.zeros((zdata.shape))
+            zdata = data[f'{feature_set[0]}__{feature_set[1]}__{model_name}__{method}'].values
+
+            #if 'ALE' in colorbar_label:
+            #    masked = zdata[0].mask
+            #    zdata = np.ma.getdata(zdata)
+            #else:
+            #    masked = np.zeros((zdata[0].shape))
+            masked=[False, False]
+            
             if to_probability:
                 zdata *= 100.
 

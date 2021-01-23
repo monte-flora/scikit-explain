@@ -54,24 +54,24 @@ class LocalInterpret(Attributes):
         treeinterpreter
     """
     
-    def __init__(self, model, model_names, examples, targets, model_output, 
+    def __init__(self, models, model_names, examples, targets, model_output, 
                  feature_names=None, checked_attributes=False):
         # These functions come from the inherited Attributes class  
         if not checked_attributes:
-            self.set_model_attribute(model, model_names)
+            self.set_model_attribute(models, model_names)
             self.set_examples_attribute(examples, feature_names)
             self.set_target_attribute(targets)
             self.set_model_output(model_output, model)
         else:
-            self.models = model
+            self.models = models
             self.model_names = model_names
             self.examples = examples
             self.targets = targets
             self.feature_names = list(examples.columns)
             self.model_output = model_output
         
-    def _get_local_prediction(self, method='treeinterpreter', data_for_shap=None,
-                              performance_based=True, n_examples=100, shap_sample_size=1000):
+    def _get_local_prediction(self, method='shap', background_dataset=None,
+                              performance_based=True, n_examples=100,):
         """
         Explain individual predictions using SHAP (SHapley Additive exPlanations;
         https://github.com/slundberg/shap) or treeinterpreter 
@@ -84,14 +84,14 @@ class LocalInterpret(Attributes):
                 data to perform the contribution break-down on.
             method : 'treeinterpreter' or 'shap' 
         """
-        if data_for_shap is None and method == 'shap':
+        if background_dataset is None and method == 'shap':
                 raise ValueError("""
-                                 data_for_shap is None!, but the user set method='shap'.
+                                 background_dataset is None!, but the user set method='shap'.
                                  If using SHAP, then you must provide data to train the explainer.
                                  """
                                 )
         
-        self.data_for_shap = data_for_shap
+        self.background_dataset = background_dataset
         
         if method not in ['tree_interpreter', 'shap']:
             raise ValueError("""
@@ -104,61 +104,68 @@ class LocalInterpret(Attributes):
 
         # will be returned; a list of pandas dataframes, one for each performance dict key
         contributions_dict = {model_name:{} for model_name in self.model_names}
+        feature_values_dict = {model_name:{} for model_name in self.model_names}
+        
         for model_name, model in self.models.items():
             # create entry for current model
             #self.contributions_dict[model_name] = {}
             if performance_based:
-                print('Computing performance-based contributions...') 
+                ### print('Computing performance-based contributions...') 
                 performance_dict = get_indices_based_on_performance(model, 
                                                                 examples=self.examples, 
                                                                 targets=self.targets, 
-                                                                n_examples=n_examples)
+                                                                n_examples=n_examples,
+                                                                 model_output=self.model_output)
             
                 for key, indices in performance_dict.items():
                     cont_dict = self._get_feature_contributions(model=model, 
                                                            examples = self.examples.iloc[indices,:], 
-                                                           subsample_size=shap_sample_size, 
                                                           )
+                    
                     contributions_dict[model_name][key] = cont_dict
+                    feature_values_dict[model_name][key] = self.examples.iloc[indices,:]
 
             else:
                 cont_dict = self._get_feature_contributions(model=model, 
                                                            examples = self.examples, 
-                                                           subsample_size=shap_sample_size, 
                                                           )
-                    
+                
                 contributions_dict[model_name]['non_performance'] = cont_dict
+                feature_values_dict[model_name]['non_performance'] = self.examples
                     
             # average out the contributions and sort based on contribution
-            some_dict = avg_and_sort_contributions(contributions_dict[model_name])
+            avg_contrib_dict, avg_feature_val_dict = avg_and_sort_contributions(
+                contributions_dict[model_name], feature_values_dict[model_name])
 
-            contributions_dict[model_name] = some_dict
+            contributions_dict[model_name] = avg_contrib_dict
+            feature_values_dict[model_name] = avg_feature_val_dict
                     
-        return contributions_dict
+        return contributions_dict, feature_values_dict
     
     
-    def _get_shap_values(self, model, examples, subsample_size, 
-                         subsample_method='kmeans'):
+    def _get_shap_values(self, model, examples,):
         """
+        FOR INTERNAL PURPOSES ONLY.
+        
         """
-        if subsample_method=='kmeans':
-            print(f'Performing K-means clustering (K={subsample_size}) to subset the data for the background dataset...')
-            data_for_shap = shap.kmeans(self.data_for_shap, subsample_size)
-        elif subsample_method=='random':
-            print(f'Performing random sampling (N={subsample_size}) to subset the data for the background dataset...')
-            data_for_shap = shap.sample(self.data_for_shap, subsample_size)
+        #if subsample_method=='kmeans':
+            ### print(f'Performing K-means clustering (K={subsample_size}) to subset the data for the background dataset...')
+         #   data_for_shap = shap.kmeans(self.data_for_shap, subsample_size)
+        #elif subsample_method=='random':
+            ### print(f'Performing random sampling (N={subsample_size}) to subset the data for the background dataset...')
+         #   data_for_shap = shap.sample(self.data_for_shap, subsample_size)
 
         try: 
             print('trying TreeExplainer...')
             explainer = shap.TreeExplainer(model, 
-                                       data=data_for_shap,
+                                       data=self.background_dataset,
                                        feature_perturbation = "interventional",
                                        model_output=self.model_output
                                           )
             contributions = explainer.shap_values(examples)
             
         except Exception as e:
-            traceback.print_exc()
+            ### traceback.print_exc()
             if self.model_output == 'probability':
                 func = model.predict_proba
             else:
@@ -166,7 +173,7 @@ class LocalInterpret(Attributes):
                 
             print('TreeExplainer failed, starting KernelExplainer...')
             explainer = shap.KernelExplainer(func, 
-                                             data_for_shap, 
+                                             self.background_dataset, 
                                              link='identity'
                                             )
             
@@ -187,6 +194,7 @@ class LocalInterpret(Attributes):
     
     def _get_ti_values(self, model, examples):
         """
+         FOR INTERNAL PURPOSES ONLY.
         """
         # check to make sure model is of type Tree
         if type(model).__name__ not in list_of_acceptable_tree_models:
@@ -207,8 +215,10 @@ class LocalInterpret(Attributes):
        
         return contributions, bias 
         
-    def _get_feature_contributions(self, model, examples, subsample_size):
+    def _get_feature_contributions(self, model, examples):
         """
+        FOR INTERNAL PURPOSES ONLY.
+        
         Compute the feature contributions either using treeinterpreter or SHAP. 
         
         Args:
@@ -218,7 +228,7 @@ class LocalInterpret(Attributes):
             model_output
         """
         if self.method == 'shap':
-            contributions, bias = self._get_shap_values(model, examples, subsample_size)
+            contributions, bias = self._get_shap_values(model, examples)
         elif self.method == 'tree_interpreter':
             contributions, bias = self._get_ti_values(model, examples)     
 
@@ -234,12 +244,13 @@ class LocalInterpret(Attributes):
                     var_list.append(100.*c)
                 else:
                     var_list.append(c)
+            
             key_list.append('Bias')
             if self.model_output == 'probability':
                 var_list.append(100.*bias)
             else:
                 var_list.append(bias)
-                
+
             tmp_data.append(dict(zip(key_list, var_list)))   
                 
        # return a pandas DataFrame to do analysis on

@@ -305,7 +305,7 @@ class PlotStructure:
             
         return values 
     
-    def set_tick_labels(self, ax, feature_names, display_feature_names):
+    def set_tick_labels(self, ax, feature_names, display_feature_names, return_labels=False):
         """
         Setting the tick labels for the tree interpreter plots. 
         """
@@ -315,9 +315,13 @@ class PlotStructure:
                       for feature_name in feature_names ]
         else:
             labels = display_feature_names 
-        
-        labels = [fr'{l}' for l in labels] 
-        ax.set_yticklabels(labels)
+
+        if return_labels:
+            labels = [fr'{l}' for l in labels]
+            return labels
+        else:
+            labels = [fr'${l}$' for l in labels]
+            ax.set_yticklabels(labels)
     
     
     def set_axis_label(self, ax, xaxis_label=None, yaxis_label = None, **kwargs):
@@ -330,9 +334,9 @@ class PlotStructure:
             xaxis_label_pretty = self.display_feature_names.get(xaxis_label, xaxis_label)
             units = self.display_units.get(xaxis_label, '')
             if units == '':
-                xaxis_label_with_units = fr'{xaxis_label_pretty}'
+                xaxis_label_with_units = fr'${xaxis_label_pretty}$'
             else:
-                xaxis_label_with_units = fr'{xaxis_label_pretty} ({units})'
+                xaxis_label_with_units = fr'${xaxis_label_pretty} \ ({units})$'
         
             ax.set_xlabel(xaxis_label_with_units, fontsize=fontsize)
         
@@ -340,9 +344,9 @@ class PlotStructure:
             yaxis_label_pretty = self.display_feature_names.get(yaxis_label, yaxis_label)
             units = self.display_units.get(yaxis_label, '')
             if units == '':
-                yaxis_label_with_units = fr'{yaxis_label_pretty}'
+                yaxis_label_with_units = fr'${yaxis_label_pretty}$'
             else:
-                yaxis_label_with_units = fr'{yaxis_label_pretty} ({units})'
+                yaxis_label_with_units = fr'${yaxis_label_pretty} \ ({units})$'
 
             ax.set_ylabel(yaxis_label_with_units, fontsize=fontsize)
         

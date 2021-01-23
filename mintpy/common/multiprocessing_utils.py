@@ -62,7 +62,7 @@ def run_parallel( func, args_iterator, kwargs, nprocs_to_use, ):
     if nprocs_to_use > mp.cpu_count():
         raise ValueError(f'User requested {nprocs_to_use} processors, but system only has {mp.cpu_count()}!')
     
-    print(f'Using {nprocs_to_use} processors...')
+    ### print(f'Using {nprocs_to_use} processors...')
 
     pool = Pool(processes=nprocs_to_use)
     

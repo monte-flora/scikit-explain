@@ -8,6 +8,7 @@ import itertools
 from functools import reduce
 from operator import add
 from joblib import delayed, Parallel
+import traceback
 
 from sklearn.metrics import (roc_auc_score,
                              roc_curve,
@@ -24,8 +25,10 @@ from ..common.utils import (compute_bootstrap_indices,
                     is_classifier, 
                     cartesian,
                     brier_skill_score,
-                    norm_aupdc
+                    norm_aupdc,
+                    to_xarray
                    )
+
 from ..common.multiprocessing_utils import run_parallel, to_iterator
 from ..common.attributes import Attributes
 
@@ -91,16 +94,16 @@ class GlobalInterpret(Attributes):
         
         Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.  
     """
-    def __init__(self, model, model_names, examples, targets=None,
+    def __init__(self, models, model_names, examples, targets=None,
                  model_output='probability', 
                  feature_names=None, checked_attributes=False):
         # These functions come from the inherited Attributes class  
         if not checked_attributes:
-            self.set_model_attribute(model, model_names)
+            self.set_model_attribute(models, model_names)
             self.set_examples_attribute(examples, feature_names)
             self.set_target_attribute(targets)
         else:
-            self.models = model
+            self.models = models
             self.model_names = model_names
             self.examples = examples
             self.targets = targets
@@ -109,24 +112,14 @@ class GlobalInterpret(Attributes):
         self.model_output = model_output
     
     def permutation_importance(self, n_vars=5, evaluation_fn="auprc",
-            subsample=1.0, njobs=1, nbootstrap=1, scoring_strategy=None):
+            subsample=1.0, n_jobs=1, n_bootstrap=1, scoring_strategy=None, verbose=False):
 
         """
-        Performs multipass permutation importance using Eli's code.
+        Performs single-pass and/or multi-pass permutation importance using the PermutationImportance 
+        package. 
 
-            Parameters:
-            -----------
-            n_multipass_vars : integer
-                number of variables to calculate the multipass permutation importance for.
-            evaluation_fn : string or callable
-                evaluation function
-            subsample: float
-                value of between 0-1 to subsample examples (useful for speedier results)
-            njobs : interger or float
-                if integer, interpreted as the number of processors to use for multiprocessing
-                if float, interpreted as the fraction of proceesors to use
-            nbootstrap: integer
-                number of bootstrapp resamples
+        See calc_permutation_importance in IntepretToolkit for documentation. 
+
         """
         available_scores = ['auc', 'auprc', 'bss', 'mse', 'norm_aupdc']
         
@@ -164,7 +157,7 @@ class GlobalInterpret(Attributes):
         # loop over each model
         for model_name, model in self.models.items():
 
-            print(f"Processing {model_name}...")
+            ### print(f"Processing {model_name}...")
 
             pi_result = sklearn_permutation_importance(
                 model            = model,
@@ -174,15 +167,32 @@ class GlobalInterpret(Attributes):
                 scoring_strategy = scoring_strategy,
                 subsample        = subsample,
                 nimportant_vars  = n_vars,
-                njobs            = njobs,
-                nbootstrap       = nbootstrap,
+                njobs            = n_jobs,
+                nbootstrap       = n_bootstrap,
+                verbose          = verbose
             )
 
             pi_dict[model_name] = pi_result
+            
+        data={}
+        for model_name in self.model_names:
+            for func in ['retrieve_multipass', 'retrieve_singlepass']:
+                adict = getattr(pi_dict[model_name], func)()
+                features = np.array(list(adict.keys()))
+                rankings = np.argsort([adict[f][0] for f in features])
+                top_features = features[rankings]
+                scores = np.array([adict[f][1] for f in top_features])
+                perm_method = func.split("_")[1]
+                
+                data[f'{perm_method}_rankings__{model_name}'] = ([f'n_vars_{perm_method}'], top_features)
+                data[f'{perm_method}_scores__{model_name}'] = ([f'n_vars_{perm_method}', 'n_bootstrap'], scores)
+            data[f'original_score__{model_name}'] = (['n_bootstrap'], results[model_name].original_score)
+                
+        results_ds = to_xarray(data)
               
-        return pi_dict
+        return results_ds
     
-    def _run_interpret_curves(self, method, features, nbins=25, njobs=1, subsample=1.0, nbootstrap=1):
+    def _run_interpret_curves(self, method, features, n_bins=25, n_jobs=1, subsample=1.0, n_bootstrap=1):
 
         """
         Runs the interpretation curve (partial dependence or accumulated local effects) 
@@ -194,25 +204,28 @@ class GlobalInterpret(Attributes):
         
         Args:
         ---------
-            method : 'pd' or 'ale'
-                determines whether to compute partial dependence ('pd') or 
-                accumulated local effects ('ale').
+            method : 'pd' , 'ale', or 'ice'
+                determines whether to compute partial dependence ('pd'), 
+                accumulated local effects ('ale'), or individual conditional expectations ('ice')
         
             features: string, 2-tuple of strings, list of strings, or lists of 2-tuple strings
                 feature names to compute partial dependence for. If 2-tuple, it will compute 
                 the second-order partial dependence. 
             
-            nbins : int 
+            n_bins : int 
                 Number of evenly-spaced bins to compute PD/ALE over. 
              
-            njobs : int or float 
+            n_jobs : int or float 
                  if int, the number of processors to use for parallelization
                  if float, percentage of total processors to use for parallelization 
                  
-            subsample : float (between 0-1)
-                 Fraction of randomly sampled examples to evaluate (default is 1.0; no subsampling)
+            subsample : float or integer
+                    if value between 0-1 interpreted as fraction of total examples to use 
+                    if value > 1, interpreted as the number of examples to randomly sample 
+                        from the original dataset.
                  
-            nbootstrap: number of bootstrap iterations to perform. Defaults to 1 (no
+            n_bootstrap: integer
+                number of bootstrap iterations to perform. Defaults to 1 (no
                         bootstrapping).
         """    
         #Check if features is a string
@@ -230,28 +243,68 @@ class GlobalInterpret(Attributes):
         elif method == 'ice':
             func = self.compute_individual_cond_expect
 
-
         args_iterator = to_iterator(self.model_names, 
                                     features,
-                                    [nbins],
+                                    [n_bins],
                                     [subsample],
-                                    [nbootstrap])
+                                    [n_bootstrap])
 
         results = run_parallel(
                    func = func,
                    args_iterator = args_iterator,
                    kwargs = {}, 
-                   nprocs_to_use=njobs
+                   nprocs_to_use=n_jobs
             )
         
-        if len(self.model_names) > 1:
-            results = merge_nested_dict(results)
-        else:
-            results = merge_dict(results)
-                
-        return results
+        results = merge_dict(results)
+
+        results_ds = to_xarray(results)
+        
+        return results_ds
    
-    def compute_individual_cond_expect(self, model_name, features, nbins=30, subsample=1.0, nbootstrap=1):
+    def _store_results(self, method, model_name, features, ydata, xdata, hist_data ):
+        """
+         Store the results of the ALE/PD/ICE calculations into dict,
+         which is converted to an xarray.Dataset
+        """
+        results = {}
+
+        feature1 = f'{features[0]}' if isinstance(features, tuple) else features
+        feature2 = f'__{features[1]}' if isinstance(features, tuple) else ''
+        
+        y_shape = ['n_bootstrap', f'n_bins__{feature1}', f'n_bins{feature2}']
+        if feature2 == '':
+            y_shape = y_shape[:-1]
+            
+        hist_data1 = hist_data[0]
+        
+        xdata2 = None
+        if method == 'ale':
+            if np.ndim(xdata) > 1:
+                xdata1 = 0.5 * (xdata[0][1:] + xdata[0][:-1])
+                xdata2 = 0.5 * (xdata[1][1:] + xdata[1][:-1])
+            else:
+                xdata1 = 0.5 * (xdata[1:] + xdata[:-1])
+            if np.ndim(xdata) > 1:
+                hist_data2 = hist_data[1] 
+
+        elif method == 'pd':
+            xdata1 = xdata[0]
+            if np.shape(xdata)[0] > 1:
+                xdata2 = xdata[1]
+                hist_data2 = hist_data[1]
+            
+        results[f'{feature1}{feature2}__{model_name}__{method}'] = (y_shape, ydata)
+        results[f'{feature1}__bin_values'] = ([f'n_bins__{feature1}'], xdata1)
+        results[f'{feature1}'] = (['n_examples'], hist_data1)    
+        if xdata2 is not None:
+            results[f'{feature2[2:]}__bin_values'] = ([f'n_bins{feature2[2:]}'], xdata2)
+            results[f'{feature2[2:]}'] = (['n_examples'], hist_data2)
+
+        return results 
+            
+            
+    def compute_individual_cond_expect(self, model_name, features, n_bins=30, subsample=1.0, n_bootstrap=1):
         """
         Compute the Individual Conditional Expectations (see https://christophm.github.io/interpretable-ml-book/ice.html)
         """
@@ -264,9 +317,11 @@ class GlobalInterpret(Attributes):
 
         # Check if feature is valid
         is_valid_feature(features, self.feature_names)
-
-        if (subsample < 1.0):
-            idx = np.random.choice(len(self.examples), size=int(len(self.examples)*subsample))
+        
+        if (float(subsample) != 1.0):
+            n_examples = len(self.examples)
+            size = int(n_examples*subsample) if subsample <= 1.0 else subsample
+            idx = np.random.choice(n_examples, size=size)
             examples = self.examples.iloc[idx,:]
             examples.reset_index(drop=True, inplace=True)
         else:
@@ -278,7 +333,7 @@ class GlobalInterpret(Attributes):
         # Create a grid of values 
         grid = [np.linspace(np.amin(f),
                            np.amax(f),
-                           nbins
+                           n_bins
                           ) for f in feature_values]
 
         if self.model_output=='probability':
@@ -302,13 +357,20 @@ class GlobalInterpret(Attributes):
         #center the ICE plots
         ice_values -= np.mean(ice_values, axis=1).reshape(len(ice_values), 1)
 
-        results = { features[0]: {model_name : {}}}
-        results[features[0]][model_name]['values'] = ice_values
-        results[features[0]][model_name]['xdata'] = grid[0]
+        #results = { features[0]: {model_name : {}}}
+        #results[features[0]][model_name]['values'] = ice_values
+        #results[features[0]][model_name]['xdata'] = grid[0]
+        
+        results = self._store_results( method='ice', 
+                            model_name=model_name, 
+                            features=features, 
+                            ydata=ice_values, 
+                            xdata = grid[0], 
+                            hist_data=feature_values[0])
         
         return results 
 
-    def compute_partial_dependence(self, model_name, features, nbins=30, subsample=1.0, nbootstrap=1):
+    def compute_partial_dependence(self, model_name, features, n_bins=30, subsample=1.0, n_bootstrap=1):
 
         """
         Calculate the centered partial dependence.
@@ -329,18 +391,18 @@ class GlobalInterpret(Attributes):
                 string identifier or key value for the model object dict
             features : str
                 name of feature to compute PD for (string) 
-            nbins : int 
+            n_bins : int 
                 Number of evenly-spaced bins to compute PD
             subsample : float between 0-1
                 Percent of randomly sampled examples to compute PD for.
-            nbootstrap : int 
+            n_bootstrap : int 
                 Number of bootstrapping 
                 
         Returns:
             pd, partial dependence values (in %, i.e., multiplied by 100.) 
         """
         # Retrieve the model object from the models dict attribute 
-        model =  self.models[model_name]
+        model = self.models[model_name]
 
          #Check if features is a string
         if is_str(features):
@@ -350,19 +412,19 @@ class GlobalInterpret(Attributes):
         is_valid_feature(features, self.feature_names)
 
         # Extract the values for the features 
-        feature_values = [self.examples[f].to_numpy() for f in features]
+        full_feature_values = [self.examples[f].to_numpy() for f in features]
         
         # Create a grid of values 
         grid = [np.linspace(np.amin(f), 
                            np.amax(f), 
-                           nbins
-                          ) for f in feature_values]
+                           n_bins
+                          ) for f in full_feature_values]
 
         # get the bootstrap samples
-        if nbootstrap > 1 or float(subsample) != 1.0:
+        if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(self.examples, 
                                         subsample=subsample, 
-                                        nbootstrap=nbootstrap)
+                                        n_bootstrap=n_bootstrap)
         else:
             bootstrap_indices = [self.examples.index.to_list()]
 
@@ -377,7 +439,7 @@ class GlobalInterpret(Attributes):
         for k, idx in enumerate(bootstrap_indices):
             # get samples
             examples = self.examples.iloc[idx, :]
-            
+            feature_values = [examples[f].to_numpy() for f in features]
             averaged_predictions = [ ]
             # for each value, set all indices to the value, 
             # make prediction, store mean prediction
@@ -406,21 +468,21 @@ class GlobalInterpret(Attributes):
         # Reshape the pd_values for second-order effects 
         pd_values = np.array(pd_values)
         if len(features) > 1:
-            pd_values = pd_values.reshape(nbootstrap, nbins, nbins)
+            pd_values = pd_values.reshape(n_bootstrap, n_bins, n_bins)
         else: 
             features = features[0]
+
+        results = self._store_results( method='pd', 
+                            model_name=model_name, 
+                            features=features, 
+                            ydata=pd_values, 
+                            xdata = grid, 
+                            hist_data=feature_values)
         
-        results = { features: {model_name : {}}}
-        results[features][model_name]['values'] = pd_values
-        results[features][model_name]['xdata1'] = grid[0]
-        results[features][model_name]['xdata1_hist'] = feature_values[0]
-        if np.shape(grid)[0] > 1:
-            results[features][model_name]['xdata2'] = grid[1]
-            results[features][model_name]['xdata2_hist'] = feature_values[1]
         
         return results
 
-    def compute_first_order_ale(self, model_name, feature, nbins=30, subsample=1.0, nbootstrap=1):
+    def compute_first_order_ale(self, model_name, feature, n_bins=30, subsample=1.0, n_bootstrap=1):
         """
         Computes first-order ALE function on single continuous feature data.
         
@@ -433,9 +495,9 @@ class GlobalInterpret(Attributes):
                  the string identifier for model in the attribute "models" dict
             feature : string
                 The name of the feature to consider.
-            nbins : int 
+            n_bins : int 
             subsample : float [0,1]
-            nbootstrap : int
+            n_bootstrap : int
                 
         Returns: 
         ----------
@@ -448,10 +510,10 @@ class GlobalInterpret(Attributes):
             raise Exception(f"Feature {feature} is not a valid feature")
 
         # get the bootstrap samples
-        if nbootstrap > 1 or float(subsample) != 1.0:
+        if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(self.examples, 
                                         subsample=subsample, 
-                                        nbootstrap=nbootstrap)
+                                        n_bootstrap=n_bootstrap)
         else:
             bootstrap_indices = [self.examples.index.to_list()]
   
@@ -460,13 +522,13 @@ class GlobalInterpret(Attributes):
         # calculate the bin edges to be used in the bootstrapping. 
         original_feature_values = self.examples[feature].values
         bin_edges = np.unique( np.percentile(original_feature_values, 
-                                  np.linspace(0, 100, nbins+1),
+                                  np.linspace(0, 100, n_bins+1),
                                   interpolation="lower"
                                 )
                                 )
-        
+
         # Initialize an empty ale array 
-        ale = np.zeros((nbootstrap, len(bin_edges)-1))
+        ale = np.zeros((n_bootstrap, len(bin_edges)-1))
         
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
@@ -512,22 +574,33 @@ class GlobalInterpret(Attributes):
             ale_uninterpolated = np.array([0, *np.cumsum(mean_effects)])
 
             # Interpolate the ale to the center of the bins. 
-            ale[k,:] = 0.5*(ale_uninterpolated[1:] + ale_uninterpolated[:-1])
+            try:
+                ale[k,:] = 0.5*(ale_uninterpolated[1:] + ale_uninterpolated[:-1])
+            except Exception as e:
+                traceback.print_exc()
+                raise ValueError(f"""
+                                 The value of n_bins ({n_bins}) is likely too 
+                                 high relative to the sample size of the data. Either increase
+                                 the data size (if using subsample) or use less bins. 
+                                 """
+                                )
             
             # Center the ALE by substracting the bin-size weighted mean. 
             ale[k,:] -= np.sum(ale[k,:]  * index_groupby.size() / examples.shape[0]) 
-            
-        results = {feature : {model_name :{}}}
-        results[feature][model_name]['values'] = np.array(ale)
-        results[feature][model_name]['xdata1'] = 0.5 * (bin_edges[1:] + bin_edges[:-1])
-        results[feature][model_name]['xdata1_hist'] = feature_values
-        
+     
+        results = self._store_results( method='ale', 
+                            model_name=model_name, 
+                            features=feature, 
+                            ydata=ale, 
+                            xdata = bin_edges, 
+                            hist_data=[original_feature_values])
+    
         return results
     
     def _get_centers(self, x):
         return 0.5*(x[1:] + x[:-1]) 
     
-    def compute_second_order_ale(self, model_name, features, nbins=30, subsample=1.0, nbootstrap=1):
+    def compute_second_order_ale(self, model_name, features, n_bins=30, subsample=1.0, n_bootstrap=1):
         """
         Computes second-order ALE function on two continuous features data.
             
@@ -539,9 +612,9 @@ class GlobalInterpret(Attributes):
             model_name : str
             features : string
                 The name of the feature to consider.
-            nbins : int
+            n_bins : int
             subsample : float between [0,1]
-            nbootstrap : int 
+            n_bootstrap : int 
         
         Returns :
         ----------
@@ -564,16 +637,16 @@ class GlobalInterpret(Attributes):
         original_feature_values = [self.examples[features[i]].values for i in range(2)]
 
         bin_edges = [ np.unique( np.percentile(v, 
-                                  np.linspace(0.0, 100.0, nbins+1),
+                                  np.linspace(0.0, 100.0, n_bins+1),
                                   interpolation="lower")
                                 )
                      for v in original_feature_values]
         
         # get the bootstrap samples
-        if nbootstrap > 1 or float(subsample) != 1.0:
+        if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(self.examples, 
                                         subsample=subsample, 
-                                        nbootstrap=nbootstrap)
+                                        n_bootstrap=n_bootstrap)
         else:
             bootstrap_indices = [self.examples.index.to_list()]
 
@@ -740,45 +813,56 @@ class GlobalInterpret(Attributes):
            
             ale_set.append(ale)
 
-        results = {features : {model_name :{}}}
-        results[features][model_name]['values'] = ale_set
-        results[features][model_name]['xdata1'] = 0.5 * (bin_edges[0][1:] + bin_edges[0][:-1])
-        results[features][model_name]['xdata2'] = 0.5 * (bin_edges[1][1:] + bin_edges[1][:-1])
-        results[features][model_name]['xdata1_hist'] = original_feature_values[0]
-        results[features][model_name]['xdata2_hist'] = original_feature_values[1]
-         
+        ###ale_set_ds = xarray.DataArray(ale_set).to_masked_array()    
+        
+        results = self._store_results( method='ale', 
+                            model_name=model_name, 
+                            features=features, 
+                            ydata=ale_set, 
+                            xdata = bin_edges, 
+                            hist_data=original_feature_values)
+        
+        
         return results
          
-    def friedman_h_statistic(self, model_name, feature_tuple, nbins=30, subsample=1.0):
+    def friedman_h_statistic(self, model_name, feature_tuple, n_bins=30, subsample=1.0):
         """
         Compute the H-statistic for two-way interactions between two features. 
         
         Args:
             model_name : str
             feature_tuple : 2-tuple of strs
-            nbins : int
+            n_bins : int
         
         Returns:
         """
         self.model_names = [model_name]
         feature1, feature2 = feature_tuple
-        
         features = [feature1, feature2] 
         
+        # Compute the first-order effects for the two features.
         results = self._run_interpret_curves(method='pd', 
                                              features=features, 
-                                             nbins=nbins, 
-                                             njobs=2, 
+                                             n_bins=n_bins, 
+                                             n_jobs=2, 
                                              subsample=subsample, 
-                                             nbootstrap=1
+                                             n_bootstrap=1
                                             )
         
-        feature1_pd = results[feature1][model_name]['values'].squeeze()
-        feature2_pd = results[feature2][model_name]['values'].squeeze()
+        feature1_pd = results[f'{feature1}__{model_name}__pd'].values.squeeze()
+        feature2_pd = results[f'{feature2}__{model_name}__pd'].values.squeeze()
 
-        combined_results = self.compute_partial_dependence(model_name, feature_tuple, nbins)
-        combined_pd = combined_results[feature_tuple][model_name]['values'].squeeze()
+        # Compute the second-order effects between the two features 
+        combined_results = self.compute_partial_dependence(model_name, 
+                                                           feature_tuple, 
+                                                           n_bins,
+                                                           subsample=subsample)
+        
+        combined_results = to_xarray(combined_results)
+        
+        combined_pd = combined_results[f'{feature1}__{feature2}__{model_name}__pd'].values.squeeze()
        
+        # Calculate the H-statistics 
         pd_decomposed = feature1_pd[:,np.newaxis] + feature2_pd[np.newaxis,:]
         numer = (combined_pd - pd_decomposed)**2
         denom = (combined_pd)**2
@@ -786,11 +870,27 @@ class GlobalInterpret(Attributes):
         
         return sqrt(H_squared)
 
-    def interaction_strength(self, model_name, features, nbins=30, subsample=1.0, njobs=1, nbootstrap=1, **kwargs):
+    def interaction_strength(self, model_name, n_bins=30, subsample=1.0, n_jobs=1, n_bootstrap=1, **kwargs):
         """
         Compute the interaction strenth of a ML model (based on IAS from 
         Quantifying Model Complexity via Functional
         Decomposition for Better Post-Hoc Interpretability). 
+        
+        Args:
+        --------------------
+            model_name : string
+            
+            n_bins : integer 
+            
+            subsample : float or integer
+            
+            n_jobs : float or integer 
+            
+            n_bootstrap : integer 
+            
+            ale_subsample : float or integer 
+        
+        
         """
         ale_subsample = kwargs.get('ale_subsample', subsample)
 
@@ -798,29 +898,37 @@ class GlobalInterpret(Attributes):
         model =  self.models[model_name]
         feature_names = list(self.examples.columns)
         results = self._run_interpret_curves(method='ale',
-                                             features=features,
-                                             nbins=nbins,
-                                             njobs=njobs,
+                                             features=feature_names,
+                                             n_bins=n_bins,
+                                             n_jobs=n_jobs,
                                              subsample=ale_subsample,
-                                             nbootstrap=1
+                                             n_bootstrap=1
                                             )
+        
+        
+        
         
         # Get the interpolated ALE curves 
         ale_main_effects = {}
-        for f in features:
-            main_effect = results[f][model_name]['values'].squeeze()
+        for f in feature_names:
+            main_effect = results[f'{f}__{model_name}__ale'].values.squeeze()
             # Get the bootstrap mean effect (if applicable)
             #if main_effect.shape[0] > 1
             #   main_effect = np.mean(mean_effect, axis=0)
-            x_values =  results[f][model_name]['xdata1']
-            ale_main_effects[f] = interp1d(x_values, main_effect, fill_value="extrapolate")
+            x_values = results[f'{f}__bin_values'].values
+            
+            ### print(f'Interpolating {f} ...')
+            
+            ale_main_effects[f] = interp1d(x_values, main_effect, 
+                                           fill_value="extrapolate",
+                                          kind='quadratic')
 
         
         # get the bootstrap samples
-        if nbootstrap > 1 or float(subsample) != 1.0:
+        if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(self.examples,
                                         subsample=subsample,
-                                        nbootstrap=nbootstrap)
+                                        n_bootstrap=n_bootstrap)
         else:
             bootstrap_indices = [self.examples.index.to_list()]
 
