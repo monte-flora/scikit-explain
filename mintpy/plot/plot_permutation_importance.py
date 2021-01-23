@@ -133,7 +133,7 @@ class PlotImportance(PlotStructure):
                 sorted_var_names = list(results[f'{perm_method}_rankings__{model_name}'].values) 
                 sorted_var_names = sorted_var_names[: min(num_vars_to_plot, len(sorted_var_names))]
 
-				if num_vars_to_plot is None:
+                if num_vars_to_plot is None:
                     num_vars_to_plot == len(sorted_var_names)
 
                 scores = [results[f'{perm_method}_scores__{model_name}'].values[i,:] 
