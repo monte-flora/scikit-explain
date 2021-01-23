@@ -130,12 +130,11 @@ class PlotImportance(PlotStructure):
                 if only_one_model:
                     ax.set_xlabel(xlabels[g])
                 
-                #rankings = self.retrieve_ranking(importance_obj, multipass)
-                if num_vars_to_plot is None:
-                    num_vars_to_plot == len(sorted_var_names)
-                
                 sorted_var_names = list(results[f'{perm_method}_rankings__{model_name}'].values) 
                 sorted_var_names = sorted_var_names[: min(num_vars_to_plot, len(sorted_var_names))]
+
+				if num_vars_to_plot is None:
+                    num_vars_to_plot == len(sorted_var_names)
 
                 scores = [results[f'{perm_method}_scores__{model_name}'].values[i,:] 
                           for i in range(len(sorted_var_names))]

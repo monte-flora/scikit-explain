@@ -111,8 +111,8 @@ class PlotInterpretCurves(PlotStructure):
     
             for i, model_name in enumerate(model_names):
                 if ice_curves: 
-                    #ice_data = ice_curves[feature][model_name]['values']
-                    #ice_xdata = ice_curves[feature][model_name]['xdata']
+                    ice_data = ice_curves[f'{feature}__{model_name}__ice'].values
+					ice_xdata = ice_curves[f'{features}__bin_values'].values
                     if to_probability:
                         ice_data *=100
                     if unnormalize is not None:

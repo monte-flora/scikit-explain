@@ -61,7 +61,7 @@ class LocalInterpret(Attributes):
             self.set_model_attribute(models, model_names)
             self.set_examples_attribute(examples, feature_names)
             self.set_target_attribute(targets)
-            self.set_model_output(model_output, model)
+            self.set_model_output(model_output, models)
         else:
             self.models = models
             self.model_names = model_names

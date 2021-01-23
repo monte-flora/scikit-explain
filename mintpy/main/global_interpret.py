@@ -186,7 +186,7 @@ class GlobalInterpret(Attributes):
                 
                 data[f'{perm_method}_rankings__{model_name}'] = ([f'n_vars_{perm_method}'], top_features)
                 data[f'{perm_method}_scores__{model_name}'] = ([f'n_vars_{perm_method}', 'n_bootstrap'], scores)
-            data[f'original_score__{model_name}'] = (['n_bootstrap'], results[model_name].original_score)
+            data[f'original_score__{model_name}'] = (['n_bootstrap'], pi_dict[model_name].original_score)
                 
         results_ds = to_xarray(data)
               
