@@ -4,12 +4,12 @@ import sklearn
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, _tree
 from distutils.version import LooseVersion
+
 if LooseVersion(sklearn.__version__) < LooseVersion("0.17"):
     raise Exception("treeinterpreter requires scikit-learn 0.17 or later")
 
 
-class TreeInterpreter():
-
+class TreeInterpreter:
     def __init__(self, model, examples, joint_contribution=False):
         """
         Parameters
@@ -22,14 +22,14 @@ class TreeInterpreter():
 
         X : array-like, shape = (n_samples, n_features)
         Test samples.
-    
+
         joint_contribution : boolean
         Specifies if contributions are given individually from each feature,
         or jointly over them
         """
 
-        self._model      = model
-        self._examples   = examples
+        self._model = model
+        self._examples = examples
         self._joint_contribution = joint_contribution
 
     def _get_tree_paths(self, tree, node_id, depth=0):
@@ -55,7 +55,6 @@ class TreeInterpreter():
             paths = [[node_id]]
         return paths
 
-
     def predict_tree(self, tree):
         """
         For a given DecisionTreeRegressor, DecisionTreeClassifier,
@@ -64,17 +63,17 @@ class TreeInterpreter():
         that prediction ≈ bias + feature_contributions.
         """
         leaves = tree.apply(self._examples)
-        paths  = self._get_tree_paths(tree.tree_, 0)
+        paths = self._get_tree_paths(tree.tree_, 0)
 
         for path in paths:
             path.reverse()
 
         leaf_to_path = {}
 
-        #map leaves to paths
+        # map leaves to paths
         for path in paths:
-            leaf_to_path[path[-1]] = path         
-    
+            leaf_to_path[path[-1]] = path
+
         # remove the single-dimensional inner arrays
         values = tree.tree_.value.squeeze(axis=1)
 
@@ -94,11 +93,11 @@ class TreeInterpreter():
             line_shape = (self._examples.shape[1], tree.n_classes_)
 
         direct_prediction = values[leaves]
-    
-        #make into python list, accessing values will be faster
-        values_list   = list(values)
+
+        # make into python list, accessing values will be faster
+        values_list = list(values)
         feature_index = list(tree.tree_.feature)
-    
+
         contributions = []
         if self._joint_contribution:
             for row, leaf in enumerate(leaves):
@@ -107,35 +106,34 @@ class TreeInterpreter():
                 contributions.append({})
                 for i in range(len(path) - 1):
                     path_features.add(feature_index[path[i]])
-                    contrib = values_list[path[i+1]] - \
-                             values_list[path[i]]
-                    #path_features.sort()
-                    contributions[row][tuple(sorted(path_features))] = \
-                        contributions[row].get(tuple(sorted(path_features)), 0) + contrib
+                    contrib = values_list[path[i + 1]] - values_list[path[i]]
+                    # path_features.sort()
+                    contributions[row][tuple(sorted(path_features))] = (
+                        contributions[row].get(tuple(sorted(path_features)), 0)
+                        + contrib
+                    )
             return direct_prediction, biases, contributions
-        
+
         else:
             unique_leaves = np.unique(leaves)
             unique_contributions = {}
-        
+
             for row, leaf in enumerate(unique_leaves):
                 for path in paths:
                     if leaf == path[-1]:
                         break
-            
+
                 contribs = np.zeros(line_shape)
                 for i in range(len(path) - 1):
-                
-                    contrib = values_list[path[i+1]] - \
-                             values_list[path[i]]
+
+                    contrib = values_list[path[i + 1]] - values_list[path[i]]
                     contribs[feature_index[path[i]]] += contrib
                 unique_contributions[leaf] = contribs
-            
+
             for row, leaf in enumerate(leaves):
                 contributions.append(unique_contributions[leaf])
 
             return direct_prediction, biases, np.array(contributions)
-
 
     def predict_forest(self):
 
@@ -146,35 +144,38 @@ class TreeInterpreter():
         feature_contributions.
         """
 
-        biases        = []
+        biases = []
         contributions = []
-        predictions   = []
-    
+        predictions = []
+
         if self._joint_contribution:
-        
+
             for tree in self._model.estimators_:
                 pred, bias, contribution = self.predict_tree()
 
                 biases.append(bias)
                 contributions.append(contribution)
                 predictions.append(pred)
-        
+
             total_contributions = []
-        
+
             for i in range(len(self._examples)):
                 contr = {}
                 for j, dct in enumerate(contributions):
                     for k in set(dct[i]).union(set(contr.keys())):
-                        contr[k] = (contr.get(k, 0)*j + dct[i].get(k,0) ) / (j+1)
+                        contr[k] = (contr.get(k, 0) * j + dct[i].get(k, 0)) / (j + 1)
 
-                total_contributions.append(contr)    
-            
+                total_contributions.append(contr)
+
             for i, item in enumerate(contribution):
                 total_contributions[i]
                 sm = sum([v for v in contribution[i].values()])
-            
-            return (np.mean(predictions, axis=0), np.mean(biases, axis=0),
-                total_contributions)
+
+            return (
+                np.mean(predictions, axis=0),
+                np.mean(biases, axis=0),
+                total_contributions,
+            )
 
         else:
             for tree in self._model.estimators_:
@@ -183,13 +184,16 @@ class TreeInterpreter():
                 biases.append(bias)
                 contributions.append(contribution)
                 predictions.append(pred)
-        
-            return (np.mean(predictions, axis=0), np.mean(biases, axis=0),
-                np.mean(contributions, axis=0))
-    
+
+            return (
+                np.mean(predictions, axis=0),
+                np.mean(biases, axis=0),
+                np.mean(contributions, axis=0),
+            )
+
     def predict(self):
 
-        """ Returns a triple (prediction, bias, feature_contributions), such
+        """Returns a triple (prediction, bias, feature_contributions), such
         that prediction ≈ bias + feature_contributions.
 
         Returns
@@ -199,7 +203,7 @@ class TreeInterpreter():
             for classification
         * bias, shape = (n_samples) for regression and (n_samples, n_classes) for
             classification
-        * contributions, If joint_contribution is False then returns and  array of 
+        * contributions, If joint_contribution is False then returns and  array of
             shape = (n_samples, n_features) for regression or
             shape = (n_samples, n_features, n_classes) for classification, denoting
             contribution from each feature.
@@ -209,16 +213,19 @@ class TreeInterpreter():
         """
 
         # Only single out response variable supported,
-        if (self._model.n_outputs_ > 1):
+        if self._model.n_outputs_ > 1:
             raise ValueError("Multilabel classification trees not supported")
 
-        if (isinstance(self._model, DecisionTreeClassifier) or
-            isinstance(self._model, DecisionTreeRegressor)):
+        if isinstance(self._model, DecisionTreeClassifier) or isinstance(
+            self._model, DecisionTreeRegressor
+        ):
             return self.predict_tree()
-        elif (isinstance(self._model, RandomForestClassifier) or
-              isinstance(self._model, RandomForestRegressor)):
+        elif isinstance(self._model, RandomForestClassifier) or isinstance(
+            self._model, RandomForestRegressor
+        ):
             return self.predict_forest()
         else:
-            raise ValueError("Wrong model type. Base learner needs to be a "
-                             "DecisionTreeClassifier or DecisionTreeRegressor.")
-    
+            raise ValueError(
+                "Wrong model type. Base learner needs to be a "
+                "DecisionTreeClassifier or DecisionTreeRegressor."
+            )
