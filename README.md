@@ -22,7 +22,8 @@ numpy
 pandas
 scikit-learn
 matplotlib
-shap
+shap>=0.30.0
+xarray>=0.16.0
 ```
 
 ### Initializing MintPy
