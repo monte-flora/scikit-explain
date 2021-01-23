@@ -54,14 +54,21 @@ def run_parallel(
     nprocs_to_use,
 ):
     """
-    Runs a series of python scripts in parallel
+    Runs a series of python scripts in parallel. Scripts uses the tqdm to create a
+    progress bar.
+
     Args:
     -------------------------
-    func, python function, the function to be parallelized; can be a function which issues a series of python scripts
-    iterator, python iterator, the arguments of func to be iterated over
+        func : callable
+            python function, the function to be parallelized; can be a function which issues a series of python scripts
+        args_iterator :  iterable, list,
+            python iterator, the arguments of func to be iterated over
                              it can be the iterator itself or a series of list
-    nprocs_to_use, int or float, if int, taken as the literal number of processors to use
-                                if float (between 0 and 1), taken as the percentage of available processors to use
+        nprocs_to_use : int or float,
+            if int, taken as the literal number of processors to use
+            if float (between 0 and 1), taken as the percentage of available processors to use
+        kwargs : dict
+            keyword arguments to be passed to the func
     """
     if 0 <= nprocs_to_use < 1:
         nprocs_to_use = int(nprocs_to_use * mp.cpu_count())
@@ -87,9 +94,13 @@ def run_parallel(
         result_objects.append(result)
 
     pool.close()
-    pool.join()
+    # pool.join()
+
+    result_list_tqdm = []
+    for job in tqdm(result_objects):
+        result_list_tqdm.append(job.get())
 
     # list of dicts
-    results = [result.get() for result in result_objects]
+    # results = [result.get() for result in result_objects]
 
-    return results
+    return result_list_tqdm
