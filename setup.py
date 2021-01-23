@@ -32,7 +32,8 @@ REQUIRED = [
     'pandas',
     'scikit-learn',
     'matplotlib',
-    'shap'
+    'shap>=0.30.0',
+	'xarray>=0.16.0'
 ] 
 
 # What packages are optional?
