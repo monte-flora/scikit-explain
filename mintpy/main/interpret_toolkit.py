@@ -692,7 +692,7 @@ class InterpretToolkit(Attributes):
         if not combine:
             return results
         else:
-            return combine_top_features(results, nvars=n_vars)
+            return combine_top_features(results, n_vars=n_vars)
 
     def load_results(self, fnames,):
         """ Load results of a computation (permutation importance, calc_ale, calc_pd, etc).
