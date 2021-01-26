@@ -23,6 +23,10 @@ def norm_aupdc(targets, predictions, **kwargs):
 
     # Number of positive examples
     pos = np.count_nonzero(targets)
+    if pos == 0:
+        print('No positive examples for the NAUPDC calculation! Returning a NAN value.')
+        return np.nan
+
     # Number of negative examples
     neg = len(targets) - pos
 

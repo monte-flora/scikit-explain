@@ -11,7 +11,11 @@ except ImportError:
     pass
 
 from shap.plots import colors
-from shap.utils import convert_name, approximate_interactions
+try:
+    from shap.utils import convert_name, approximate_interactions
+except:
+    from shap.common import convert_name, approximate_interactions
+
 from matplotlib.ticker import MaxNLocator
 
 from .base_plotting import PlotStructure
