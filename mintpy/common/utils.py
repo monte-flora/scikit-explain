@@ -181,7 +181,7 @@ def save_pickle(fname, data):
 
 
 def load_netcdf(fnames):
-    """Load netcdf file with xarray"""
+    """Load multiple netcdf files with xarray"""
     if not isinstance(fnames, list):
         fnames = [fnames]
 
@@ -190,7 +190,12 @@ def load_netcdf(fnames):
         ds = xr.open_dataset(f)
         data.append(ds)
 
-    ds_set = xr.merge(data, combine_attrs="no_conflicts")
+    try:
+        ds_set = xr.merge(data, combine_attrs="no_conflicts")
+    except:
+        models_used = [ds.attrs['models used'] for ds in data]
+        ds_set = xr.merge(data, combine_attrs="override")
+        ds_set.attrs['models used'] = models_used 
 
     return ds_set
 
@@ -200,6 +205,8 @@ def save_netcdf(fname, ds, complevel=5):
     comp = dict(zlib=True, complevel=complevel)
     encoding = {var: comp for var in ds.data_vars}
     ds.to_netcdf(path=fname, encoding=encoding)
+    ds.close()
+    del ds 
 
 
 def combine_top_features(results_dict, n_vars=None):
