@@ -168,7 +168,7 @@ class PlotImportance(PlotStructure):
                 ]
                 # Get the predictor names
                 variable_names_to_plot = [
-                    " {}".format(var)
+                    fr"$ {var}$" 
                     for var in self.convert_vars_to_readable(
                         [
                             "No Permutations",
