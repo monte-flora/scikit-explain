@@ -411,20 +411,25 @@ class InterpretToolkit(Attributes):
                                                    ) 
     
 
-    def _plot_interpret_curves(self, method, data, display_feature_names={}, display_units={}, 
+    def _plot_interpret_curves(self, method, data, features=None, display_feature_names={}, display_units={}, 
                                to_probability=False, **kwargs):
         """
         FOR INTERNAL USE ONLY. 
         
         Handles 1D or 2D PD/ALE plots.
         """
+        if features is None:
+            try:
+                features = self.features_used
+            except:
+                raise ValueError('No features were provided to plot!')
 
         if data.attrs['dimension'] == '2D':
             plot_obj = PlotInterpret2D()
             return plot_obj.plot_contours(method=method,
                                           data=data,
                                           model_names=self.model_names,
-                                          features=self.features_used,
+                                          features=features,
                                           display_feature_names=display_feature_names,
                                           display_units=display_units,
                                           to_probability = to_probability,
@@ -434,13 +439,13 @@ class InterpretToolkit(Attributes):
             return plot_obj.plot_1d_curve(method=method,
                                           data=data,
                                           model_names=self.model_names,
-                                          features=self.features_used,
+                                          features=features,
                                           display_feature_names=display_feature_names,
                                           display_units=display_units,
                                           to_probability = to_probability,
                                           **kwargs)
 
-    def plot_pd(self, display_feature_names={}, display_units={}, 
+    def plot_pd(self, features=None, display_feature_names={}, display_units={}, 
                 line_colors=None, to_probability=False, **kwargs):
         """
         Runs the partial dependence plotting.
@@ -489,13 +494,14 @@ class InterpretToolkit(Attributes):
         return self._plot_interpret_curves(
                                method='pd',
                                data=data,
+                               features=features,
                                display_feature_names=display_feature_names,
                                display_units=display_units,
                                to_probability=to_probability,
                                line_colors=line_colors,            
                                **kwargs)
 
-    def plot_ale(self, display_feature_names={}, display_units={}, 
+    def plot_ale(self, features=None, display_feature_names={}, display_units={}, 
                  line_colors=None, to_probability=False, **kwargs):
         """
         Runs the accumulated local effects plotting.
@@ -544,6 +550,7 @@ class InterpretToolkit(Attributes):
         return self._plot_interpret_curves(
                                method = 'ale',
                                data=data,
+                               features=features,
                                display_feature_names=display_feature_names,
                                display_units=display_units,
                                to_probability=to_probability,
