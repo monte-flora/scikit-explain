@@ -191,10 +191,10 @@ def load_netcdf(fnames):
         data.append(ds)
 
     try:
-        ds_set = xr.merge(data, combine_attrs="no_conflicts")
+        ds_set = xr.merge(data, combine_attrs="no_conflicts", compat='override')
     except:
         models_used = [ds.attrs['models used'] for ds in data]
-        ds_set = xr.merge(data, combine_attrs="override")
+        ds_set = xr.merge(data, combine_attrs="override", compat='override')
         ds_set.attrs['models used'] = models_used 
 
     return ds_set
