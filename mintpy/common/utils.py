@@ -197,6 +197,11 @@ def load_netcdf(fnames):
         ds_set = xr.merge(data, combine_attrs="override", compat='override')
         ds_set.attrs['models used'] = models_used 
 
+    # Check that names 
+    #model_names = ds_set.attrs['models used']
+    # if len(list(set(alist))) != len(alist):
+    #        alist = [x+f'_{i}' for i,x in enumerate(alist)]
+
     return ds_set
 
 
