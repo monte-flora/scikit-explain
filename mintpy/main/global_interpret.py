@@ -193,6 +193,8 @@ class GlobalInterpret(Attributes):
             )
 
             pi_dict[model_name] = pi_result
+            
+            del pi_result
 
         data = {}
         for model_name in self.model_names:
@@ -926,8 +928,35 @@ class GlobalInterpret(Attributes):
 
         return sqrt(H_squared)
 
-    def interaction_strength(
-        self, model_name, n_bins=30, subsample=1.0, n_jobs=1, n_bootstrap=1, **kwargs
+
+    def compute_scalar_interaction_stats(self, method, data, model_names, n_bins=30, subsample=1.0, n_bootstrap=1, n_jobs=1, **kwargs):
+        """
+        Wrapper function for computing the interaction strength statistic (see below).
+        Will perform calculation in parallel for multiple models. 
+        """
+        if method == 'ias':
+            func=self.compute_interaction_strength
+        elif method == 'h_stat':
+            func = self.friedman_h_statistic
+
+        self.data = data
+        args_iterator = to_iterator(
+            model_names, [n_bins], [subsample], [n_bootstrap]
+        )
+        kwargs['n_jobs'] = n_jobs
+        results = run_parallel(
+            func=func, 
+            args_iterator=args_iterator, 
+            kwargs=kwargs, nprocs_to_use=n_jobs
+        )
+        
+        results = merge_dict(results)
+
+        return results 
+
+
+    def compute_interaction_strength(
+        self, model_name, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs
     ):
         """
         Compute the interaction strenth of a ML model (based on IAS from
@@ -936,7 +965,9 @@ class GlobalInterpret(Attributes):
 
         Args:
         --------------------
-            model_name : string
+            results : xarray.Dataset 
+
+            model_names : list of strings
 
             n_bins : integer
 
@@ -951,32 +982,32 @@ class GlobalInterpret(Attributes):
 
         """
         ale_subsample = kwargs.get("ale_subsample", subsample)
-
-        # Get the model predictions
         model = self.models[model_name]
         feature_names = list(self.examples.columns)
-        results = self._run_interpret_curves(
-            method="ale",
-            features=feature_names,
-            n_bins=n_bins,
-            n_jobs=n_jobs,
-            subsample=ale_subsample,
-            n_bootstrap=1,
-        )
+        try:
+            data = self.data
+        except:
+            # Get the ALE curve for each feature    
+            feature_names = list(self.examples.columns)
+            n_jobs = kwargs.get('n_jobs', 1) 
+            data = self._run_interpret_curves(
+                    method="ale",
+                    features=feature_names,
+                    n_bins=n_bins,
+                    n_jobs=n_jobs,
+                    subsample=ale_subsample,
+                    n_bootstrap=1,
+                    )
+       
 
         # Get the interpolated ALE curves
         ale_main_effects = {}
         for f in feature_names:
-            main_effect = results[f"{f}__{model_name}__ale"].values.squeeze()
-            # Get the bootstrap mean effect (if applicable)
-            # if main_effect.shape[0] > 1
-            #   main_effect = np.mean(mean_effect, axis=0)
-            x_values = results[f"{f}__bin_values"].values
-
-            ### print(f'Interpolating {f} ...')
+            main_effect = data[f"{f}__{model_name}__ale"].values.squeeze()
+            x_values = data[f"{f}__bin_values"].values
 
             ale_main_effects[f] = interp1d(
-                x_values, main_effect, fill_value="extrapolate", kind="quadratic"
+                x_values, main_effect, fill_value="extrapolate", kind="linear"
             )
 
         # get the bootstrap samples
@@ -1006,7 +1037,7 @@ class GlobalInterpret(Attributes):
                         examples[i, :], ale_main_effects, feature_names, avg_prediction
                     )
                 )
-
+                
             main_effects = np.array(main_effects)
 
             num = np.sum((predictions - main_effects) ** 2)
@@ -1015,7 +1046,7 @@ class GlobalInterpret(Attributes):
             # Compute the interaction strength
             ias.append(num / denom)
 
-        return np.array(ias)
+        return {model_name : np.array(ias)}
 
 
 def combine_ale_effects(example, ale_main_effects, feature_names, avg_prediction):
