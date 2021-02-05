@@ -316,7 +316,7 @@ class GlobalInterpret(Attributes):
             if np.ndim(xdata) > 1:
                 hist_data2 = hist_data[1]
 
-        elif method == "pd":
+        elif method == "pd" or method == 'ice':
             xdata1 = xdata[0]
             if np.shape(xdata)[0] > 1:
                 xdata2 = xdata[1]
@@ -383,17 +383,18 @@ class GlobalInterpret(Attributes):
         # center the ICE plots
         ice_values -= np.mean(ice_values, axis=1).reshape(len(ice_values), 1)
 
-        # results = { features[0]: {model_name : {}}}
-        # results[features[0]][model_name]['values'] = ice_values
-        # results[features[0]][model_name]['xdata'] = grid[0]
+        if len(features) > 1:
+            ice_values = ice_values.reshape(n_bootstrap, n_bins, n_bins)
+        else:
+            features = features[0]
 
         results = self._store_results(
             method="ice",
             model_name=model_name,
             features=features,
             ydata=ice_values,
-            xdata=grid[0],
-            hist_data=feature_values[0],
+            xdata=grid,
+            hist_data=feature_values,
         )
 
         return results
@@ -984,6 +985,11 @@ class GlobalInterpret(Attributes):
         ale_subsample = kwargs.get("ale_subsample", subsample)
         model = self.models[model_name]
         feature_names = list(self.examples.columns)
+        
+        if 'Run Date' in feature_names:
+            feature_names.remove('Run Date')
+
+        
         try:
             data = self.data
         except:
@@ -1003,7 +1009,10 @@ class GlobalInterpret(Attributes):
         # Get the interpolated ALE curves
         ale_main_effects = {}
         for f in feature_names:
-            main_effect = data[f"{f}__{model_name}__ale"].values.squeeze()
+            try:
+                main_effect = data[f"{f}__{model_name}__ale"].values.squeeze()
+            except:
+                continue 
             x_values = data[f"{f}__bin_values"].values
 
             ale_main_effects[f] = interp1d(
