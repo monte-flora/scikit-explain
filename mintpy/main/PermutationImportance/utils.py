@@ -12,7 +12,6 @@ __all__ = ["add_ranks_to_dict", "get_data_subset", "make_data_from_columns"]
 def add_ranks_to_dict(result, variable_names, scoring_strategy):
     """Takes a list of (var, score) and converts to a dictionary of 
     {var: (rank, score)}
-
     :param result: a dict of {var_index: score}
     :param variable_names: a list of variable names
     :param scoring_strategy: a function to be used for determining optimal
@@ -41,7 +40,6 @@ def add_ranks_to_dict(result, variable_names, scoring_strategy):
 def get_data_subset(data, rows=None, columns=None):
     """Returns a subset of the data corresponding to the desired rows and
     columns
-
     :param data: either a pandas dataframe or a numpy array
     :param rows: a list of row indices
     :param columns: a list of column indices
@@ -65,17 +63,20 @@ def get_data_subset(data, rows=None, columns=None):
             data, "Data must be a pandas dataframe or numpy array")
 
 
-def make_data_from_columns(columns_list):
+def make_data_from_columns(columns_list, index=None):
     """Synthesizes a dataset out of a list of columns
-
     :param columns_list: a list of either pandas series or numpy arrays
     :returns: a pandas dataframe or a numpy array
     """
     if len(columns_list) == 0:
         raise InvalidDataException(
             columns_list, "Must have at least one column to synthesize dataset")
-    if isinstance(columns_list[0], pd.DataFrame):
-        return pd.concat(columns_list, axis=1)
+    if isinstance(columns_list[0], pd.DataFrame) or isinstance(columns_list[0], pd.Series):
+        df = pd.concat([c.reset_index(drop=True) for c in columns_list], axis=1)
+        if index is not None:
+            return df.set_index(index)
+        else:
+            return df
     elif isinstance(columns_list[0], np.ndarray):
         return np.column_stack(columns_list)
     else:
