@@ -1029,16 +1029,10 @@ class GlobalInterpret(Attributes):
             # Get the average model prediction
             avg_prediction = np.mean(predictions)
 
-            # Combine the main effects
-            main_effects = []
-            for i in range(len(examples)):
-                main_effects.append(
-                    combine_ale_effects(
-                        examples[i, :], ale_main_effects, feature_names, avg_prediction
-                    )
-                )
-                
-            main_effects = np.array(main_effects)
+            # Get the ALE value for each feature per example
+            main_effects = np.array([ale_main_effects[f](examples[:,i]) for i,f in enumerate(feature_names)])
+            # Sum the ALE values per example and add on the average value 
+            main_effects = np.sum(main_effects.T, axis=1) + avg_prediction 
 
             num = np.sum((predictions - main_effects) ** 2)
             denom = np.sum((predictions - avg_prediction) ** 2)
@@ -1048,12 +1042,3 @@ class GlobalInterpret(Attributes):
 
         return {model_name : np.array(ias)}
 
-
-def combine_ale_effects(example, ale_main_effects, feature_names, avg_prediction):
-    """
-    Combine all first-order ALE effects for a given example
-    """
-    return np.sum(
-        [ale_main_effects[f](example[j]) for j, f in enumerate(feature_names)]
-        + [avg_prediction]
-    )
