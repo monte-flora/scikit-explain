@@ -902,8 +902,10 @@ class InterpretToolkit(Attributes):
         available_options = {'permutation_importance' : 'perm_imp_ds',
                              'pd' : 'pd_ds',
                              'ale' : 'ale_ds',
-                             'contributions' : 'contrib_ds'
-                            }
+                             'contributions' : 'contrib_ds',
+                             'ice' : 'ice_ds'
+                             }
+        
         if option not in list(available_options.keys()):
             raise ValueError(f"""{option} is not a possible option!
                              Possible options are {list(available_options.keys())}
