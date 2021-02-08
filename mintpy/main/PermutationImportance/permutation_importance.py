@@ -14,7 +14,7 @@ should be to maximize the error or loss function."""
 import numpy as np
 	
 from .abstract_runner import abstract_variable_importance
-from .selection_strategies import PermutationImportanceSelectionStrategy
+from .selection_strategies import PermutationImportanceSelectionStrategy, ConditionalPermutationImportanceSelectionStrategy
 from .sklearn_api import score_trained_sklearn_model, score_trained_sklearn_model_with_probabilities
 
 __all__ = ["permutation_importance", "sklearn_permutation_importance"]
@@ -23,35 +23,43 @@ __all__ = ["permutation_importance", "sklearn_permutation_importance"]
 #variable_names = ['' for i in range(len(fake_data))]
 #from sklearn.metrics import roc_auc_score
 
-def permutation_importance(scoring_data, scoring_fn, scoring_strategy, variable_names=None, nimportant_vars=None, njobs=1, verbose=False, **kwargs):
-	"""Performs permutation importance over data given a particular
-	set of functions for scoring and determining optimal variables
+def permutation_importance(scoring_data, scoring_fn, scoring_strategy, variable_names=None, nimportant_vars=None, njobs=1, 
+    method='marginal', verbose=False, **kwargs):
+        """Performs permutation importance over data given a particular
+        set of functions for scoring and determining optimal variables
 
-	:param scoring_data: a 2-tuple ``(inputs, outputs)`` for scoring in the
-		``scoring_fn``
-	:param scoring_fn: a function to be used for scoring. Should be of the form
-		``(training_data, scoring_data) -> some_value``
-	:param scoring_strategy: a function to be used for determining optimal
-		variables. Should be of the form ``([some_value]) -> index``
-	:param variable_names: an optional list for variable names. If not given,
-		will use names of columns of data (if pandas dataframe) or column
-		indices
-	:param nimportant_vars: number of variables to compute multipass importance
-		for. Defaults to all variables
-	:param njobs: an integer for the number of threads to use. If negative, will
-		use ``num_cpus + njobs``. Defaults to 1
-	:returns: :class:`PermutationImportance.result.ImportanceResult` object 
-		which contains the results for each run
-	"""
-	# We don't need the training data, so pass empty arrays to the abstract runner
-	if scoring_data is None:
-		raise ValueError("Must declare scoring data!")	 
-	else:
-		return abstract_variable_importance(training_data=(np.array([]), np.array([])), 
+        :param scoring_data: a 2-tuple ``(inputs, outputs)`` for scoring in the
+            ``scoring_fn``
+        :param scoring_fn: a function to be used for scoring. Should be of the form
+            ``(training_data, scoring_data) -> some_value``
+        :param scoring_strategy: a function to be used for determining optimal
+            variables. Should be of the form ``([some_value]) -> index``
+        :param variable_names: an optional list for variable names. If not given,
+            will use names of columns of data (if pandas dataframe) or column
+            indices
+        :param nimportant_vars: number of variables to compute multipass importance
+            for. Defaults to all variables
+        :param njobs: an integer for the number of threads to use. If negative, will
+            use ``num_cpus + njobs``. Defaults to 1
+        :returns: :class:`PermutationImportance.result.ImportanceResult` object 
+            which contains the results for each run
+        """
+        if method == 'conditional':
+            selection_strategy=ConditionalPermutationImportanceSelectionStrategy
+        elif method == 'marginal':
+            selection_strategy=PermutationImportanceSelectionStrategy
+        else:
+            raise ValueError(f'method must be "conditional" or "marginal"!') 
+
+        # We don't need the training data, so pass empty arrays to the abstract runner
+        if scoring_data is None:
+            raise ValueError("Must declare scoring data!")	 
+        else:
+            return abstract_variable_importance(training_data=(np.array([]), np.array([])), 
 					scoring_data=scoring_data, 
 					scoring_fn=scoring_fn, 
 					scoring_strategy=scoring_strategy, 
-					selection_strategy=PermutationImportanceSelectionStrategy, 
+					selection_strategy=selection_strategy, 
 					variable_names=variable_names, 
 					nimportant_vars=nimportant_vars, 
 					njobs=njobs,
@@ -64,7 +72,9 @@ def sklearn_permutation_importance( model,
 									evaluation_fn, 
 									scoring_strategy, 
 									variable_names=None, 
-									nimportant_vars=None, njobs=1, nbootstrap=1, subsample=1, verbose=False, **kwargs):
+									nimportant_vars=None, 
+                                                                        method='marginal',
+                                                                        njobs=1, nbootstrap=1, subsample=1, verbose=False, **kwargs):
 	"""Performs permutation importance for a particular model, 
 	``scoring_data``, ``evaluation_fn``, and strategy for determining optimal 
 	variables
@@ -107,4 +117,4 @@ def sklearn_permutation_importance( model,
 		scoring_fn = score_trained_sklearn_model(
 			model, evaluation_fn, nbootstrap=nbootstrap, subsample=subsample, **kwargs)
 
-	return permutation_importance(scoring_data=scoring_data, scoring_fn=scoring_fn, scoring_strategy=scoring_strategy, variable_names=variable_names, nimportant_vars=nimportant_vars, njobs=njobs, verbose=verbose, **kwargs)
+	return permutation_importance(scoring_data=scoring_data, scoring_fn=scoring_fn, scoring_strategy=scoring_strategy, variable_names=variable_names, nimportant_vars=nimportant_vars, njobs=njobs, verbose=verbose, method=method, **kwargs)
