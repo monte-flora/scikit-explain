@@ -20,7 +20,7 @@ strategies.
 import numpy as np
 import pandas as pd
 
-from .utils import get_data_subset, make_data_from_columns
+from .utils import get_data_subset, make_data_from_columns, conditional_permutations
 
 __all__ = ["SequentialForwardSelectionStrategy",
            "SequentialBackwardSelectionStrategy",
@@ -156,3 +156,45 @@ class PermutationImportanceSelectionStrategy(SelectionStrategy):
             [get_data_subset(self.shuffled_scoring_inputs if i in important_variables else scoring_inputs, None, [i]) for i in range(self.num_vars)], index=self.original_index)
 
         return self.training_data, (complete_scoring_inputs, scoring_outputs)
+
+
+class ConditionalPermutationImportanceSelectionStrategy(SelectionStrategy):
+    """ Conditional Permutation Importance tests all variables which are not yet considered
+    important by performing conditional permutation on that column in addition to the columns of the 
+    variables which are considered important. The shape of the data will remain
+    constant, but at each step, one additional column will be permuted."""
+
+    name = "Conditional Permutation Importance"
+
+    def __init__(self, training_data, scoring_data, num_vars, important_vars, **kwargs):
+        """Initializes the object by storing the data and keeping track of other
+        important information
+        :param training_data: (training_inputs, training_outputs)
+        :param scoring_data: (scoring_inputs, scoring_outputs)
+        :param num_vars: integer for the total number of variables
+        :param important_vars: a list of the indices of variables which are 
+            already considered important
+        """
+        super(ConditionalPermutationImportanceSelectionStrategy, self).__init__(
+            training_data, scoring_data, num_vars, important_vars)
+        n_bins = kwargs.get('n_bins', 50)
+        
+        # Also initialize the "shuffled data"
+        scoring_inputs, __ = self.scoring_data
+        self.shuffled_scoring_inputs = conditional_permutations(
+            scoring_inputs, n_bins) # This copies
+
+    def generate_datasets(self, important_variables):
+        """Check each of the non-important variables. Dataset has columns which
+        are important shuffled
+        :returns: (training_data, scoring_data)
+        """
+        scoring_inputs, scoring_outputs = self.scoring_data
+        # If a feature has been deemed important it remains shuffled
+        complete_scoring_inputs = make_data_from_columns(
+            [get_data_subset(self.shuffled_scoring_inputs if i in important_variables else scoring_inputs, None, [i]) 
+             for i in range(self.num_vars)])
+
+        return self.training_data, (complete_scoring_inputs, scoring_outputs)
+
+

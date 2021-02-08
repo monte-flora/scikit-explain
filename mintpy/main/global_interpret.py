@@ -128,6 +128,7 @@ class GlobalInterpret(Attributes):
         n_jobs=1,
         n_bootstrap=1,
         scoring_strategy=None,
+        method='marginal',
         verbose=False,
     ):
 
@@ -190,6 +191,7 @@ class GlobalInterpret(Attributes):
                 njobs=n_jobs,
                 nbootstrap=n_bootstrap,
                 verbose=verbose,
+                method=method,
             )
 
             pi_dict[model_name] = pi_result
@@ -1050,4 +1052,80 @@ class GlobalInterpret(Attributes):
             ias.append(num / denom)
 
         return {model_name : np.array(ias)}
+
+
+    def compute_ale_variance(
+        self, data, model_name, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs
+    ):
+        """
+        Compute the standard deviation of the ALE values 
+        for each feature and rank then for predictor importance. 
+
+        Args:
+        --------------------
+            results : xarray.Dataset 
+
+            model_names : list of strings
+
+            n_bins : integer
+
+            subsample : float or integer
+
+            n_jobs : float or integer
+
+            n_bootstrap : integer
+
+            ale_subsample : float or integer
+
+
+        """
+        if data is None:
+            # Get the ALE curve for each feature    
+            ale_subsample = kwargs.get("ale_subsample", subsample)
+            feature_names = list(self.examples.columns)
+            model = self.models[model_name]
+            feature_names = list(self.examples.columns)
+            n_jobs = kwargs.get('n_jobs', 1)
+            data = self._run_interpret_curves(
+                    method="ale",
+                    features=feature_names,
+                    n_bins=n_bins,
+                    n_jobs=n_jobs,
+                    subsample=ale_subsample,
+                    n_bootstrap=1,
+                    )
+        else:
+            feature_names = [f.split('__')[0] for f in data.data_vars if 'ale' in f ]
+        
+        ale_std = np.array([np.std(data[f"{f}__{model_name}__ale"].values.squeeze(), ddof=1) for f in feature_names])
+        idx = np.argsort(ale_std)[::-1]
+
+        feature_names_sorted = np.array(feature_names)[idx]
+        ale_std_sorted = ale_std[idx]
+
+        results={}
+        
+        results[f"ale_variance_rankings__{model_name}"] = (
+                    [f"n_vars_ale_variance"],
+                    feature_names_sorted,
+                )
+        results[f"ale_variance_scores__{model_name}"] = (
+                [f"n_vars_ale_variance"],
+                    ale_std_sorted,
+                )
+
+        results_ds = to_xarray(results)
+
+        return results_ds 
+            
+
+
+
+
+
+
+
+
+
+
 

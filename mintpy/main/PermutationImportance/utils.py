@@ -82,3 +82,60 @@ def make_data_from_columns(columns_list, index=None):
     else:
         raise InvalidDataException(
             columns_list, "Columns_list must come from a pandas dataframe or numpy arrays")
+
+
+def conditional_permutations(data, n_bins):
+    """
+    Conditionally permute each feature in a dataset.
+
+    Code appended to the PermutationImportance package by Montgomery Flora 2021. 
+    
+    Args:
+    -------------------
+        data : pd.DataFrame or np.ndarray shape=(n_examples, n_features,)
+        n_bins : interger 
+    
+    Returns:
+    -------------------
+        permuted_data : a permuted version of data
+    """
+    permuted_data = data.copy()
+
+    for i in range(np.shape(data)[1]):
+        # Get the bin values of feature 
+        if isinstance(data, pd.DataFrame):
+            feature_values = data.iloc[:,i]
+        elif isinstance(data, np.ndarray):
+            feature_values = data[:,i]
+        else:
+            raise InvalidDataException(
+                    data, "Data must be a pandas dataframe or numpy array")
+        
+        bin_edges = np.unique(
+            np.percentile(
+                feature_values,
+                np.linspace(0, 100, n_bins + 1),
+                interpolation="lower",
+                )
+            )
+        
+        bin_indices = np.clip(
+                np.digitize(feature_values, bin_edges, right=True) - 1, 0, None
+            )
+        
+        shuffled_indices = bin_indices.copy()
+        unique_bin_values = np.unique(bin_indices)
+        
+        # indices is bin index for a corresponding value of feature  
+        for bin_idx in unique_bin_values:
+            # idx is the actual index of indices where the bin index == i 
+            idx = np.where(bin_indices==bin_idx)[0]
+            # Replace the bin indices with a permutation of the actual indices 
+            shuffled_indices[idx] = np.random.RandomState(seed=42).permutation(idx)
+
+        if isinstance(data, pd.DataFrame):
+            permuted_data.iloc[:,i] = data.iloc[shuffled_indices,i]
+        else:
+            permuted_data[:,i] = data[shuffled_indices,i]
+        
+    return permuted_data
