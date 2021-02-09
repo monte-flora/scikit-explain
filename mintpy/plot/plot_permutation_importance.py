@@ -89,9 +89,8 @@ class PlotImportance(PlotStructure):
     def plot_variable_importance(
         self,
         data,
-        method='permutation_importance',
+        method='multipass',
         metrics_used=None,
-        multipass=True,
         display_feature_names={},
         feature_colors=None,
         num_vars_to_plot=10,
@@ -105,8 +104,8 @@ class PlotImportance(PlotStructure):
         Args:
             data : xarray.Dataset or list of xarray.Dataset
                 Permutation importance dataset for one or more metrics
-            multipass : boolean
-                if True, plots the multipass results
+            method: 'multipass', 'singlepass', or 'ale_variance'
+                Method used to produce the feature ranking. 
             display_feature_names : dict
                 A dict mapping feature names to readable, "pretty" feature names
             feature_colors : dict
@@ -119,15 +118,13 @@ class PlotImportance(PlotStructure):
         xticks = kwargs.get("xticks", None)
         title = kwargs.get("title", "")
 
-        perm_method = "multipass" if multipass else "singlepass"
-
         if not isinstance(data, list):
             data = [data]
 
         if (any(isinstance(i, list) for i in model_names)):
             model_names = model_names[0]                                
                                      
-        self._check_for_models(data, model_names)                            
+        #self._check_for_models(data, model_names)                            
         
         fig, axes, xlabels, ylabels, only_one_model, n_panels = self._get_axes(model_names, 
                                                                                metrics_used, **kwargs)
@@ -150,7 +147,7 @@ class PlotImportance(PlotStructure):
                     ax.set_xlabel(xlabels[g])
 
                 sorted_var_names = list(
-                    results[f"{perm_method}_rankings__{model_name}"].values
+                    results[f"{method}_rankings__{model_name}"].values
                 )
                 sorted_var_names = sorted_var_names[
                     : min(num_vars_to_plot, len(sorted_var_names))

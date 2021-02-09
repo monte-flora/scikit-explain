@@ -126,10 +126,11 @@ class GlobalInterpret(Attributes):
         evaluation_fn="auprc",
         subsample=1.0,
         n_jobs=1,
-        n_bootstrap=1,
+        n_bootstrap=None,
         scoring_strategy=None,
-        method='marginal',
+        perm_method='marginal',
         verbose=False,
+        random_state=None,
     ):
 
         """
@@ -171,6 +172,9 @@ class GlobalInterpret(Attributes):
                 f"evaluation_fn is not set! Available options are {available_scores}"
             )
 
+        if subsample != 1.0 and n_bootstrap is None:
+            n_bootstrap = 1
+            
         targets = pd.DataFrame(data=self.targets, columns=["Test"])
 
         pi_dict = {}
@@ -191,7 +195,8 @@ class GlobalInterpret(Attributes):
                 njobs=n_jobs,
                 nbootstrap=n_bootstrap,
                 verbose=verbose,
-                method=method,
+                perm_method=perm_method,
+                random_state=random_state,
             )
 
             pi_dict[model_name] = pi_result
@@ -206,14 +211,14 @@ class GlobalInterpret(Attributes):
                 rankings = np.argsort([adict[f][0] for f in features])
                 top_features = features[rankings]
                 scores = np.array([adict[f][1] for f in top_features])
-                perm_method = func.split("_")[1]
+                pass_method = func.split("_")[1]
 
-                data[f"{perm_method}_rankings__{model_name}"] = (
-                    [f"n_vars_{perm_method}"],
+                data[f"{pass_method}_rankings__{model_name}"] = (
+                    [f"n_vars_{pass_method}"],
                     top_features,
                 )
-                data[f"{perm_method}_scores__{model_name}"] = (
-                    [f"n_vars_{perm_method}", "n_bootstrap"],
+                data[f"{pass_method}_scores__{model_name}"] = (
+                    [f"n_vars_{pass_method}", "n_bootstrap"],
                     scores,
                 )
             data[f"original_score__{model_name}"] = (

@@ -111,8 +111,8 @@ class InterpretToolkit(Attributes):
             
         return ds
     
-    def calc_permutation_importance(self, n_vars, evaluation_fn="auprc", method='marginal',
-            subsample=1.0, n_jobs=1, n_bootstrap=1, scoring_strategy=None, verbose=False,  ):
+    def calc_permutation_importance(self, n_vars, evaluation_fn="auprc", perm_method='marginal',
+            subsample=1.0, n_jobs=1, n_bootstrap=None, scoring_strategy=None, verbose=False, random_state=None ):
         """
         Performs single-pass and/or multi-pass permutation importance using the PermutationImportance 
         package. 
@@ -148,7 +148,7 @@ class InterpretToolkit(Attributes):
             if integer, interpreted as the number of processors to use for multiprocessing
             if float, interpreted as the fraction of proceesors to use for multiprocessing
         
-        n_bootstrap: integer (default=1 for no bootstrapping)
+        n_bootstrap: integer (default=None for no bootstrapping)
             number of bootstrap resamples for computing confidence intervals on the feature rankings. 
             
         scoring_strategy : string (default=None)
@@ -157,6 +157,14 @@ class InterpretToolkit(Attributes):
             (a lower value is better), then set scoring_strategy = "argmax_of_mean"
             
             This argument is only required if using a non-default evaluation_fn (see above) 
+        
+        random_state : int, RandomState instance, default=None
+            Pseudo-random number generator to control the permutations of each
+            feature.
+            Pass an int to get reproducible results across function calls.
+        
+        perm_method : 'marginal' or 'conditional'
+            Whether to use marginal- or conditional-based permutations. 
         
         verbose : boolean
             True for print statements on the progress
@@ -176,11 +184,13 @@ class InterpretToolkit(Attributes):
                                                     n_bootstrap=n_bootstrap,
                                                     scoring_strategy=scoring_strategy,
                                                     verbose=verbose,
-                                                    method=method, 
+                                                    perm_method=perm_method,
+                                                    random_state=random_state
                                                    )
         
         self.attrs_dict['n_multipass_vars'] = n_vars
         self.attrs_dict['method'] = 'permutation_importance'
+        self.attrs_dict['perm_method'] = perm_method 
         self.attrs_dict['evaluation_fn'] = evaluation_fn
         results_ds = self._append_attributes(results_ds)
     
@@ -806,7 +816,7 @@ class InterpretToolkit(Attributes):
 
     def plot_importance(self, method='multipass', 
                         xlabels=None, ylabels=None, metrics_used=None, 
-                        data=None, **kwargs):
+                        data=None, model_names=None, **kwargs):
         """
         Method for plotting the permutation importance results
 
@@ -842,14 +852,20 @@ class InterpretToolkit(Attributes):
             raise ValueError('data is None! Either set it or run the .calc_permutation_importance method first!')
 
         if xlabels is None and metrics_used is None and ylabels is None:
-            xlabels = [data.attrs['evaluation_fn']]
+            metrics_used = [data.attrs['evaluation_fn']]
         else:
             xlabels = ['']
+            
+        if model_names is not None:
+            if isinstance(model_names, str):
+                model_names = [model_names]            
+        else:
+            model_names=self.model_names
 
         return plot_obj.plot_variable_importance(data,
                                                 method=method, 
                                                 model_output=model_output,
-                                                model_names=self.model_names,
+                                                model_names=model_names,
                                                 metrics_used = metrics_used,
                                                 xlabels = xlabels,
                                                 ylabels=ylabels,
