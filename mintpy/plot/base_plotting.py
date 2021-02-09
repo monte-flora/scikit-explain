@@ -351,10 +351,10 @@ class PlotStructure:
             labels = display_feature_names
 
         if return_labels:
-            labels = [fr"{l}" for l in labels]
+            labels = [f"{l}" for l in labels]
             return labels
         else:
-            labels = [fr"${l}$" for l in labels]
+            labels = [f"{l}" for l in labels]
             ax.set_yticklabels(labels)
 
     def set_axis_label(self, ax, xaxis_label=None, yaxis_label=None, **kwargs):
@@ -369,9 +369,9 @@ class PlotStructure:
             )
             units = self.display_units.get(xaxis_label, "")
             if units == "":
-                xaxis_label_with_units = fr"${xaxis_label_pretty}$"
+                xaxis_label_with_units = f"{xaxis_label_pretty}"
             else:
-                xaxis_label_with_units = fr"${xaxis_label_pretty} \ ({units})$"
+                xaxis_label_with_units = f"{xaxis_label_pretty} ({units})"
 
             ax.set_xlabel(xaxis_label_with_units, fontsize=fontsize)
 
@@ -381,9 +381,9 @@ class PlotStructure:
             )
             units = self.display_units.get(yaxis_label, "")
             if units == "":
-                yaxis_label_with_units = fr"${yaxis_label_pretty}$"
+                yaxis_label_with_units = f"{yaxis_label_pretty}"
             else:
-                yaxis_label_with_units = fr"${yaxis_label_pretty} \ ({units})$"
+                yaxis_label_with_units = f"{yaxis_label_pretty} ({units})"
 
             ax.set_ylabel(yaxis_label_with_units, fontsize=fontsize)
 

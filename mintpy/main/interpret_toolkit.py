@@ -841,8 +841,10 @@ class InterpretToolkit(Attributes):
         elif data is None:
             raise ValueError('data is None! Either set it or run the .calc_permutation_importance method first!')
 
-        if xlabels is None and metrics_used is None:
+        if xlabels is None and metrics_used is None and ylabels is None:
             xlabels = [data.attrs['evaluation_fn']]
+        else:
+            xlabels = ['']
 
         return plot_obj.plot_variable_importance(data,
                                                 method=method, 
@@ -877,7 +879,6 @@ class InterpretToolkit(Attributes):
         as a dict with each model as the key (combine=False) or a list of important
         features as a combined list (combine=True) with duplicate top features removed.
         """
-
         results = retrieve_important_vars(results, 
                                           model_names=self.model_names, 
                                           multipass=True)
@@ -911,6 +912,9 @@ class InterpretToolkit(Attributes):
             if not isinstance(model_names, list):
                 model_names = [model_names]
 
+            if (any(isinstance(i, list) for i in model_names)):
+                model_names = model_names[0] 
+            
             setattr(s, 'model_names', model_names)
             setattr(s, 'models used', model_names) 
 
