@@ -107,16 +107,15 @@ class PlotFeatureContributions(PlotStructure):
                     num_and_exp = f"{feat_val:.1e}".split("e")
                     base = float(num_and_exp[0])
                     exp = int(num_and_exp[1])
-                    feat_val = fr"{base} \times 10^{{{exp}}}"
+                    feat_val = fr"{base} $\times$ 10$^{{{exp}}}$"
                 else:
                     feat_val = round(feat_val)
 
+                special_label = label.replace(' ', ' \ ').replace("$", '')
                 if units == "":
-                    text = fr"$\bf{label}$" + fr" $({feat_val})$"
+                    text = fr"$\bf{special_label}$" + f" ({feat_val})"
                 else:
-                    # text = fr'$\bf{{{label}}}$'+ fr' (${feat_val} \ {units}$)'
-
-                    text = fr"$\bf{label}$" + fr" $({feat_val}$" + fr" ${units})$"
+                    text = fr"$\bf{special_label}$" + f" ({feat_val}" + f" {units})"
 
             if c > 0:
                 # Plot the contribution value
