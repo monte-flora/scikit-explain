@@ -425,13 +425,17 @@ class PlotStructure:
         ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.yaxis.set_minor_locator(AutoMinorLocator())
 
-    def set_n_ticks(self, ax):
+    def set_n_ticks(self, ax, option='y'):
         """
         Set the max number of ticks per x- and y-axis for a
         subplot ax
         """
-        ax.yaxis.set_major_locator(MaxNLocator(5))
-        ax.yaxis.set_major_locator(MaxNLocator(4))
+        if option == 'y' or option == 'both':
+            ax.yaxis.set_major_locator(MaxNLocator(5))
+            ax.yaxis.set_major_locator(MaxNLocator(4))
+        if option == 'x' or option == 'both':
+            ax.xaxis.set_major_locator(MaxNLocator(5))
+            ax.xaxis.set_major_locator(MaxNLocator(4))
 
     def despine_plt(self, ax):
         """
