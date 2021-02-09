@@ -164,6 +164,7 @@ class PlotImportance(PlotStructure):
                         results[f"{method}_scores__{model_name}"].values[i, :]
                         for i in range(len(sorted_var_names))
                     ]
+                    
                 else:
                     scores = [
                         results[f"{method}_scores__{model_name}"][i]
@@ -187,7 +188,7 @@ class PlotImportance(PlotStructure):
                 # Get the colors for the plot
                 colors_to_plot = [self.variable_to_color(var, feature_colors) for var in sorted_var_names]
                 # Get the predictor names
-                variable_names_to_plot = [fr"$ {var}$" for var in self.convert_vars_to_readable(sorted_var_names,display_feature_names,)]
+                variable_names_to_plot = [f" {var}" for var in self.convert_vars_to_readable(sorted_var_names,display_feature_names,)]
 
                 if bootstrapped:
                     scores_to_plot = np.array([np.mean(score) for score in scores])
