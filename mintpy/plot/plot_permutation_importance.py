@@ -1,4 +1,5 @@
 import numpy as np
+import collections
 
 from .base_plotting import PlotStructure
 
@@ -20,62 +21,37 @@ class PlotImportance(PlotStructure):
 
         return bootstrapped, original_score_mean
 
-    def plot_variable_importance(
-        self,
-        data,
-        method, 
-        display_feature_names={},
-        feature_colors=None,
-        num_vars_to_plot=10,
-        model_output="raw",
-        model_names=None,
-        **kwargs,
-    ):
-
-        """Plots any variable importance method for a particular estimator
-
-        Args:
-            data : xarray.Dataset or list of xarray.Dataset
-                Permutation importance dataset for one or more metrics
-
-            multipass : boolean
-                if True, plots the multipass results
-            display_feature_names : dict
-                A dict mapping feature names to readable, "pretty" feature names
-            feature_colors : dict
-                A dict mapping features to various colors. Helpful for color coding groups of features
-            num_vars_to_plot : int
-                Number of top variables to plot (defalut is None and will use number of multipass results)
-            xaxis_label : str
-                Metric used to compute the predictor importance, which will display as the X-axis label.
+    def _get_axes(self, model_names, metrics_used,**kwargs):
         """
+        Determine how many axes are required.
+        """
+        ylabels = kwargs.get("ylabels", "")
+        xlabels = kwargs.get("xlabels", "")
         hspace = kwargs.get("hspace", 0.5)
         wspace = kwargs.get("wspace", 0.2)
-        xticks = kwargs.get("xticks", None)
-        title = kwargs.get("title", "")
-        ylabels = kwargs.get("ylabels", [""])
-        xlabels = kwargs.get("xlabels", [""])
         n_columns = kwargs.get("n_columns", 3)
 
-        if not isinstance(data, list):
-            data = [data]
-
-        #if len(data) != len(ylabel):
-        #    raise ValueError("The number of y-labels given used must match the number of dataset given!")
-
         if len(model_names) == 1:
-            # Only one model, but one or more metrics; or something liek that
+            # Only one model, but one or more metrics
             only_one_model = True
+            xlabels = metrics_used 
             n_columns = min(len(xlabels), 3)
             n_panels = len(xlabels)
         else:
             # More than one model, and one or more metrics
             only_one_model = False
             n_columns = min(len(model_names), 3)
-            n_panels = n_columns * len(data)
+            if metrics_used is not None:
+                if len(metrics_used) == 1:
+                    xlabels = metrics_used
+                else:
+                    ylabels = metrics_used
 
-        print(n_panels, n_columns, model_names)
-
+        if ylabels is not None:
+            n_panels = n_columns * len(ylabels)
+        else:
+            n_panels = n_columns 
+            
         if n_panels == 1:
             figsize = (3, 2.5)
         elif n_panels == 2:
@@ -98,6 +74,64 @@ class PlotImportance(PlotStructure):
         if n_panels == 1:
             axes = [axes]
 
+        return fig, axes, xlabels, ylabels, only_one_model, n_panels
+            
+    def _check_for_models(self, data, model_names):
+        """Check that each model is in data"""
+        for ds in data:
+            if not( collections.Counter(ds.attrs['models used']) == collections.Counter(model_names)):
+                raise AttributeError("""
+                 The model names given do not match the models used to create
+                 given data 
+                                     """
+                               )
+                
+    def plot_variable_importance(
+        self,
+        data,
+        method='permutation_importance',
+        metrics_used=None,
+        multipass=True,
+        display_feature_names={},
+        feature_colors=None,
+        num_vars_to_plot=10,
+        model_output="raw",
+        model_names=None,
+        **kwargs,
+    ):
+
+        """Plots any variable importance method for a particular estimator
+
+        Args:
+            data : xarray.Dataset or list of xarray.Dataset
+                Permutation importance dataset for one or more metrics
+            multipass : boolean
+                if True, plots the multipass results
+            display_feature_names : dict
+                A dict mapping feature names to readable, "pretty" feature names
+            feature_colors : dict
+                A dict mapping features to various colors. Helpful for color coding groups of features
+            num_vars_to_plot : int
+                Number of top variables to plot (defalut is None and will use number of multipass results)
+            xaxis_label : str
+                Metric used to compute the predictor importance, which will display as the X-axis label.
+        """
+        xticks = kwargs.get("xticks", None)
+        title = kwargs.get("title", "")
+
+        perm_method = "multipass" if multipass else "singlepass"
+
+        if not isinstance(data, list):
+            data = [data]
+
+        if (any(isinstance(i, list) for i in model_names)):
+            model_names = model_names[0]                                
+                                     
+        self._check_for_models(data, model_names)                            
+        
+        fig, axes, xlabels, ylabels, only_one_model, n_panels = self._get_axes(model_names, 
+                                                                               metrics_used, **kwargs)
+
         # List of data for different metrics
         for g, results in enumerate(data):
             # loop over each model creating one panel per model
@@ -116,7 +150,7 @@ class PlotImportance(PlotStructure):
                     ax.set_xlabel(xlabels[g])
 
                 sorted_var_names = list(
-                    results[f"{method}_rankings__{model_name}"].values
+                    results[f"{perm_method}_rankings__{model_name}"].values
                 )
                 sorted_var_names = sorted_var_names[
                     : min(num_vars_to_plot, len(sorted_var_names))
@@ -124,7 +158,6 @@ class PlotImportance(PlotStructure):
 
                 if num_vars_to_plot is None:
                     num_vars_to_plot == len(sorted_var_names)
-
 
                 if method !='ale_variance':
                     scores = [
@@ -144,11 +177,12 @@ class PlotImportance(PlotStructure):
                     # Get the original score (no permutations)
                     # Check if the permutation importance is bootstrapped
                     bootstrapped, original_score_mean = self.is_bootstrapped(original_score)
-    
+
                     sorted_var_names.insert(0, "No Permutations")
+                    scores.insert(0, original_score) 
                 else:
                     bootstrapped =False
-                
+
 
                 # Get the colors for the plot
                 colors_to_plot = [self.variable_to_color(var, feature_colors) for var in sorted_var_names]
@@ -157,13 +191,15 @@ class PlotImportance(PlotStructure):
 
                 if bootstrapped:
                     scores_to_plot = np.array([np.mean(score) for score in scores])
-                    ci = np.array([np.abs(np.mean(score) - np.percentile(score, [2.5, 97.5])) for score in np.r_[[original_score,],scores,]]).transpose()
+                    ci = np.array( [np.abs(np.mean(score) - np.percentile(score, [2.5, 97.5])) 
+                                   for score in scores]).transpose()
+                
                 else:
                     if method != 'ale_variance':
                         scores.insert(0, original_score_mean)
-                    
-                    scores_to_plot = np.array(scores)
 
+                    scores_to_plot = np.array(scores)
+                
                 # Despine
                 self.despine_plt(ax)
 
@@ -215,7 +251,7 @@ class PlotImportance(PlotStructure):
                         alpha=0.8,
                     )
 
-                if model_output == "probability" and method != 'ale_variance':
+                if model_output == "probability":
                     # Add vertical line
                     ax.axvline(
                         original_score_mean,
@@ -234,7 +270,7 @@ class PlotImportance(PlotStructure):
                         rotation=270,
                         alpha=0.7,
                     )
-       
+
                 if model_output == "probability" and method != 'ale_variance' and xticks is None:
                     # Most probability-based scores are between 0-1 (AUC, BSS, NAUPDC,etc.)
                     xticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
@@ -243,9 +279,11 @@ class PlotImportance(PlotStructure):
                     ax.set_xticks(xticks)
                 else:
                     self.set_n_ticks(ax, option='x')
-                
+
                 ax.tick_params(axis="both", which="both", length=0)
                 ax.set_yticks([])
+                if xticks is not None:
+                    ax.set_xticks(xticks)
 
                 upper_limit = min(1.05 * np.amax(scores_to_plot), 1.0)
                 if model_output == "probability":
@@ -254,7 +292,7 @@ class PlotImportance(PlotStructure):
                 else:
                     upper_limit = 1.05 * np.amax(scores_to_plot)
                     ax.set_xlim([upper_limit, 0])
-           
+
                 # make the horizontal plot go with the highest value at the top
                 ax.invert_yaxis()
                 vals = ax.get_xticks()
@@ -294,18 +332,20 @@ class PlotImportance(PlotStructure):
                     )
 
         if len(xlabels) == 1 and not only_one_model:
-            self.set_major_axis_labels(
+            major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=xlabels[0].replace("_", "").upper(),
                 ylabel_left="",
                 labelpad=5,
                 fontsize=self.FONT_SIZES["tiny"],
             )
-        
-        print(ylabels)    
-        if ylabels is not None:
-            self.set_row_labels(ylabels, axes)
 
+        if ylabels is not None:
+            if isinstance(ylabels, str):
+                major_ax.set_ylabel(ylabels, fontsize=self.FONT_SIZEs['tiny'])
+            else:
+                self.set_row_labels(ylabels, axes)
+                                     
         if model_output == "probability":
             pos = (0.9, 0.09)
         else:
@@ -342,3 +382,4 @@ class PlotImportance(PlotStructure):
                 return VARIABLES_COLOR_DICT
             else:
                 return VARIABLES_COLOR_DICT[var]
+

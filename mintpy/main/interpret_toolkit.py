@@ -804,13 +804,16 @@ class InterpretToolkit(Attributes):
                            **kwargs
                           )
 
-    def plot_importance(self, method, xlabels=None, ylabels=None, metrics_used=None, data=None, **kwargs):
+    def plot_importance(self, method='multipass', 
+                        xlabels=None, ylabels=None, metrics_used=None, 
+                        data=None, **kwargs):
         """
         Method for plotting the permutation importance results
 
         Args:
         ---------------------------
-        method:
+        method: 'ale_variance', 'multipass' or 'singlepass'
+            Method used to compute the feature rankings. 
                 
         data : xarray.Dataset or list of xarray.Datasets
             A permutation importance result dataset or list 
@@ -838,7 +841,7 @@ class InterpretToolkit(Attributes):
         elif data is None:
             raise ValueError('data is None! Either set it or run the .calc_permutation_importance method first!')
 
-        if xlabels is None:
+        if xlabels is None and metrics_used is None:
             xlabels = [data.attrs['evaluation_fn']]
 
         return plot_obj.plot_variable_importance(data,
