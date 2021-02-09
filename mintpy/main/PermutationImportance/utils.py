@@ -3,6 +3,7 @@ results of the variable importance"""
 
 import numpy as np
 import pandas as pd
+import numbers
 
 from .error_handling import InvalidDataException
 
@@ -84,7 +85,7 @@ def make_data_from_columns(columns_list, index=None):
             columns_list, "Columns_list must come from a pandas dataframe or numpy arrays")
 
 
-def conditional_permutations(data, n_bins):
+def conditional_permutations(data, n_bins, random_state):
     """
     Conditionally permute each feature in a dataset.
 
@@ -94,6 +95,13 @@ def conditional_permutations(data, n_bins):
     -------------------
         data : pd.DataFrame or np.ndarray shape=(n_examples, n_features,)
         n_bins : interger 
+            number of bins to divide a feature into. Based on a 
+            percentile method to ensure that each bin receieves 
+            a similar number of examples
+        random_state : np.random.RandomState instance
+            Pseudo-random number generator to control the permutations of each
+            feature.
+            Pass an int to get reproducible results across function calls.
     
     Returns:
     -------------------
@@ -118,7 +126,7 @@ def conditional_permutations(data, n_bins):
                 interpolation="lower",
                 )
             )
-        
+     
         bin_indices = np.clip(
                 np.digitize(feature_values, bin_edges, right=True) - 1, 0, None
             )
@@ -126,12 +134,12 @@ def conditional_permutations(data, n_bins):
         shuffled_indices = bin_indices.copy()
         unique_bin_values = np.unique(bin_indices)
         
-        # indices is bin index for a corresponding value of feature  
+        # bin_indices is composed of bin indices for a corresponding value of feature_values  
         for bin_idx in unique_bin_values:
             # idx is the actual index of indices where the bin index == i 
             idx = np.where(bin_indices==bin_idx)[0]
             # Replace the bin indices with a permutation of the actual indices 
-            shuffled_indices[idx] = np.random.RandomState(seed=42).permutation(idx)
+            shuffled_indices[idx] = random_state.permutation(idx)
 
         if isinstance(data, pd.DataFrame):
             permuted_data.iloc[:,i] = data.iloc[shuffled_indices,i]
@@ -139,3 +147,22 @@ def conditional_permutations(data, n_bins):
             permuted_data[:,i] = data[shuffled_indices,i]
         
     return permuted_data
+
+def check_random_state(seed):
+    """Turn seed into a np.random.RandomState instance
+    Parameters. Function comes for sci-kit-learn. 
+    ----------
+    seed : None, int or instance of RandomState
+        If seed is None, return the RandomState singleton used by np.random.
+        If seed is an int, return a new RandomState instance seeded with seed.
+        If seed is already a RandomState instance, return it.
+        Otherwise raise ValueError.
+    """
+    if seed is None or seed is np.random:
+        return np.random.mtrand._rand
+    if isinstance(seed, numbers.Integral):
+        return np.random.RandomState(seed)
+    if isinstance(seed, np.random.RandomState):
+        return seed
+    raise ValueError('%r cannot be used to seed a numpy.random.RandomState'
+                     ' instance' % seed)

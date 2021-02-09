@@ -127,7 +127,7 @@ class PermutationImportanceSelectionStrategy(SelectionStrategy):
 
     name = "Permutation Importance"
 
-    def __init__(self, training_data, scoring_data, num_vars, important_vars):
+    def __init__(self, training_data, scoring_data, num_vars, important_vars, random_state, **kwargs):
         """Initializes the object by storing the data and keeping track of other
         important information
         :param training_data: (training_inputs, training_outputs)
@@ -138,9 +138,10 @@ class PermutationImportanceSelectionStrategy(SelectionStrategy):
         """
         super(PermutationImportanceSelectionStrategy, self).__init__(
             training_data, scoring_data, num_vars, important_vars)
+        
         # Also initialize the "shuffled data"
         scoring_inputs, __ = self.scoring_data
-        indices = np.random.permutation(len(scoring_inputs))
+        indices = random_state.permutation(len(scoring_inputs))
         self.shuffled_scoring_inputs = get_data_subset(
             scoring_inputs, indices)  # This copies
         # keep track of the initial index (assuming this is pandas data)
@@ -166,7 +167,7 @@ class ConditionalPermutationImportanceSelectionStrategy(SelectionStrategy):
 
     name = "Conditional Permutation Importance"
 
-    def __init__(self, training_data, scoring_data, num_vars, important_vars, **kwargs):
+    def __init__(self, training_data, scoring_data, num_vars, important_vars, random_state, **kwargs):
         """Initializes the object by storing the data and keeping track of other
         important information
         :param training_data: (training_inputs, training_outputs)
@@ -182,7 +183,9 @@ class ConditionalPermutationImportanceSelectionStrategy(SelectionStrategy):
         # Also initialize the "shuffled data"
         scoring_inputs, __ = self.scoring_data
         self.shuffled_scoring_inputs = conditional_permutations(
-            scoring_inputs, n_bins) # This copies
+            scoring_inputs, n_bins, random_state) # This copies
+        # keep track of the initial index (assuming this is pandas data)
+        self.original_index = scoring_inputs.index if isinstance(scoring_inputs, pd.DataFrame) else None
 
     def generate_datasets(self, important_variables):
         """Check each of the non-important variables. Dataset has columns which
@@ -193,7 +196,7 @@ class ConditionalPermutationImportanceSelectionStrategy(SelectionStrategy):
         # If a feature has been deemed important it remains shuffled
         complete_scoring_inputs = make_data_from_columns(
             [get_data_subset(self.shuffled_scoring_inputs if i in important_variables else scoring_inputs, None, [i]) 
-             for i in range(self.num_vars)])
+             for i in range(self.num_vars)], index=self.original_index)
 
         return self.training_data, (complete_scoring_inputs, scoring_outputs)
 
