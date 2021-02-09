@@ -136,7 +136,7 @@ class model_scorer(object):
         predictions = self.prediction_fn(trained_model, scoring_inputs)
 
         if self.nbootstrap is None:
-            return self.evaluation_fn(scoring_outputs, predictions, **self.kwargs)
+            return [self.evaluation_fn(scoring_outputs, predictions, **self.kwargs)]
         else:
             # Bootstrap the scores
             scores = list()
@@ -148,6 +148,7 @@ class model_scorer(object):
                     scoring_outputs, rows)
                 scores.append(self.evaluation_fn(
                     subsampled_scoring_outputs, subsampled_predictions, **self.kwargs))
+                
             return np.array(scores)
 
 
