@@ -23,8 +23,7 @@ class PlotImportance(PlotStructure):
     def plot_variable_importance(
         self,
         data,
-        metrics_used,
-        multipass=True,
+        method, 
         display_feature_names={},
         feature_colors=None,
         num_vars_to_plot=10,
@@ -54,48 +53,28 @@ class PlotImportance(PlotStructure):
         wspace = kwargs.get("wspace", 0.2)
         xticks = kwargs.get("xticks", None)
         title = kwargs.get("title", "")
-        ylabels = kwargs.get("ylabels", "")
-        xlabels = kwargs.get("xlabels", "")
+        ylabels = kwargs.get("ylabels", [""])
+        xlabels = kwargs.get("xlabels", [""])
         n_columns = kwargs.get("n_columns", 3)
-
-        perm_method = "multipass" if multipass else "singlepass"
 
         if not isinstance(data, list):
             data = [data]
 
-        if len(data) != len(metrics_used):
-            raise ValueError(
-                """
-                             The number of metrics used (the different metrics used to compute 
-                             permutation importance) must match the number of dataset given!
-                             """
-            )
+        #if len(data) != len(ylabel):
+        #    raise ValueError("The number of y-labels given used must match the number of dataset given!")
 
         if len(model_names) == 1:
-            # Only one model, but one or more metrics
+            # Only one model, but one or more metrics; or something liek that
             only_one_model = True
-            xlabels = metrics_used
             n_columns = min(len(xlabels), 3)
             n_panels = len(xlabels)
-            xlabels = metrics_used
         else:
             # More than one model, and one or more metrics
             only_one_model = False
             n_columns = min(len(model_names), 3)
-            if len(metrics_used) == 1:
-                xlabels = metrics_used
-            else:
-                ylabels = metrics_used
+            n_panels = n_columns * len(data)
 
-            n_panels = n_columns * len(metrics_used)
-
-        # get the number of panels which will be the number of ML models in dictionary
-        # n_keys = [list(importance_dict.keys()) for importance_dict in data]
-        # n_panels = len([item for sublist in n_keys for item in sublist])
-
-        if model_output == "probability" and xticks is None:
-            # Most probability-based scores are between 0-1 (AUC, BSS, NAUPDC,etc.)
-            xticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+        print(n_panels, n_columns, model_names)
 
         if n_panels == 1:
             figsize = (3, 2.5)
@@ -137,7 +116,7 @@ class PlotImportance(PlotStructure):
                     ax.set_xlabel(xlabels[g])
 
                 sorted_var_names = list(
-                    results[f"{perm_method}_rankings__{model_name}"].values
+                    results[f"{method}_rankings__{model_name}"].values
                 )
                 sorted_var_names = sorted_var_names[
                     : min(num_vars_to_plot, len(sorted_var_names))
@@ -146,74 +125,44 @@ class PlotImportance(PlotStructure):
                 if num_vars_to_plot is None:
                     num_vars_to_plot == len(sorted_var_names)
 
-                scores = [
-                    results[f"{perm_method}_scores__{model_name}"].values[i, :]
-                    for i in range(len(sorted_var_names))
-                ]
 
-                # Get the original score (no permutations)
-                original_score = results[f"original_score__{model_name}"].values
+                if method !='ale_variance':
+                    scores = [
+                        results[f"{method}_scores__{model_name}"].values[i, :]
+                        for i in range(len(sorted_var_names))
+                    ]
+                else:
+                    scores = [
+                        results[f"{method}_scores__{model_name}"][i]
+                        for i in range(len(sorted_var_names))
+                    ]
 
-                # Get the original score (no permutations)
-                # Check if the permutation importance is bootstrapped
-                bootstrapped, original_score_mean = self.is_bootstrapped(original_score)
+                if method != 'ale_variance':
+                    # Get the original score (no permutations)
+                    original_score = results[f"original_score__{model_name}"].values
+
+                    # Get the original score (no permutations)
+                    # Check if the permutation importance is bootstrapped
+                    bootstrapped, original_score_mean = self.is_bootstrapped(original_score)
+    
+                    sorted_var_names.insert(0, "No Permutations")
+                else:
+                    bootstrapped =False
+                
 
                 # Get the colors for the plot
-                colors_to_plot = [
-                    self.variable_to_color(var, feature_colors)
-                    for var in [
-                        "No Permutations",
-                    ]
-                    + sorted_var_names
-                ]
+                colors_to_plot = [self.variable_to_color(var, feature_colors) for var in sorted_var_names]
                 # Get the predictor names
-                variable_names_to_plot = [
-                    fr"$ {var}$" 
-                    for var in self.convert_vars_to_readable(
-                        [
-                            "No Permutations",
-                        ]
-                        + sorted_var_names,
-                        display_feature_names,
-                    )
-                ]
+                variable_names_to_plot = [fr"$ {var}$" for var in self.convert_vars_to_readable(sorted_var_names,display_feature_names,)]
 
                 if bootstrapped:
-                    scores_to_plot = np.array(
-                        [
-                            original_score_mean,
-                        ]
-                        + [np.mean(score) for score in scores]
-                    )
-                    ci = np.array(
-                        [
-                            np.abs(np.mean(score) - np.percentile(score, [2.5, 97.5]))
-                            for score in np.r_[
-                                [
-                                    original_score,
-                                ],
-                                scores,
-                            ]
-                        ]
-                    ).transpose()
+                    scores_to_plot = np.array([np.mean(score) for score in scores])
+                    ci = np.array([np.abs(np.mean(score) - np.percentile(score, [2.5, 97.5])) for score in np.r_[[original_score,],scores,]]).transpose()
                 else:
-                    scores_to_plot = np.array(
-                        [
-                            original_score_mean,
-                        ]
-                        + scores
-                    )
-                    ci = np.array(
-                        [
-                            [0, 0]
-                            for score in np.r_[
-                                [
-                                    original_score,
-                                ],
-                                scores,
-                            ]
-                        ]
-                    ).transpose()
+                    if method != 'ale_variance':
+                        scores.insert(0, original_score_mean)
+                    
+                    scores_to_plot = np.array(scores)
 
                 # Despine
                 self.despine_plt(ax)
@@ -266,7 +215,7 @@ class PlotImportance(PlotStructure):
                         alpha=0.8,
                     )
 
-                if model_output == "probability":
+                if model_output == "probability" and method != 'ale_variance':
                     # Add vertical line
                     ax.axvline(
                         original_score_mean,
@@ -285,11 +234,18 @@ class PlotImportance(PlotStructure):
                         rotation=270,
                         alpha=0.7,
                     )
+       
+                if model_output == "probability" and method != 'ale_variance' and xticks is None:
+                    # Most probability-based scores are between 0-1 (AUC, BSS, NAUPDC,etc.)
+                    xticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
 
-                ax.tick_params(axis="both", which="both", length=0)
-                ax.set_yticks([])
                 if xticks is not None:
                     ax.set_xticks(xticks)
+                else:
+                    self.set_n_ticks(ax, option='x')
+                
+                ax.tick_params(axis="both", which="both", length=0)
+                ax.set_yticks([])
 
                 upper_limit = min(1.05 * np.amax(scores_to_plot), 1.0)
                 if model_output == "probability":
@@ -298,7 +254,7 @@ class PlotImportance(PlotStructure):
                 else:
                     upper_limit = 1.05 * np.amax(scores_to_plot)
                     ax.set_xlim([upper_limit, 0])
-
+           
                 # make the horizontal plot go with the highest value at the top
                 ax.invert_yaxis()
                 vals = ax.get_xticks()
@@ -345,8 +301,10 @@ class PlotImportance(PlotStructure):
                 labelpad=5,
                 fontsize=self.FONT_SIZES["tiny"],
             )
-
-        self.set_row_labels(ylabels, axes)
+        
+        print(ylabels)    
+        if ylabels is not None:
+            self.set_row_labels(ylabels, axes)
 
         if model_output == "probability":
             pos = (0.9, 0.09)
