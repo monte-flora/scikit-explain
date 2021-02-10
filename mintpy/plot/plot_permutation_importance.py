@@ -156,18 +156,11 @@ class PlotImportance(PlotStructure):
                 if num_vars_to_plot is None:
                     num_vars_to_plot == len(sorted_var_names)
 
-                if method !='ale_variance':
-                    scores = [
+                scores = [
                         results[f"{method}_scores__{model_name}"].values[i, :]
                         for i in range(len(sorted_var_names))
                     ]
                     
-                else:
-                    scores = [
-                        results[f"{method}_scores__{model_name}"][i]
-                        for i in range(len(sorted_var_names))
-                    ]
-
                 if method != 'ale_variance':
                     # Get the original score (no permutations)
                     original_score = results[f"original_score__{model_name}"].values
@@ -179,9 +172,8 @@ class PlotImportance(PlotStructure):
                     sorted_var_names.insert(0, "No Permutations")
                     scores.insert(0, original_score) 
                 else:
-                    bootstrapped =False
-
-
+                    bootstrapped=True if np.shape(scores)[1] > 1 else False
+                    
                 # Get the colors for the plot
                 colors_to_plot = [self.variable_to_color(var, feature_colors) for var in sorted_var_names]
                 # Get the predictor names
