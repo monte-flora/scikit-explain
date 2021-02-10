@@ -852,10 +852,17 @@ class InterpretToolkit(Attributes):
         # initialize a plotting object
         plot_obj = PlotImportance()
 
-        if hasattr(self, 'perm_imp_ds') and data is None:
-            data = self.perm_imp_ds
-        elif data is None:
-            raise ValueError('data is None! Either set it or run the .calc_permutation_importance method first!')
+        
+        if method != 'ale_variance':
+            if hasattr(self, 'perm_imp_ds') and data is None:
+                data = self.perm_imp_ds
+            elif data is None:
+                raise ValueError('data is None! Either set it or run the .calc_permutation_importance method first!')
+        else:
+            if hasattr(self, 'ale_var_ds') and data is None:
+                data = self.ale_var_ds
+            elif data is None:
+                raise ValueError('data is None! Either set it or run the .calc_ale_variance method first!')
 
         if xlabels is None and metrics_used is None and ylabels is None:
             metrics_used = [data.attrs['evaluation_fn']]
@@ -868,7 +875,7 @@ class InterpretToolkit(Attributes):
         else:
             model_names=self.model_names
 
-        return plot_obj.plot_variable_importance(data,
+        return plot_obj.plot_variable_importance(data=data,
                                                 method=method, 
                                                 model_output=model_output,
                                                 model_names=model_names,

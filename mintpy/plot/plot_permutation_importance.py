@@ -129,6 +129,7 @@ class PlotImportance(PlotStructure):
         fig, axes, xlabels, ylabels, only_one_model, n_panels = self._get_axes(model_names, 
                                                                                metrics_used, **kwargs)
 
+        
         # List of data for different metrics
         for g, results in enumerate(data):
             # loop over each model creating one panel per model
@@ -173,7 +174,7 @@ class PlotImportance(PlotStructure):
                     scores.insert(0, original_score) 
                 else:
                     bootstrapped=True if np.shape(scores)[1] > 1 else False
-                    
+        
                 # Get the colors for the plot
                 colors_to_plot = [self.variable_to_color(var, feature_colors) for var in sorted_var_names]
                 # Get the predictor names
@@ -187,9 +188,11 @@ class PlotImportance(PlotStructure):
                 else:
                     if method != 'ale_variance':
                         scores.insert(0, original_score_mean)
+                    else:
+                        scores = np.array([score[0] for score in scores])
 
                     scores_to_plot = np.array(scores)
-                
+               
                 # Despine
                 self.despine_plt(ax)
 
@@ -241,7 +244,7 @@ class PlotImportance(PlotStructure):
                         alpha=0.8,
                     )
 
-                if model_output == "probability":
+                if model_output == "probability" and method != 'ale_variance':
                     # Add vertical line
                     ax.axvline(
                         original_score_mean,
