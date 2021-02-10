@@ -1097,16 +1097,19 @@ class GlobalInterpret(Attributes):
                     n_bins=n_bins,
                     n_jobs=n_jobs,
                     subsample=ale_subsample,
-                    n_bootstrap=1,
+                    n_bootstrap=n_bootstrap,
                     )
         else:
             feature_names = [f.split('__')[0] for f in data.data_vars if 'ale' in f ]
-        
-        ale_std = np.array([np.std(data[f"{f}__{model_name}__ale"].values.squeeze(), ddof=1) for f in feature_names])
-        idx = np.argsort(ale_std)[::-1]
+
+        # Compute the std over the bin axis
+        ale_std = np.array([np.std(data[f"{f}__{model_name}__ale"].values, ddof=1, axis=1) for f in feature_names])
+
+        # Average over the bootstrap indices 
+        idx = np.argsort(np.mean(ale_std, axis=1))[::-1]
 
         feature_names_sorted = np.array(feature_names)[idx]
-        ale_std_sorted = ale_std[idx]
+        ale_std_sorted = ale_std[idx, :]
 
         results={}
         
@@ -1115,7 +1118,7 @@ class GlobalInterpret(Attributes):
                     feature_names_sorted,
                 )
         results[f"ale_variance_scores__{model_name}"] = (
-                [f"n_vars_ale_variance"],
+                [f"n_vars_ale_variance", 'n_bootstrap'],
                     ale_std_sorted,
                 )
 
