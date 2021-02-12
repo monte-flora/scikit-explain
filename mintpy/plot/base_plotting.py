@@ -445,6 +445,23 @@ class PlotStructure:
         ax.spines["top"].set_visible(False)
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
+        
+    def annotate_bars(self, ax, bottom_idx, top_idx, x=0):
+        """
+        Adds a square bracket that contains two points. Used to
+        connect predictors in the predictor ranking plot 
+        for highly correlated pairs. 
+        """
+        ax.annotate('', xy=(x,bottom_idx),  
+            xytext=(x,top_idx), 
+            arrowprops=dict(arrowstyle="<->,head_length=0.05,head_width=0.05",
+                            ec="xkcd:slate gray",
+                            connectionstyle="bar,fraction=0.2",
+                            shrinkA=0.5, 
+                            shrinkB=0.5,
+                            linewidth=0.5,
+                            )
+            )
 
     def add_colorbar(
         self,
