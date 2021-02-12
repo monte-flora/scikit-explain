@@ -1,4 +1,7 @@
 import numpy as np
+import collections
+
+from ..common.utils import find_correlated_pairs_among_top_features
 
 from .base_plotting import PlotStructure
 
@@ -20,83 +23,37 @@ class PlotImportance(PlotStructure):
 
         return bootstrapped, original_score_mean
 
-    def plot_variable_importance(
-        self,
-        data,
-        metrics_used,
-        multipass=True,
-        display_feature_names={},
-        feature_colors=None,
-        num_vars_to_plot=10,
-        model_output="raw",
-        model_names=None,
-        **kwargs,
-    ):
-
-        """Plots any variable importance method for a particular estimator
-
-        Args:
-            data : xarray.Dataset or list of xarray.Dataset
-                Permutation importance dataset for one or more metrics
-
-            multipass : boolean
-                if True, plots the multipass results
-            display_feature_names : dict
-                A dict mapping feature names to readable, "pretty" feature names
-            feature_colors : dict
-                A dict mapping features to various colors. Helpful for color coding groups of features
-            num_vars_to_plot : int
-                Number of top variables to plot (defalut is None and will use number of multipass results)
-            xaxis_label : str
-                Metric used to compute the predictor importance, which will display as the X-axis label.
+    def _get_axes(self, model_names, metrics_used,**kwargs):
         """
-        hspace = kwargs.get("hspace", 0.5)
-        wspace = kwargs.get("wspace", 0.2)
-        xticks = kwargs.get("xticks", None)
-        title = kwargs.get("title", "")
+        Determine how many axes are required.
+        """
         ylabels = kwargs.get("ylabels", "")
         xlabels = kwargs.get("xlabels", "")
+        hspace = kwargs.get("hspace", 0.5)
+        wspace = kwargs.get("wspace", 0.2)
         n_columns = kwargs.get("n_columns", 3)
-
-        perm_method = "multipass" if multipass else "singlepass"
-
-        if not isinstance(data, list):
-            data = [data]
-
-        if len(data) != len(metrics_used):
-            raise ValueError(
-                """
-                             The number of metrics used (the different metrics used to compute 
-                             permutation importance) must match the number of dataset given!
-                             """
-            )
 
         if len(model_names) == 1:
             # Only one model, but one or more metrics
             only_one_model = True
-            xlabels = metrics_used
+            xlabels = metrics_used 
             n_columns = min(len(xlabels), 3)
             n_panels = len(xlabels)
-            xlabels = metrics_used
         else:
             # More than one model, and one or more metrics
             only_one_model = False
             n_columns = min(len(model_names), 3)
-            if len(metrics_used) == 1:
-                xlabels = metrics_used
-            else:
-                ylabels = metrics_used
+            if metrics_used is not None:
+                if len(metrics_used) == 1:
+                    xlabels = metrics_used
+                else:
+                    ylabels = metrics_used
 
-            n_panels = n_columns * len(metrics_used)
-
-        # get the number of panels which will be the number of ML models in dictionary
-        # n_keys = [list(importance_dict.keys()) for importance_dict in data]
-        # n_panels = len([item for sublist in n_keys for item in sublist])
-
-        if model_output == "probability" and xticks is None:
-            # Most probability-based scores are between 0-1 (AUC, BSS, NAUPDC,etc.)
-            xticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
-
+        if ylabels is not None:
+            n_panels = n_columns * len(ylabels)
+        else:
+            n_panels = n_columns 
+            
         if n_panels == 1:
             figsize = (3, 2.5)
         elif n_panels == 2:
@@ -119,6 +76,69 @@ class PlotImportance(PlotStructure):
         if n_panels == 1:
             axes = [axes]
 
+        return fig, axes, xlabels, ylabels, only_one_model, n_panels
+            
+    def _check_for_models(self, data, model_names):
+        """Check that each model is in data"""
+        for ds in data:
+            if not( collections.Counter(ds.attrs['models used']) == collections.Counter(model_names)):
+                raise AttributeError("""
+                 The model names given do not match the models used to create
+                 given data 
+                                     """
+                               )
+                
+    def plot_variable_importance(
+        self,
+        data,
+        method='multipass',
+        metrics_used=None,
+        display_feature_names={},
+        feature_colors=None,
+        num_vars_to_plot=10,
+        model_output="raw",
+        model_names=None,
+        plot_correlated_features=False,
+        **kwargs,
+    ):
+
+        """Plots any variable importance method for a particular estimator
+
+        Args:
+            data : xarray.Dataset or list of xarray.Dataset
+                Permutation importance dataset for one or more metrics
+            method: 'multipass', 'singlepass', or 'ale_variance'
+                Method used to produce the feature ranking. 
+            display_feature_names : dict
+                A dict mapping feature names to readable, "pretty" feature names
+            feature_colors : dict
+                A dict mapping features to various colors. Helpful for color coding groups of features
+            num_vars_to_plot : int
+                Number of top variables to plot (defalut is None and will use number of multipass results)
+            xaxis_label : str
+                Metric used to compute the predictor importance, which will display as the X-axis label.
+        """
+        xticks = kwargs.get("xticks", None)
+        title = kwargs.get("title", "")
+        
+        if plot_correlated_features:
+            examples = kwargs.get("examples", None)
+            if examples is None or examples.empty:
+                raise ValueError ('Must provide examples to compute the correlations!')
+            rho_threshold=0.8
+            corr_matrix = examples.corr().abs()
+            
+        if not isinstance(data, list):
+            data = [data]
+
+        if (any(isinstance(i, list) for i in model_names)):
+            model_names = model_names[0]                                
+                                     
+        #self._check_for_models(data, model_names)                            
+        
+        fig, axes, xlabels, ylabels, only_one_model, n_panels = self._get_axes(model_names, 
+                                                                               metrics_used, **kwargs)
+
         # List of data for different metrics
         for g, results in enumerate(data):
             # loop over each model creating one panel per model
@@ -135,86 +155,61 @@ class PlotImportance(PlotStructure):
 
                 if only_one_model:
                     ax.set_xlabel(xlabels[g])
+                    
+                if num_vars_to_plot is None:
+                    num_vars_to_plot == len(sorted_var_names)
 
                 sorted_var_names = list(
-                    results[f"{perm_method}_rankings__{model_name}"].values
+                    results[f"{method}_rankings__{model_name}"].values
                 )
+                
                 sorted_var_names = sorted_var_names[
                     : min(num_vars_to_plot, len(sorted_var_names))
                 ]
 
-                if num_vars_to_plot is None:
-                    num_vars_to_plot == len(sorted_var_names)
-
+                sorted_var_names = sorted_var_names[::-1]
+                
                 scores = [
-                    results[f"{perm_method}_scores__{model_name}"].values[i, :]
-                    for i in range(len(sorted_var_names))
-                ]
-
-                # Get the original score (no permutations)
-                original_score = results[f"original_score__{model_name}"].values
-
-                # Get the original score (no permutations)
-                # Check if the permutation importance is bootstrapped
-                bootstrapped, original_score_mean = self.is_bootstrapped(original_score)
-
-                # Get the colors for the plot
-                colors_to_plot = [
-                    self.variable_to_color(var, feature_colors)
-                    for var in [
-                        "No Permutations",
+                        results[f"{method}_scores__{model_name}"].values[i, :]
+                        for i in range(len(sorted_var_names))
                     ]
-                    + sorted_var_names
-                ]
+                
+                scores = scores[::-1]
+                
+                if method != 'ale_variance':
+                    # Get the original score (no permutations)
+                    original_score = results[f"original_score__{model_name}"].values
+
+                    # Get the original score (no permutations)
+                    # Check if the permutation importance is bootstrapped
+                    bootstrapped, original_score_mean = self.is_bootstrapped(original_score)
+
+                    sorted_var_names.append("No Permutations")
+                    scores.append(original_score) 
+                else:
+                    bootstrapped=True if np.shape(scores)[1] > 1 else False
+
+                if plot_correlated_features:
+                    self._add_correlated_brackets(ax, corr_matrix, sorted_var_names, rho_threshold)
+                
+                # Get the colors for the plot
+                colors_to_plot = [self.variable_to_color(var, feature_colors) for var in sorted_var_names]
                 # Get the predictor names
-                variable_names_to_plot = [
-                    " {}".format(var)
-                    for var in self.convert_vars_to_readable(
-                        [
-                            "No Permutations",
-                        ]
-                        + sorted_var_names,
-                        display_feature_names,
-                    )
-                ]
+                variable_names_to_plot = [f" {var}" for var in 
+                                          self.convert_vars_to_readable(sorted_var_names,
+                                                                        display_feature_names,)]
 
                 if bootstrapped:
-                    scores_to_plot = np.array(
-                        [
-                            original_score_mean,
-                        ]
-                        + [np.mean(score) for score in scores]
-                    )
-                    ci = np.array(
-                        [
-                            np.abs(np.mean(score) - np.percentile(score, [2.5, 97.5]))
-                            for score in np.r_[
-                                [
-                                    original_score,
-                                ],
-                                scores,
-                            ]
-                        ]
-                    ).transpose()
+                    scores_to_plot = np.array([np.mean(score) for score in scores])
+                    ci = np.array( [np.abs(np.mean(score) - np.percentile(score, [2.5, 97.5])) 
+                                   for score in scores]).transpose()
+                
                 else:
-                    scores_to_plot = np.array(
-                        [
-                            original_score_mean,
-                        ]
-                        + scores
-                    )
-                    ci = np.array(
-                        [
-                            [0, 0]
-                            for score in np.r_[
-                                [
-                                    original_score,
-                                ],
-                                scores,
-                            ]
-                        ]
-                    ).transpose()
-
+                    if method != 'ale_variance':
+                        scores.append(original_score_mean) 
+                    
+                    scores_to_plot = np.array(scores)
+                
                 # Despine
                 self.despine_plt(ax)
 
@@ -232,6 +227,8 @@ class PlotImportance(PlotStructure):
                         zorder=2,
                     )
                 else:
+                    
+                    print(scores_to_plot)
                     ax.barh(
                         np.arange(len(scores_to_plot)),
                         scores_to_plot,
@@ -248,24 +245,23 @@ class PlotImportance(PlotStructure):
 
                 # Put the variable names _into_ the plot
                 if model_output == "probability":
-                    x_pos = 0
+                    x_pos= 0.0
                     ha = "left"
                 else:
                     x_pos = 0.05
-                    ha = "right"
+                    ha = "left"
 
                 # Put the variable names _into_ the plot
                 for i in range(len(variable_names_to_plot)):
-                    ax.text(
-                        x_pos,
-                        i,
+                    ax.annotate(
                         variable_names_to_plot[i],
+                        xy=(x_pos,i),
                         va="center",
                         ha=ha,
                         size=size,
                         alpha=0.8,
                     )
-
+                
                 if model_output == "probability":
                     # Add vertical line
                     ax.axvline(
@@ -286,21 +282,30 @@ class PlotImportance(PlotStructure):
                         alpha=0.7,
                     )
 
+                if model_output == "probability" and method != 'ale_variance' and xticks is None:
+                    # Most probability-based scores are between 0-1 (AUC, BSS, NAUPDC,etc.)
+                    xticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+
+                if xticks is not None:
+                    ax.set_xticks(xticks)
+                else:
+                    self.set_n_ticks(ax, option='x')
+
                 ax.tick_params(axis="both", which="both", length=0)
                 ax.set_yticks([])
+                
                 if xticks is not None:
                     ax.set_xticks(xticks)
 
-                upper_limit = min(1.05 * np.amax(scores_to_plot), 1.0)
                 if model_output == "probability":
-                    upper_limit = min(1.05 * np.amax(scores_to_plot), 1.0)
+                    upper_limit = min(1.1 * np.amax(scores_to_plot), 1.0)
                     ax.set_xlim([0, upper_limit])
                 else:
-                    upper_limit = 1.05 * np.amax(scores_to_plot)
-                    ax.set_xlim([upper_limit, 0])
+                    upper_limit = 1.1 * np.amax(scores_to_plot)
+                    ax.set_xlim([0, upper_limit])
 
                 # make the horizontal plot go with the highest value at the top
-                ax.invert_yaxis()
+                #ax.invert_yaxis()
                 vals = ax.get_xticks()
                 for tick in vals:
                     ax.axvline(
@@ -308,7 +313,7 @@ class PlotImportance(PlotStructure):
                     )
 
                 if k == 0:
-                    pad = -0.15
+                    pad =  -0.2 if plot_correlated_features else -0.15
                     ax.annotate(
                         "higher ranking",
                         xy=(pad, 0.8),
@@ -338,7 +343,7 @@ class PlotImportance(PlotStructure):
                     )
 
         if len(xlabels) == 1 and not only_one_model:
-            self.set_major_axis_labels(
+            major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=xlabels[0].replace("_", "").upper(),
                 ylabel_left="",
@@ -346,13 +351,50 @@ class PlotImportance(PlotStructure):
                 fontsize=self.FONT_SIZES["tiny"],
             )
 
-        self.set_row_labels(ylabels, axes)
-
+        if ylabels is not None:
+            if isinstance(ylabels, str):
+                major_ax.set_ylabel(ylabels, fontsize=self.FONT_SIZEs['tiny'])
+            else:
+                self.set_row_labels(ylabels, axes)
+                                     
         if model_output == "probability":
             pos = (0.9, 0.09)
         else:
-            pos = (0.05, 0.95)
+            pos = (0.9, 0.9)
         self.add_alphabet_label(n_panels, axes, pos=pos)
+        
+    def _add_correlated_brackets(self, ax, corr_matrix, top_features, rho_threshold):
+        """
+        Add bracket connecting features above a given correlation threshold.
+        """
+        _,pair_indices = find_correlated_pairs_among_top_features(
+                                                                      corr_matrix, 
+                                                                       top_features, 
+                                                                       rho_threshold=rho_threshold,
+                                                                       )
+        x=0.008
+        dx=0.002
+        bottom_indices=[]
+        top_indices=[]
+        for p in pair_indices:
+            if p[0] > p[1]:
+                bottom_idx = p[1]
+                top_idx = p[0]
+            else:
+                bottom_idx = p[0]
+                top_idx = p[1]
+
+            if bottom_idx in bottom_indices or bottom_idx in top_indices:
+                bottom_idx+=0.1
+                        
+            if top_idx in top_indices or top_idx in bottom_indices:
+                top_idx+=0.1
+                            
+            bottom_indices.append(bottom_idx)
+            top_indices.append(top_idx)
+                            
+            self.annotate_bars(ax, bottom_idx=bottom_idx, top_idx=top_idx, x=x)
+            x-=dx 
 
     # You can fill this in by using a dictionary with {var_name: legible_name}
     def convert_vars_to_readable(self, variables_list, VARIABLE_NAMES_DICT):

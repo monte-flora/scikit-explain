@@ -351,10 +351,10 @@ class PlotStructure:
             labels = display_feature_names
 
         if return_labels:
-            labels = [fr"{l}" for l in labels]
+            labels = [f"{l}" for l in labels]
             return labels
         else:
-            labels = [fr"${l}$" for l in labels]
+            labels = [f"{l}" for l in labels]
             ax.set_yticklabels(labels)
 
     def set_axis_label(self, ax, xaxis_label=None, yaxis_label=None, **kwargs):
@@ -369,9 +369,9 @@ class PlotStructure:
             )
             units = self.display_units.get(xaxis_label, "")
             if units == "":
-                xaxis_label_with_units = fr"${xaxis_label_pretty}$"
+                xaxis_label_with_units = f"{xaxis_label_pretty}"
             else:
-                xaxis_label_with_units = fr"${xaxis_label_pretty} \ ({units})$"
+                xaxis_label_with_units = f"{xaxis_label_pretty} ({units})"
 
             ax.set_xlabel(xaxis_label_with_units, fontsize=fontsize)
 
@@ -381,9 +381,9 @@ class PlotStructure:
             )
             units = self.display_units.get(yaxis_label, "")
             if units == "":
-                yaxis_label_with_units = fr"${yaxis_label_pretty}$"
+                yaxis_label_with_units = f"{yaxis_label_pretty}"
             else:
-                yaxis_label_with_units = fr"${yaxis_label_pretty} \ ({units})$"
+                yaxis_label_with_units = f"{yaxis_label_pretty} ({units})"
 
             ax.set_ylabel(yaxis_label_with_units, fontsize=fontsize)
 
@@ -425,13 +425,17 @@ class PlotStructure:
         ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.yaxis.set_minor_locator(AutoMinorLocator())
 
-    def set_n_ticks(self, ax):
+    def set_n_ticks(self, ax, option='y'):
         """
         Set the max number of ticks per x- and y-axis for a
         subplot ax
         """
-        ax.yaxis.set_major_locator(MaxNLocator(5))
-        ax.yaxis.set_major_locator(MaxNLocator(4))
+        if option == 'y' or option == 'both':
+            ax.yaxis.set_major_locator(MaxNLocator(5))
+            ax.yaxis.set_major_locator(MaxNLocator(4))
+        if option == 'x' or option == 'both':
+            ax.xaxis.set_major_locator(MaxNLocator(5))
+            ax.xaxis.set_major_locator(MaxNLocator(4))
 
     def despine_plt(self, ax):
         """
@@ -441,6 +445,23 @@ class PlotStructure:
         ax.spines["top"].set_visible(False)
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
+        
+    def annotate_bars(self, ax, bottom_idx, top_idx, x=0):
+        """
+        Adds a square bracket that contains two points. Used to
+        connect predictors in the predictor ranking plot 
+        for highly correlated pairs. 
+        """
+        ax.annotate('', xy=(x,bottom_idx),  
+            xytext=(x,top_idx), 
+            arrowprops=dict(arrowstyle="<->,head_length=0.05,head_width=0.05",
+                            ec="xkcd:slate gray",
+                            connectionstyle="bar,fraction=0.2",
+                            shrinkA=0.5, 
+                            shrinkB=0.5,
+                            linewidth=0.5,
+                            )
+            )
 
     def add_colorbar(
         self,
