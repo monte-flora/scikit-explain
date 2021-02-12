@@ -20,7 +20,9 @@ from ..common.utils import (
     retrieve_important_vars,
     load_netcdf,
     save_netcdf,
-    combine_top_features)
+    combine_top_features,
+    determine_feature_dtype
+    )
 
 class InterpretToolkit(Attributes):
 
@@ -106,7 +108,6 @@ class InterpretToolkit(Attributes):
         """
 
         for key in self.attrs_dict.keys():
-            print(key, self.attrs_dict[key])
             ds.attrs[key] = self.attrs_dict[key]
             
         return ds
@@ -275,7 +276,6 @@ class InterpretToolkit(Attributes):
             are the features computed for. The items are data for the ICE curves. Also, 
             contains X data (feature values where the ICE curves were computed) for plotting. 
         """
-
         results_ds = self.global_obj._run_interpret_curves(method="ice",
                             features=features,
                             n_bins=n_bins,
@@ -283,7 +283,7 @@ class InterpretToolkit(Attributes):
                             subsample=subsample,
                             n_bootstrap=n_bootstrap)
         
-        dimension = '2D' if isinstance( list(features)[0] , tuple) else '1D'
+        dimension = '2D' if isinstance(list(features)[0], tuple) else '1D'
         self.attrs_dict['method'] = 'ice'
         self.attrs_dict['dimension'] = dimension
         
@@ -322,7 +322,6 @@ class InterpretToolkit(Attributes):
         --------------------------------------------------------
         results : xarray.DataSet
         """
-
         results_ds = self.global_obj._run_interpret_curves(method="pd",
                             features=features,
                             n_bins=n_bins,
@@ -336,11 +335,22 @@ class InterpretToolkit(Attributes):
         results_ds = self._append_attributes(results_ds)
         
         self.pd_ds = results_ds
-        self.features_used = features
+        
+        if features is None:
+            features=[]
+        if cat_features is None:
+            cat_features=[]
+   
+        if isinstance(features, str):
+            features=[features]
+        if isinstance(features, str):
+            cat_features=[cat_features]
+        
+        self.features_used = features + cat_features
         
         return results_ds
 
-    def calc_ale(self, features, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1):
+    def calc_ale(self, features=None, cat_features=None, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1):
         """
         Runs the accumulated local effects (ALE) calculations.
 
@@ -368,9 +378,12 @@ class InterpretToolkit(Attributes):
         --------------------------------------------------------
         results : xarray.DataSet
         """
-
+        if cat_features is None:
+            features, cat_features = determine_feature_dtype(self.examples,features)
+        
         results_ds = self.global_obj._run_interpret_curves(method="ale",
                             features=features,
+                            cat_features=cat_features,                             
                             n_bins=n_bins,
                             n_jobs=n_jobs,
                             subsample=subsample,
@@ -383,7 +396,18 @@ class InterpretToolkit(Attributes):
         results_ds = self._append_attributes(results_ds)
         
         self.ale_ds = results_ds
-        self.features_used = features
+        
+        if features is None:
+            features=[]
+        if cat_features is None:
+            cat_features=[]
+   
+        if isinstance(features, str):
+            features=[features]
+        if isinstance(features, str):
+            cat_features=[cat_features]
+        
+        self.features_used = features + cat_features
 
         return results_ds
 
@@ -531,7 +555,7 @@ class InterpretToolkit(Attributes):
                                           to_probability = to_probability,
                                           **kwargs)
 
-    def plot_pd(self, features=None, display_feature_names={}, display_units={}, 
+    def plot_pd(self, data=None, features=None, display_feature_names={}, display_units={}, 
                 line_colors=None, to_probability=False, **kwargs):
         """
         Runs the partial dependence plotting.
@@ -564,7 +588,7 @@ class InterpretToolkit(Attributes):
         """
 
         # Check if calc_pd has been ran
-        if not hasattr(self, 'pd_ds'):
+        if not hasattr(self, 'pd_ds') and data is None:
             raise AttributeError('No results! Run calc_pd first!')
         else:
             data = self.pd_ds
@@ -587,7 +611,7 @@ class InterpretToolkit(Attributes):
                                line_colors=line_colors,            
                                **kwargs)
 
-    def plot_ale(self, features=None, display_feature_names={}, display_units={}, 
+    def plot_ale(self, data=None, features=None, display_feature_names={}, display_units={}, 
                  line_colors=None, to_probability=False, **kwargs):
         """
         Runs the accumulated local effects plotting.
@@ -620,7 +644,7 @@ class InterpretToolkit(Attributes):
         """
 
         # Check if calc_pd has been ran
-        if not hasattr(self, 'ale_ds'):
+        if not hasattr(self, 'ale_ds') and data is None:
             raise AttributeError('No results! Run calc_ale first!')
         else:
             data = self.ale_ds
@@ -822,7 +846,8 @@ class InterpretToolkit(Attributes):
 
     def plot_importance(self, method='multipass', 
                         xlabels=None, ylabels=None, metrics_used=None, 
-                        data=None, model_names=None, **kwargs):
+                        data=None, model_names=None, plot_correlated_features=False,
+                        **kwargs):
         """
         Method for plotting the permutation importance results
 
@@ -857,6 +882,9 @@ class InterpretToolkit(Attributes):
         elif data is None:
             raise ValueError('data is None! Either set it or run the .calc_permutation_importance method first!')
 
+        if isinstance(metrics_used, str):
+            metrics_used=[metrics_used]
+            
         if xlabels is None and metrics_used is None and ylabels is None:
             metrics_used = [data.attrs['evaluation_fn']]
         else:
@@ -867,7 +895,10 @@ class InterpretToolkit(Attributes):
                 model_names = [model_names]            
         else:
             model_names=self.model_names
-
+            
+        if plot_correlated_features:
+            kwargs['examples'] = self.examples
+            
         return plot_obj.plot_variable_importance(data,
                                                 method=method, 
                                                 model_output=model_output,
@@ -875,6 +906,7 @@ class InterpretToolkit(Attributes):
                                                 metrics_used = metrics_used,
                                                 xlabels = xlabels,
                                                 ylabels=ylabels,
+                                                plot_correlated_features=plot_correlated_features,
                                                  **kwargs)
 
     def get_important_vars(self, results, multipass=True, n_vars=10, combine=False):
