@@ -201,7 +201,7 @@ class PlotInterpretCurves(PlotStructure):
             ax.set_yscale("log")
             ymax = round(10 * len(data))
             n_ticks = round(log10(ymax))
-            ax.set_ylim([0, ymax])
+            ax.set_ylim([0.00001, ymax])
             ax.set_yticks([10 ** i for i in range(n_ticks + 1)])
             return "Frequency"
 

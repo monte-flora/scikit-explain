@@ -144,7 +144,10 @@ class GlobalInterpret(Attributes):
         """
         available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
 
-        if not isinstance(evaluation_fn.lower(), str) and scoring_strategy is None:
+        if isinstance(evaluation_fn, str):
+            evaluation_fn=evaluation_fn.lower()
+        
+        if not isinstance(evaluation_fn, str) and scoring_strategy is None:
             raise ValueError(
                 """ 
                 The scoring_strategy argument is None! If you are using a user-define evaluation_fn 
@@ -580,7 +583,7 @@ class GlobalInterpret(Attributes):
         model = self.models[model_name]
         # check to make sure feature is valid
         if feature not in self.feature_names:
-            raise Exception(f"Feature {feature} is not a valid feature")
+            raise KeyError(f"Feature {feature} is not a valid feature.")
 
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
