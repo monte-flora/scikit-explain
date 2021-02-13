@@ -7,13 +7,39 @@ from sklearn.metrics import brier_score_loss, average_precision_score
 from statsmodels.distributions.empirical_distribution import ECDF
 from scipy.stats import t
 
+
+def is_fitted(model):
+    '''
+    Checks if a scikit-learn estimator/transformer has already been fit.
+    
+    
+    Parameters
+    ----------
+    model: scikit-learn estimator (e.g. RandomForestClassifier) 
+        or transformer (e.g. MinMaxScaler) object
+        
+    
+    Returns
+    -------
+    Boolean that indicates if ``model`` has already been fit (True) or not (False).
+    '''
+    
+    attrs = [v for v in vars(model)
+             if v.endswith("_") and not v.startswith("__")]
+    
+    return len(attrs) != 0
+
 def determine_feature_dtype(examples, features):
     """
     Determine if any features are categorical. 
     """
+    feature_names = list(examples.columns)
     non_cat_features=[]
     cat_features=[]
     for f in features:
+        if f not in feature_names:
+            raise KeyError(f"'{f}' is not a valid feature.")
+        
         if str(examples.dtypes[f]) == 'category':
             cat_features.append(f)
         else:

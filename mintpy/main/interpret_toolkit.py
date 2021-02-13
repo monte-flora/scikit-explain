@@ -21,7 +21,8 @@ from ..common.utils import (
     load_netcdf,
     save_netcdf,
     combine_top_features,
-    determine_feature_dtype
+    determine_feature_dtype,
+    is_str
     )
 
 class InterpretToolkit(Attributes):
@@ -223,13 +224,13 @@ class InterpretToolkit(Attributes):
                                  """)
             else:
                 # Check that ale_data actually has data for all the requested model names 
-                if isinstance(model_name, str):
+                if is_str(model_name):
                     model_name_temp=[model_name]
                     
                 if collections.Counter(model_name_temp) != collections.Counter(ale_data.attrs['models used']):
                     raise ValueError(f'ale_data does not contain data for all the model names ({model_name}) given!')
         else:
-            raise ValueError(f'Must provide ale_data or compute ale for each feature using mintpy.InterpretToolkit.calc_ale')
+            raise ValueError('Must provide ale_data or compute ale for each feature using mintpy.InterpretToolkit.calc_ale')
 
         results_ds = self.global_obj.compute_ale_variance(
                             data=ale_data, model_name=model_name, 
@@ -333,20 +334,8 @@ class InterpretToolkit(Attributes):
         self.attrs_dict['dimension'] = dimension
         
         results_ds = self._append_attributes(results_ds)
-        
         self.pd_ds = results_ds
-        
-        if features is None:
-            features=[]
-        if cat_features is None:
-            cat_features=[]
-   
-        if isinstance(features, str):
-            features=[features]
-        if isinstance(features, str):
-            cat_features=[cat_features]
-        
-        self.features_used = features + cat_features
+        self.features_used = features 
         
         return results_ds
 
@@ -478,7 +467,7 @@ class InterpretToolkit(Attributes):
         if model_names is None:
             model_names = self.model_names
         else:
-            if isinstance(model_names, str):
+            if is_str(model_names):
                 model_names = [model_names]
 
         if hasattr(self, 'ale_ds') and ale_data is None:
@@ -518,7 +507,10 @@ class InterpretToolkit(Attributes):
                 features = self.features_used
             except:
                 raise ValueError('No features were provided to plot!')
-
+        else:
+            if is_str(features):
+                features=[features]
+                
         if data.attrs['dimension'] == '2D':
             plot_obj = PlotInterpret2D()
             return plot_obj.plot_contours(method=method,
@@ -875,7 +867,7 @@ class InterpretToolkit(Attributes):
                              .calc_permutation_importance or .calc_ale_variance methods first!
                              """)
 
-        if isinstance(metrics_used, str):
+        if is_str(metrics_used):
             metrics_used=[metrics_used]
             
         if xlabels is None and metrics_used is None and ylabels is None:
@@ -884,7 +876,7 @@ class InterpretToolkit(Attributes):
             xlabels = ['']
             
         if model_names is not None:
-            if isinstance(model_names, str):
+            if is_str(model_names):
                 model_names = [model_names]            
         else:
             model_names=self.model_names
