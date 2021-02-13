@@ -7,7 +7,6 @@ from sklearn.metrics import brier_score_loss, average_precision_score
 from statsmodels.distributions.empirical_distribution import ECDF
 from scipy.stats import t
 
-
 def determine_feature_dtype(examples, features):
     """
     Determine if any features are categorical. 
@@ -18,7 +17,6 @@ def determine_feature_dtype(examples, features):
         if str(examples.dtypes[f]) == 'category':
             cat_features.append(f)
         else:
-            
             non_cat_features.append(f)
     
     return non_cat_features, cat_features

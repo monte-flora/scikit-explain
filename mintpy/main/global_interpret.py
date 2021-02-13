@@ -27,7 +27,8 @@ from ..common.utils import (
     brier_skill_score,
     norm_aupdc,
     to_xarray,
-    order_groups
+    order_groups,
+    determine_feature_dtype
 )
 
 from ..common.multiprocessing_utils import run_parallel, to_iterator
@@ -279,12 +280,14 @@ class GlobalInterpret(Attributes):
         if is_str(features) or isinstance(features, tuple):
             features = [features]
         
-        if is_str(cat_features):
-            cat_features = [cat_features]
-
+        if not isinstance(features[0], tuple):
+            features, cat_features = determine_feature_dtype(self.examples, features)
+        else:
+            cat_features=[]
+            
         results=[]
         cat_results=[]
-        if features is not None:
+        if len(features) > 0:
             if method == "ale":
                 # check first element of feature and see if the type is a tuple; assume second-order calculations
                 if isinstance(features[0], tuple):
@@ -304,8 +307,14 @@ class GlobalInterpret(Attributes):
                 func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs
             )
         
-        if method == 'ale' and cat_features is not None:
-            func = self.compute_first_order_ale_cat
+        if len(cat_features) > 0:
+            if method == 'ale':
+                func = self.compute_first_order_ale_cat
+            elif method == 'pd':
+                func = self.compute_partial_dependence
+            elif method =='ice':
+                func = self.compute_individual_cond_expect
+                
             args_iterator = to_iterator(
                 self.model_names, cat_features,  [subsample], [n_bootstrap], [feature_encoder]
                 )
@@ -313,7 +322,7 @@ class GlobalInterpret(Attributes):
             cat_results = run_parallel(
                 func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs
                 )
-            # Add functionality for categorical ALE curves. 
+           
         results=cat_results+results
 
         results = merge_dict(results)
@@ -499,7 +508,7 @@ class GlobalInterpret(Attributes):
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
             # get samples
-            examples = self.examples.iloc[idx, :]
+            examples = self.examples.iloc[idx, :].reset_index(drop=True)
             feature_values = [examples[f].to_numpy() for f in features]
             averaged_predictions = []
             # for each value, set all indices to the value,
@@ -604,7 +613,7 @@ class GlobalInterpret(Attributes):
  
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
-            examples = self.examples.iloc[idx, :]
+            examples = self.examples.iloc[idx, :].reset_index(drop=True)
 
             # Find the ranges to calculate the local effects over
             # Using xdata ensures each bin gets the same number of examples
@@ -749,7 +758,7 @@ class GlobalInterpret(Attributes):
             )
 
             # get samples
-            examples = self.examples.iloc[idx, :]
+            examples = self.examples.iloc[idx, :].reset_index(drop=True)
 
             # create bins for computation for both features
             feature_values = [examples[features[i]].values for i in range(2)]
@@ -948,6 +957,10 @@ class GlobalInterpret(Attributes):
             results : nested dictionary
 
         """
+        from inspect import currentframe, getframeinfo
+        from pandas.core.common import SettingWithCopyError
+        pd.options.mode.chained_assignment = 'raise'
+        
         if feature_encoder is None:
             def feature_encoder_func(data):
                 return data 
@@ -975,10 +988,10 @@ class GlobalInterpret(Attributes):
 
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
-            examples = self.examples.iloc[idx, :]
+            examples = self.examples.iloc[idx, :].reset_index(drop=True)
 
             if (examples[feature].dtype.name != "category") or (not examples[feature].cat.ordered):
-                examples[feature] = examples[feature].astype(str)
+                examples[feature] = examples[feature].astype(str)          
                 groups_order = order_groups(examples, feature)
                 groups = groups_order.index.values
                 examples[feature] = examples[feature].astype(
@@ -1055,7 +1068,7 @@ class GlobalInterpret(Attributes):
             Delta_plus = y_hat_plus - y_hat[ind_plus]
             Delta_neg = y_hat[ind_neg] - y_hat_neg
 
-            # compute the mean of the difference per group
+                # compute the mean of the difference per group
             delta_df = pd.concat(
                 [
                     pd.DataFrame(
@@ -1063,7 +1076,7 @@ class GlobalInterpret(Attributes):
                     ),
                     pd.DataFrame({"eff": Delta_neg, feature: groups[feature_codes[ind_neg]]}),
                 ]
-            )
+                )
             res_df = delta_df.groupby([feature]).mean()
             res_df.loc[:,"ale"] = res_df.loc[:, "eff"].cumsum()
 
