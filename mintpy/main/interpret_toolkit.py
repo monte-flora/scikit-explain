@@ -378,12 +378,8 @@ class InterpretToolkit(Attributes):
         --------------------------------------------------------
         results : xarray.DataSet
         """
-        if cat_features is None:
-            features, cat_features = determine_feature_dtype(self.examples,features)
-        
         results_ds = self.global_obj._run_interpret_curves(method="ale",
-                            features=features,
-                            cat_features=cat_features,                             
+                            features=features,                            
                             n_bins=n_bins,
                             n_jobs=n_jobs,
                             subsample=subsample,
@@ -396,18 +392,7 @@ class InterpretToolkit(Attributes):
         results_ds = self._append_attributes(results_ds)
         
         self.ale_ds = results_ds
-        
-        if features is None:
-            features=[]
-        if cat_features is None:
-            cat_features=[]
-   
-        if isinstance(features, str):
-            features=[features]
-        if isinstance(features, str):
-            cat_features=[cat_features]
-        
-        self.features_used = features + cat_features
+        self.features_used = features 
 
         return results_ds
 
@@ -871,16 +856,24 @@ class InterpretToolkit(Attributes):
         -----------------------
         fig: matplotlib figure instance
         """
+        if method == 'ale_variance':
+            metrics_used=['$\sigma$(ALE)']
+        
         model_output = kwargs.get('model_output', self.model_output)
         kwargs.pop('model_output', None)
 
         # initialize a plotting object
         plot_obj = PlotImportance()
 
-        if hasattr(self, 'perm_imp_ds') and data is None:
+        if hasattr(self, 'perm_imp_ds') and data is None and method != 'ale_variance':
             data = self.perm_imp_ds
+        elif method == 'ale_variance' and hasattr(self, 'ale_var_ds') and data is None:
+            data = self.ale_var_ds
         elif data is None:
-            raise ValueError('data is None! Either set it or run the .calc_permutation_importance method first!')
+            raise ValueError("""
+                             data is None! Either set it or run either the 
+                             .calc_permutation_importance or .calc_ale_variance methods first!
+                             """)
 
         if isinstance(metrics_used, str):
             metrics_used=[metrics_used]
@@ -898,6 +891,9 @@ class InterpretToolkit(Attributes):
             
         if plot_correlated_features:
             kwargs['examples'] = self.examples
+            
+        
+            
             
         return plot_obj.plot_variable_importance(data,
                                                 method=method, 
