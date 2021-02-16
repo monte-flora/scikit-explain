@@ -6,9 +6,10 @@ python:
 install:
 - python setup.py upload 
 - pip install pytest-cov codecov
-- pip install matplotlib ipython codecov torch torchvision pylint scikit-learn==0.23.2  
+- pip install -r requirements.txt
+- pip install pylint scikit-learn==0.23.2
 script:
-  - python -m pytest --cov=nba_scraper tests
+  - pytest -s --cov=nba_scraper tests
 after_success:
   - codecov
 deploy:
