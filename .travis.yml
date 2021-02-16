@@ -5,12 +5,12 @@ python:
 - '3.6'
 install:
 - python setup.py upload 
-- pip install coverage 
+- pip install pytest-cov codecov
 - pip install matplotlib ipython codecov torch torchvision pylint scikit-learn==0.23.2  
 script:
-  - coverage -m unittest tests
+  - python -m pytest --cov=nba_scraper tests
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - codecov
 deploy:
   provider: testpypi
   user: "__token__"
