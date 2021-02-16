@@ -13,6 +13,7 @@ script:
   - pytest -s --cov=nba_scraper tests
 after_success:
   - codecov
+  - bash <(curl -s https://codecov.io/bash)
 deploy:
   provider: testpypi
   user: "__token__"
