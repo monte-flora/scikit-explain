@@ -6,11 +6,11 @@ python:
 install:
 - python setup.py upload 
 - pip install .[test]
-- pip install matplotlib ipython codecov torch torchvision pylint scikit-learn==0.23.2
+- pip install matplotlib ipython codecov torch torchvision pylint scikit-learn==0.23.2 coverage 
 script:
-  - python -m pytest tests
+  - coverage -m pytest tests
 after_success:
-  - codecov
+  - bash <(curl -s https://codecov.io/bash)
 deploy:
   provider: testpypi
   user: "__token__"
