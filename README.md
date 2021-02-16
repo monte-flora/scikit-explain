@@ -4,7 +4,8 @@
 [![codecov](https://codecov.io/gh/monte-flora/mintpy/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/mintpy)
 [![Updates](https://pyup.io/repos/github/monte-flora/mintpy/shield.svg)](https://pyup.io/repos/github/monte-flora/mintpy/)
 [![Python 3](https://pyup.io/repos/github/monte-flora/mintpy/python-3-shield.svg)](https://pyup.io/repos/github/monte-flora/mintpy/)
-
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+![PyPI](https://img.shields.io/pypi/v/mintpy)
 
 __MintPy__ (__Model INTerpretability in Python__) is designed to be a user-friendly package for computing and plotting machine learning interpretation output in Python. Current computation includes partial dependence (PD), accumulated local effects (ALE), random forest-based feature contributions (treeinterpreter), single- and multiple-pass permutation importance, and Shapley Additive Explanations (SHAP). All of these methods are discussed at length in Christoph Molnar's interpretable ML book (https://christophm.github.io/interpretable-ml-book/). Most calculations can be performed in parallel when multi-core processing is available. The primary feature of this package is the accompanying built-in plotting methods, which are desgined to be easy to use while producing publication-level quality figures. 
 
