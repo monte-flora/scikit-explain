@@ -207,7 +207,9 @@ class PlotImportance(PlotStructure):
                 else:
                     if method != 'ale_variance':
                         scores.append(original_score_mean) 
-                    
+                    else:
+                        scores = [score[0] for score in scores] 
+                        
                     scores_to_plot = np.array(scores)
                 
                 # Despine
@@ -227,8 +229,6 @@ class PlotImportance(PlotStructure):
                         zorder=2,
                     )
                 else:
-                    
-                    print(scores_to_plot)
                     ax.barh(
                         np.arange(len(scores_to_plot)),
                         scores_to_plot,
@@ -262,7 +262,7 @@ class PlotImportance(PlotStructure):
                         alpha=0.8,
                     )
                 
-                if model_output == "probability":
+                if model_output == "probability" and method != 'ale_variance':
                     # Add vertical line
                     ax.axvline(
                         original_score_mean,
@@ -297,7 +297,7 @@ class PlotImportance(PlotStructure):
                 if xticks is not None:
                     ax.set_xticks(xticks)
 
-                if model_output == "probability":
+                if model_output == "probability" and method != 'ale_variance':
                     upper_limit = min(1.1 * np.amax(scores_to_plot), 1.0)
                     ax.set_xlim([0, upper_limit])
                 else:

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
-from .utils import is_list, to_list
+from .utils import is_list, to_list, is_fitted
 
 
 class Attributes:
@@ -44,6 +44,11 @@ class Attributes:
                 model_names
             ), "Number of model objects is not equal to the number of model names given!"
 
+        # Check that the model objects have been fit! 
+        if model_objs is not None:
+            if not all([is_fitted(m) for m in model_objs]):
+                raise ValueError('One or more of the models given has been fit!') 
+            
         # Create a dictionary from the model_objs and model_names.
         # Then set the attributes.
         self.models = OrderedDict(
@@ -95,7 +100,7 @@ class Attributes:
         Check the model output is given and if not try to
         assume the correct model output.
         """
-
+        
         model_obj = model[0] if is_list(model) else model
         available_options = ["raw", "probability"]
 
