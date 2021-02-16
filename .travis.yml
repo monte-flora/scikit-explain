@@ -5,10 +5,10 @@ python:
 - '3.6'
 install:
 - python setup.py upload 
-- pip install .[test]
-- pip install matplotlib ipython codecov torch torchvision pylint scikit-learn==0.23.2 coverage 
+- pip install coverage 
+- pip install matplotlib ipython codecov torch torchvision pylint scikit-learn==0.23.2  
 script:
-  - coverage -m pytest tests
+  - coverage -m unittest tests
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 deploy:
