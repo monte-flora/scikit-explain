@@ -6,7 +6,7 @@ python:
 install:
 - python setup.py upload 
 - pip install .[test]
-- pip install matplotlib ipython codecov torch torchvision pylint sklearn==0.23.2
+- pip install matplotlib ipython codecov torch torchvision pylint scikit-learn==0.23.2
 script:
   - python -m pytest tests
 after_success:
