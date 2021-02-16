@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = codecov
+source = mintpy
 
 [report]
 exclude_lines =
