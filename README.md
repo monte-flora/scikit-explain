@@ -55,6 +55,9 @@ myInterpreter = mintpy.InterpretToolkit(model=model_objs,
                                 )
 ```
 ### Permutation Importance
+
+
+
 For predictor ranking, MintPy uses both single-pass and multiple-pass permutation importance method (Breiman 2001; Lakshmanan et al. 2015; McGovern et al. 2019).
 We can calculate the permutation importance and then plot the results. In the tutorial it discusses options to make the figure publication-quality giving the plotting method
 additional argument to convert the feature names to a more readable format or color coding by feature type. 
@@ -66,6 +69,8 @@ myInterpreter.plot_importance(method='multipass')
 <p align="center">
   <img width="811" src="images/multi_pass_perm_imp.png"  />
 </p>
+
+Sample notebook can be found here: [**Permutation Importance**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
 
 
 ### Partial dependence and Accumulated Local Effects 
