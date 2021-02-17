@@ -77,22 +77,35 @@ important_vars = myInterpreter.get_important_vars(results, multipass=True, nvars
 myInterpreter.calc_ale(features=important_vars, nbins=20)
 myInterpreter.plot_ale()
 ```
-<a href="url"><img src="images/ale_1d.png" align="center" height="500" width="500" ></a>
+<p align="center">
+  <img width="811" src="images/ale_1d.png"  />
+</p>
 
 Additionally, you can use the same code snippet to compute the second-order ALE (see the notebook for more details). 
 
-<a href="url"><img src="images/ale_2d.png" align="center" height="500" width="500" ></a>
+<p align="center">
+  <img width="811" src="images/ale_2d.png"  />
+</p>
+
 
 ### Feature Contributions 
 To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. MintPy can create the summary and dependence plots from the shap python package, but is adapted for multiple predictors and an easier user interface. It is also possible to plot contributions for a single example or summarized by model performance. 
 
-<a href="url"><img src="images/feature_contribution_single.png" align="center" height="500" width="700" ></a>
+<p align="center">
+  <img width="811" src="images/feature_contribution_single.png" />
+</p>
 
-<a href="url"><img src="images/feature_contributions_perform.png" align="center" height="500" width="700" ></a>
+<p align="center">
+  <img width="811" src="images/feature_contributions_perform.png"  />
+</p>
 
-<a href="url"><img src="images/shap_summary.png" align="center" height="500" width="700" ></a>
+<p align="center">
+  <img width="811" src="images/shap_summary.png"  />
+</p>
 
-<a href="url"><img src="images/shap_dependence.png" align="center" height="500" width="700" ></a>
+<p align="center">
+  <img width="811" src="images/shap_dependence.png" />
+</p>
 
 ### Tutorial notebooks
 
