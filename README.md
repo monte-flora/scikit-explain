@@ -92,6 +92,10 @@ Additionally, you can use the same code snippet to compute the second-order ALE 
   <img width="811" src="images/ale_2d.png"  />
 </p>
 
+Sample notebook can be found here: 
+- [**Accumulated Local effects**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/accumulated_local_effect_tutorial.ipynb) 
+- [**Partial Dependence**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/partial_dependence_tutorial.ipynb) 
+
 
 ### Feature Contributions 
 To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. MintPy can create the summary and dependence plots from the shap python package, but is adapted for multiple predictors and an easier user interface. It is also possible to plot contributions for a single example or summarized by model performance. 
@@ -159,8 +163,19 @@ myInterpreter.plot_shap(features=features,
   <img width="811" src="images/shap_dependence.png" />
 </p>
 
+Sample notebook can be found here: 
+- [**Feature Contributions**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/feature_contributions.ipynb) 
+- [**SHAP-Style Plots**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/shap_style_plots.ipynb) 
+
+
 ### Tutorial notebooks
 
 The notebooks provides the package documentation and demonstrate MintPy API, which was used to create the above figures. 
+
+- [**Permutation Importance**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
+- [**Accumulated Local effects**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/accumulated_local_effect_tutorial.ipynb) 
+- [**Partial Dependence**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/partial_dependence_tutorial.ipynb) 
+- [**Feature Contributions**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/feature_contributions.ipynb) 
+- [**SHAP-Style Plots**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/shap_style_plots.ipynb) 
 
 
