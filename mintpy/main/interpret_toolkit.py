@@ -284,8 +284,10 @@ class InterpretToolkit(Attributes):
             are the features computed for. The items are data for the ICE curves. Also, 
             contains X data (feature values where the ICE curves were computed) for plotting. 
         """
-        if features == 'all':
-            features = self.feature_names
+        if is_str(features):
+            if features == 'all':
+                features = self.feature_names
+                
         results_ds = self.global_obj._run_interpret_curves(method="ice",
                             features=features,
                             n_bins=n_bins,
@@ -333,8 +335,9 @@ class InterpretToolkit(Attributes):
         --------------------------------------------------------
         results : xarray.DataSet
         """
-        if features == 'all':
-            features = self.feature_names
+        if is_str(features):
+            if features == 'all':
+                features = self.feature_names
         results_ds = self.global_obj._run_interpret_curves(method="pd",
                             features=features,
                             n_bins=n_bins,
@@ -380,8 +383,9 @@ class InterpretToolkit(Attributes):
         --------------------------------------------------------
         results : xarray.DataSet
         """
-        if features == 'all':
-            features = self.feature_names
+        if is_str(features):
+            if features == 'all':
+                features = self.feature_names
             
         results_ds = self.global_obj._run_interpret_curves(method="ale",
                             features=features,                            
