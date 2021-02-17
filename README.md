@@ -7,12 +7,19 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ![PyPI](https://img.shields.io/pypi/v/mintpy)
 
-__MintPy__ (__Model INTerpretability in Python__) is designed to be a user-friendly package for computing and plotting machine learning interpretation output in Python. Current computation includes partial dependence (PD), accumulated local effects (ALE), random forest-based feature contributions (treeinterpreter), single- and multiple-pass permutation importance, and Shapley Additive Explanations (SHAP). All of these methods are discussed at length in Christoph Molnar's interpretable ML book (https://christophm.github.io/interpretable-ml-book/). Most calculations can be performed in parallel when multi-core processing is available. The primary feature of this package is the accompanying built-in plotting methods, which are desgined to be easy to use while producing publication-level quality figures. 
+__MintPy__ (__Model INTerpretability in Python__) is designed to be a user-friendly package for computing and plotting machine learning interpretation output in Python. Current computation includes partial dependence (PD), accumulated local effects (ALE), random forest-based feature contributions (treeinterpreter), single- and multiple-pass permutation importance, and Shapley Additive Explanations (SHAP). All of these methods are discussed at length in [Christoph Molnar's interpretable ML book](https://christophm.github.io/interpretable-ml-book/). Most calculations can be performed in parallel when multi-core processing is available. The primary feature of this package is the accompanying built-in plotting methods, which are desgined to be easy to use while producing publication-level quality figures. 
 
 The package is under active development and will likely contain bugs or errors. Feel free to raise issues!
 
 This package is largely original code, but also includes snippets from preexisting packages. Our goal is not take credit from other code authors, but to
-make a single source for computing several machine learning interpretation methods. 
+make a single source for computing several machine learning interpretation methods. Here is a list of packages used in MintPy: 
+-[**PyALE**](https://github.com/DanaJomar/PyALE)
+-[**PermutationImportance**](https://github.com/gelijergensen/PermutationImportance)
+-[**ALEPython**](https://github.com/blent-ai/ALEPython)
+-[**SHAP**](https://github.com/slundberg/shap/)
+-[**Scikit-Learn**](https://github.com/scikit-learn/scikit-learn)
+
+If you employ MintPy in your research, please cite this github and the relevant packages listed above. 
 
 ### Install
 MintPy can be installed through pip or conda-forge. 
