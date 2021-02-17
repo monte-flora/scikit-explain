@@ -62,7 +62,11 @@ additional argument to convert the feature names to a more readable format or co
 myInterpreter.calc_permutation_importance(n_vars=10, evaluation_fn='auc')
 myInterpreter.plot_importance(multipass=True, metric = "Training AUC")
 ```
-<a href="url"><img src="images/multi_pass_perm_imp.png" align="center" height="250" width="500" ></a>
+
+<p align="center">
+  <img width="811" src="images/multi_pass_perm_imp.png"  />
+</p>
+
 
 ### Partial dependence and Accumulated Local Effects 
 To compute the expected functional relationship between a feature and an ML model's prediction, you can use partial dependence or accumulated local effects. There is also an option for second-order interaction effects. For the choice of feature, you can manually select or can run the permutation importance and a built-in method will retrieve those features. It is also possible to configure the plot for readable feature names. 
@@ -74,6 +78,7 @@ myInterpreter.calc_ale(features=important_vars, nbins=20)
 myInterpreter.plot_ale()
 ```
 <a href="url"><img src="images/ale_1d.png" align="center" height="500" width="500" ></a>
+
 Additionally, you can use the same code snippet to compute the second-order ALE (see the notebook for more details). 
 
 <a href="url"><img src="images/ale_2d.png" align="center" height="500" width="500" ></a>
