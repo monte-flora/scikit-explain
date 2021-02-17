@@ -106,6 +106,7 @@ fig = myInterpreter.plot_contributions()
 <p align="center">
   <img width="811" src="images/feature_contribution_single.png" />
 </p>
+
 ```python
 myInterpreter = mintpy.InterpretToolkit(models=model_objs[0],
                                  model_names=model_names[0],
@@ -117,9 +118,11 @@ background_dataset = shap.sample(examples, 100)
 results = myInterpreter.calc_contributions(method='shap', background_dataset=background_dataset, performance_based=True,)
 fig = myInterpreter.plot_contributions()
 ```
+
 <p align="center">
   <img width="811" src="images/feature_contributions_perform.png"  />
 </p>
+
 ```python
 myInterpreter = mintpy.InterpretToolkit(models=model_objs[0],
                                  model_names=model_names[0],
@@ -136,6 +139,7 @@ myInterpreter.plot_shap(plot_type = 'summary', shap_values=shap_values,)
 <p align="center">
   <img width="811" src="images/shap_summary.png"  />
 </p>
+
 ```python
 features = ['tmp2m_hrs_bl_frez', 'sat_irbt', 'sfcT_hrs_ab_frez', 'tmp2m_hrs_ab_frez', 'd_rad_d']
 myInterpreter.plot_shap(features=features,
