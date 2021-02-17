@@ -1276,7 +1276,7 @@ class GlobalInterpret(Attributes):
 
 
     def compute_ale_variance(
-        self, data, model_name, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs
+        self, data, model_names, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs
     ):
         """
         Compute the standard deviation of the ALE values 
@@ -1300,14 +1300,16 @@ class GlobalInterpret(Attributes):
 
 
         """
-        if data is None:
-            # Get the ALE curve for each feature    
-            ale_subsample = kwargs.get("ale_subsample", subsample)
-            feature_names = list(self.examples.columns)
-            model = self.models[model_name]
-            feature_names = list(self.examples.columns)
-            n_jobs = kwargs.get('n_jobs', 1)
-            data = self._run_interpret_curves(
+        results={}
+        for model_name in model_names:
+            if data is None:
+                # Get the ALE curve for each feature    
+                ale_subsample = kwargs.get("ale_subsample", subsample)
+                feature_names = list(self.examples.columns)
+                model = self.models[model_name]
+                feature_names = list(self.examples.columns)
+                n_jobs = kwargs.get('n_jobs', 1)
+                data = self._run_interpret_curves(
                     method="ale",
                     features=feature_names,
                     n_bins=n_bins,
@@ -1315,25 +1317,23 @@ class GlobalInterpret(Attributes):
                     subsample=ale_subsample,
                     n_bootstrap=n_bootstrap,
                     )
-        else:
-            feature_names = [f.split('__')[0] for f in data.data_vars if 'ale' in f ]
+            else:
+                feature_names = list(set([f.split('__')[0] for f in data.data_vars if 'ale' in f ]))
 
-        # Compute the std over the bin axis
-        ale_std = np.array([np.std(data[f"{f}__{model_name}__ale"].values, ddof=1, axis=1) for f in feature_names])
+            # Compute the std over the bin axis
+            ale_std = np.array([np.std(data[f"{f}__{model_name}__ale"].values, ddof=1, axis=1) for f in feature_names])
 
-        # Average over the bootstrap indices 
-        idx = np.argsort(np.mean(ale_std, axis=1))[::-1]
+            # Average over the bootstrap indices 
+            idx = np.argsort(np.mean(ale_std, axis=1))[::-1]
 
-        feature_names_sorted = np.array(feature_names)[idx]
-        ale_std_sorted = ale_std[idx, :]
+            feature_names_sorted = np.array(feature_names)[idx]
+            ale_std_sorted = ale_std[idx, :]
 
-        results={}
-        
-        results[f"ale_variance_rankings__{model_name}"] = (
+            results[f"ale_variance_rankings__{model_name}"] = (
                     [f"n_vars_ale_variance"],
                     feature_names_sorted,
                 )
-        results[f"ale_variance_scores__{model_name}"] = (
+            results[f"ale_variance_scores__{model_name}"] = (
                 [f"n_vars_ale_variance", 'n_bootstrap'],
                     ale_std_sorted,
                 )

@@ -28,7 +28,7 @@ class Attributes:
                 (for plotting purposes)
         """
         model_is_none = model_objs == None
-
+        
         # Convert the model_objs to a list, if it is not already.
         if not is_list(model_objs):
             model_objs = to_list(model_objs)
@@ -45,7 +45,7 @@ class Attributes:
             ), "Number of model objects is not equal to the number of model names given!"
 
         # Check that the model objects have been fit! 
-        if model_objs is not None:
+        if not model_is_none:
             if not all([is_fitted(m) for m in model_objs]):
                 raise ValueError('One or more of the models given has been fit!') 
             

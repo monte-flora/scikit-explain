@@ -345,7 +345,7 @@ class PlotImportance(PlotStructure):
         if len(xlabels) == 1 and not only_one_model:
             major_ax = self.set_major_axis_labels(
                 fig,
-                xlabel=xlabels[0].replace("_", "").upper(),
+                xlabel=xlabels[0],
                 ylabel_left="",
                 labelpad=5,
                 fontsize=self.FONT_SIZES["tiny"],
