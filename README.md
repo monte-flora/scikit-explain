@@ -58,36 +58,101 @@ myInterpreter = mintpy.InterpretToolkit(model=model_objs,
 For predictor ranking, MintPy uses both single-pass and multiple-pass permutation importance method (Breiman 2001; Lakshmanan et al. 2015; McGovern et al. 2019).
 We can calculate the permutation importance and then plot the results. In the tutorial it discusses options to make the figure publication-quality giving the plotting method
 additional argument to convert the feature names to a more readable format or color coding by feature type. 
-```
+```python
 myInterpreter.calc_permutation_importance(n_vars=10, evaluation_fn='auc')
-myInterpreter.plot_importance(multipass=True, metric = "Training AUC")
+myInterpreter.plot_importance(method='multipass')
 ```
-<a href="url"><img src="images/multi_pass_perm_imp.png" align="center" height="250" width="500" ></a>
+
+<p align="center">
+  <img width="811" src="images/multi_pass_perm_imp.png"  />
+</p>
+
 
 ### Partial dependence and Accumulated Local Effects 
 To compute the expected functional relationship between a feature and an ML model's prediction, you can use partial dependence or accumulated local effects. There is also an option for second-order interaction effects. For the choice of feature, you can manually select or can run the permutation importance and a built-in method will retrieve those features. It is also possible to configure the plot for readable feature names. 
-```
+```python 
 # Assumes the calc_permutation_importance has already been run.
 important_vars = myInterpreter.get_important_vars(results, multipass=True, nvars=7)
 
-myInterpreter.calc_ale(features=important_vars, nbins=20)
+myInterpreter.calc_ale(features=important_vars, n_bins=20)
 myInterpreter.plot_ale()
 ```
-<a href="url"><img src="images/ale_1d.png" align="center" height="500" width="500" ></a>
+<p align="center">
+  <img width="811" src="images/ale_1d.png"  />
+</p>
+
 Additionally, you can use the same code snippet to compute the second-order ALE (see the notebook for more details). 
 
-<a href="url"><img src="images/ale_2d.png" align="center" height="500" width="500" ></a>
+<p align="center">
+  <img width="811" src="images/ale_2d.png"  />
+</p>
+
 
 ### Feature Contributions 
 To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. MintPy can create the summary and dependence plots from the shap python package, but is adapted for multiple predictors and an easier user interface. It is also possible to plot contributions for a single example or summarized by model performance. 
 
-<a href="url"><img src="images/feature_contribution_single.png" align="center" height="500" width="700" ></a>
+```python
+single_example = examples.iloc[[0]]
+myInterpreter = mintpy.InterpretToolkit(models=model_objs[0],
+                                 model_names=model_names[0],
+                                 examples=single_example,
+                                 targets=targets,
+                                )
 
-<a href="url"><img src="images/feature_contributions_perform.png" align="center" height="500" width="700" ></a>
+background_dataset = shap.sample(examples, 100)
+results = myInterpreter.calc_contributions(method='shap', background_dataset=background_dataset)
+fig = myInterpreter.plot_contributions()
+```
+<p align="center">
+  <img width="811" src="images/feature_contribution_single.png" />
+</p>
 
-<a href="url"><img src="images/shap_summary.png" align="center" height="500" width="700" ></a>
+```python
+myInterpreter = mintpy.InterpretToolkit(models=model_objs[0],
+                                 model_names=model_names[0],
+                                 examples=examples,
+                                 targets=targets,
+                                )
 
-<a href="url"><img src="images/shap_dependence.png" align="center" height="500" width="700" ></a>
+background_dataset = shap.sample(examples, 100)
+results = myInterpreter.calc_contributions(method='shap', background_dataset=background_dataset, performance_based=True,)
+fig = myInterpreter.plot_contributions()
+```
+
+<p align="center">
+  <img width="811" src="images/feature_contributions_perform.png"  />
+</p>
+
+```python
+myInterpreter = mintpy.InterpretToolkit(models=model_objs[0],
+                                 model_names=model_names[0],
+                                 examples=examples,
+                                 targets=targets,
+                                )
+                                
+background_dataset = shap.sample(examples, 100)
+results = myInterpreter.calc_shap(background_dataset=background_dataset)
+shap_values, bias = results['Random Forest']
+myInterpreter.plot_shap(plot_type = 'summary', shap_values=shap_values,) 
+```
+
+<p align="center">
+  <img width="811" src="images/shap_summary.png"  />
+</p>
+
+```python
+features = ['tmp2m_hrs_bl_frez', 'sat_irbt', 'sfcT_hrs_ab_frez', 'tmp2m_hrs_ab_frez', 'd_rad_d']
+myInterpreter.plot_shap(features=features,
+                        plot_type = 'dependence',
+                        shap_values=shap_values,
+                        display_feature_names=plotting_config.display_feature_names,
+                        display_units = plotting_config.display_units,
+                        to_probability=True)
+```
+
+<p align="center">
+  <img width="811" src="images/shap_dependence.png" />
+</p>
 
 ### Tutorial notebooks
 
