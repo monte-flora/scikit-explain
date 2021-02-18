@@ -176,7 +176,7 @@ class PlotImportance(PlotStructure):
                 
                 scores = scores[::-1]
                 
-                if method != 'ale_variance':
+                if 'ale_variance' not in method:
                     # Get the original score (no permutations)
                     original_score = results[f"original_score__{model_name}"].values
 
@@ -205,7 +205,7 @@ class PlotImportance(PlotStructure):
                                    for score in scores]).transpose()
                 
                 else:
-                    if method != 'ale_variance':
+                    if 'ale_variance' not in method:
                         scores.append(original_score_mean) 
                     else:
                         scores = [score[0] for score in scores] 
@@ -262,7 +262,7 @@ class PlotImportance(PlotStructure):
                         alpha=0.8,
                     )
                 
-                if model_output == "probability" and method != 'ale_variance':
+                if model_output == "probability" and 'ale_variance' not in method:
                     # Add vertical line
                     ax.axvline(
                         original_score_mean,
@@ -282,7 +282,7 @@ class PlotImportance(PlotStructure):
                         alpha=0.7,
                     )
 
-                if model_output == "probability" and method != 'ale_variance' and xticks is None:
+                if model_output == "probability" and 'ale_variance' not in method and xticks is None:
                     # Most probability-based scores are between 0-1 (AUC, BSS, NAUPDC,etc.)
                     xticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
 
@@ -297,7 +297,7 @@ class PlotImportance(PlotStructure):
                 if xticks is not None:
                     ax.set_xticks(xticks)
 
-                if model_output == "probability" and method != 'ale_variance':
+                if model_output == "probability" and 'ale_variance' not in method:
                     upper_limit = min(1.1 * np.amax(scores_to_plot), 1.0)
                     ax.set_xlim([0, upper_limit])
                 else:
@@ -372,7 +372,7 @@ class PlotImportance(PlotStructure):
                                                                        top_features, 
                                                                        rho_threshold=rho_threshold,
                                                                        )
-        x=0.008
+        x=0.001
         dx=0.002
         bottom_indices=[]
         top_indices=[]
@@ -394,7 +394,7 @@ class PlotImportance(PlotStructure):
             top_indices.append(top_idx)
                             
             self.annotate_bars(ax, bottom_idx=bottom_idx, top_idx=top_idx, x=x)
-            x-=dx 
+            x+=dx 
 
     # You can fill this in by using a dictionary with {var_name: legible_name}
     def convert_vars_to_readable(self, variables_list, VARIABLE_NAMES_DICT):

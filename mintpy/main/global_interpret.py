@@ -339,7 +339,7 @@ class GlobalInterpret(Attributes):
         which is converted to an xarray.Dataset
         """
         results = {}
-
+        
         feature1 = f"{features[0]}" if isinstance(features, tuple) else features
         feature2 = f"__{features[1]}" if isinstance(features, tuple) else ""
 
@@ -356,19 +356,20 @@ class GlobalInterpret(Attributes):
                 xdata2 = xdata[1]
                 hist_data2 = hist_data[1]
         else:
-            if np.ndim(xdata) > 1:
+            if feature2 != "":
                 xdata1 = 0.5 * (xdata[0][1:] + xdata[0][:-1])
                 xdata2 = 0.5 * (xdata[1][1:] + xdata[1][:-1])
             else:
                 xdata1 = 0.5 * (xdata[1:] + xdata[:-1])
-            if np.ndim(xdata) > 1:
+            
+            if feature2 != "":
                 hist_data2 = hist_data[1]
                 
                 
         results[f"{feature1}{feature2}__{model_name}__{method}"] = (y_shape, ydata)
         results[f"{feature1}__bin_values"] = ([f"n_bins__{feature1}"], xdata1)
         results[f"{feature1}"] = (["n_examples"], hist_data1)
-        if xdata2 is not None:
+        if feature2 != "":
             results[f"{feature2[2:]}__bin_values"] = ([f"n_bins{feature2[2:]}"], xdata2)
             results[f"{feature2[2:]}"] = (["n_examples"], hist_data2)
 
@@ -737,7 +738,7 @@ class GlobalInterpret(Attributes):
             )
             for v in original_feature_values
         ]
-
+        
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
@@ -1276,7 +1277,7 @@ class GlobalInterpret(Attributes):
 
 
     def compute_ale_variance(
-        self, data, model_names, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs
+        self, data, model_names, features=None, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs
     ):
         """
         Compute the standard deviation of the ALE values 
@@ -1307,7 +1308,6 @@ class GlobalInterpret(Attributes):
                 ale_subsample = kwargs.get("ale_subsample", subsample)
                 feature_names = list(self.examples.columns)
                 model = self.models[model_name]
-                feature_names = list(self.examples.columns)
                 n_jobs = kwargs.get('n_jobs', 1)
                 data = self._run_interpret_curves(
                     method="ale",
@@ -1342,8 +1342,103 @@ class GlobalInterpret(Attributes):
 
         return results_ds 
             
+    def compute_interaction_rankings(
+        self, data, model_names, features, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs):
+        """
+        Compute the variable interaction rankings from Greenwell et al. 2018, but 
+        using the purely second-order ALE rather than the second-order PD. 
+    
+        For a given second-order ALE, 
+         1. Compute the standard deviation over one axis and then take the std of those values
+         2. Compute the standard deviation over another axis and then take the std of those values
+         3. Average 1 and 2 together. 
+     
+        Sort by magnitudes given in (3). Larger values (relative to other values) are 
+        possibly indicative of  stronger feature interactions. 
+    
+        
+        Args:
+        --------------------
+            results : xarray.Dataset 
 
+            model_names : list of strings 
+            
+            features : lists of 2-tuples
 
+            n_bins : integer
+
+            subsample : float or integer
+
+            n_jobs : float or integer
+
+            n_bootstrap : integer
+
+            ale_subsample : float or integer
+
+        Returns:
+            results_ds, xarray.Dataset
+        """
+        results={}
+        for model_name in model_names:
+            if data is None:
+                # Get the ALE curve for each feature
+                if features is None:
+                    feature_names = list(self.examples.columns)
+                    features = list(itertools.combinations(feature_names, r=2))
+                ale_subsample = kwargs.get("ale_subsample", subsample)
+                model = self.models[model_name]
+                n_jobs = kwargs.get('n_jobs', 1)
+                data = self._run_interpret_curves(
+                    method="ale",
+                    features=features,
+                    n_bins=n_bins,
+                    n_jobs=n_jobs,
+                    subsample=ale_subsample,
+                    n_bootstrap=n_bootstrap,
+                    )
+                
+            interaction_effects = []
+            for f in features: 
+                data_temp = data[f'{f[0]}__{f[1]}__{model_name}__ale'].values
+                std_feature0 = np.std( np.std(data_temp, ddof=1, axis=1) , ddof=1, axis=1)
+                std_feature1 = np.std( np.std(data_temp, ddof=1, axis=2), ddof=1, axis=1)
+                interaction_effects.append(0.5*(std_feature0 + std_feature1))
+
+            interaction_effects = np.array(interaction_effects)
+            # Average over the bootstrap indices
+            idx = np.argsort(np.mean(interaction_effects, axis=1))[::-1]
+    
+            feature_names_sorted = np.array(features)[idx]
+            interaction_effects_sorted = interaction_effects[idx,:]
+            feature_names_sorted = [f'{f[0]}__{f[1]}' for f in feature_names_sorted]
+    
+            results[f"ale_variance_interactions_rankings__{model_name}"] = (
+                    [f"n_vars_ale_variance_interactions" ],
+                    feature_names_sorted,
+                    )
+            results[f"ale_variance_interactions_scores__{model_name}"] = (
+                [f"n_vars_ale_variance_interactions", 'n_bootstrap'],
+                    interaction_effects_sorted,
+                  )
+
+        results_ds = to_xarray(results)
+    
+        return results_ds
+    
+    
+    def number_of_features_used(self, model, examples):
+        """
+        Compute the number of features (NF) from Molnar et al. 2019
+        """
+        original_predictions = model.predict_proba(examples)[:,1]
+        features = list(examples.columns)
+        for f in features:
+            examples_temp = examples.copy()
+            examples_temp.loc[:, f] = np.random.permutation(examples_temp[f].values)
+        
+            new_predictions = model.predict_proba(examples_temp)[:,1]
+            change = np.absolute(new_predictions-original_predictions)
+        
 
 
 
