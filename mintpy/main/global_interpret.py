@@ -28,7 +28,7 @@ from ..common.utils import (
     norm_aupdc,
     to_xarray,
     order_groups,
-    determine_feature_dtype
+    determine_feature_dtype,
 )
 
 from ..common.multiprocessing_utils import run_parallel, to_iterator
@@ -130,7 +130,7 @@ class GlobalInterpret(Attributes):
         n_jobs=1,
         n_bootstrap=None,
         scoring_strategy=None,
-        perm_method='marginal',
+        perm_method="marginal",
         verbose=False,
         random_state=None,
     ):
@@ -145,8 +145,8 @@ class GlobalInterpret(Attributes):
         available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
 
         if isinstance(evaluation_fn, str):
-            evaluation_fn=evaluation_fn.lower()
-        
+            evaluation_fn = evaluation_fn.lower()
+
         if not isinstance(evaluation_fn, str) and scoring_strategy is None:
             raise ValueError(
                 """ 
@@ -179,7 +179,7 @@ class GlobalInterpret(Attributes):
 
         if subsample != 1.0 and n_bootstrap is None:
             n_bootstrap = 1
-            
+
         targets = pd.DataFrame(data=self.targets, columns=["Test"])
 
         pi_dict = {}
@@ -205,7 +205,7 @@ class GlobalInterpret(Attributes):
             )
 
             pi_dict[model_name] = pi_result
-            
+
             del pi_result
 
         data = {}
@@ -236,13 +236,20 @@ class GlobalInterpret(Attributes):
         return results_ds
 
     def _run_interpret_curves(
-        self, method, features=None, cat_features=None, n_bins=25, n_jobs=1, subsample=1.0, n_bootstrap=1, 
-        feature_encoder=None, 
+        self,
+        method,
+        features=None,
+        cat_features=None,
+        n_bins=25,
+        n_jobs=1,
+        subsample=1.0,
+        n_bootstrap=1,
+        feature_encoder=None,
     ):
 
         """
-        Runs the interpretation curve (partial dependence, accumulated local effects, 
-        or individual conditional expectations.) calculations. 
+        Runs the interpretation curve (partial dependence, accumulated local effects,
+        or individual conditional expectations.) calculations.
         Includes assessing whether the calculation is 1D or 2D and handling
         initializing the parallelization, subsampling data, and/or using bootstraping
         to compute confidence intervals.
@@ -258,10 +265,10 @@ class GlobalInterpret(Attributes):
             features: string, 2-tuple of strings, list of strings, or lists of 2-tuple strings
                 feature names to compute for. If 2-tuple, it will compute
                 the second-order results.
-                
+
             cat_features: string, or list of strings
-                categorical features to compute ALE for. ALE requires a special distinction 
-                for categorical features. 
+                categorical features to compute ALE for. ALE requires a special distinction
+                for categorical features.
 
             n_bins : int
                 Number of evenly-spaced bins to compute PD/ALE over.
@@ -282,14 +289,14 @@ class GlobalInterpret(Attributes):
         # Check if features is a string
         if is_str(features) or isinstance(features, tuple):
             features = [features]
-        
+
         if not isinstance(features[0], tuple):
             features, cat_features = determine_feature_dtype(self.examples, features)
         else:
-            cat_features=[]
-            
-        results=[]
-        cat_results=[]
+            cat_features = []
+
+        results = []
+        cat_results = []
         if len(features) > 0:
             if method == "ale":
                 # check first element of feature and see if the type is a tuple; assume second-order calculations
@@ -303,43 +310,53 @@ class GlobalInterpret(Attributes):
                 func = self.compute_individual_cond_expect
 
             args_iterator = to_iterator(
-            self.model_names, features, [n_bins], [subsample], [n_bootstrap], 
+                self.model_names,
+                features,
+                [n_bins],
+                [subsample],
+                [n_bootstrap],
             )
-            
+
             results = run_parallel(
                 func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs
             )
-        
+
         if len(cat_features) > 0:
-            if method == 'ale':
+            if method == "ale":
                 func = self.compute_first_order_ale_cat
-            elif method == 'pd':
+            elif method == "pd":
                 func = self.compute_partial_dependence
-            elif method =='ice':
+            elif method == "ice":
                 func = self.compute_individual_cond_expect
-                
+
             args_iterator = to_iterator(
-                self.model_names, cat_features,  [subsample], [n_bootstrap], [feature_encoder]
-                )
+                self.model_names,
+                cat_features,
+                [subsample],
+                [n_bootstrap],
+                [feature_encoder],
+            )
 
             cat_results = run_parallel(
                 func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs
-                )
-           
-        results=cat_results+results
+            )
+
+        results = cat_results + results
 
         results = merge_dict(results)
         results_ds = to_xarray(results)
 
         return results_ds
 
-    def _store_results(self, method, model_name, features, ydata, xdata, hist_data, categorical=False):
+    def _store_results(
+        self, method, model_name, features, ydata, xdata, hist_data, categorical=False
+    ):
         """
         Store the results of the ALE/PD/ICE calculations into dict,
         which is converted to an xarray.Dataset
         """
         results = {}
-        
+
         feature1 = f"{features[0]}" if isinstance(features, tuple) else features
         feature2 = f"__{features[1]}" if isinstance(features, tuple) else ""
 
@@ -350,7 +367,7 @@ class GlobalInterpret(Attributes):
         hist_data1 = hist_data[0]
 
         xdata2 = None
-        if method == "pd" or method == 'ice' or (method=='ale' and categorical):
+        if method == "pd" or method == "ice" or (method == "ale" and categorical):
             xdata1 = xdata[0]
             if np.shape(xdata)[0] > 1:
                 xdata2 = xdata[1]
@@ -361,11 +378,10 @@ class GlobalInterpret(Attributes):
                 xdata2 = 0.5 * (xdata[1][1:] + xdata[1][:-1])
             else:
                 xdata1 = 0.5 * (xdata[1:] + xdata[:-1])
-            
+
             if feature2 != "":
                 hist_data2 = hist_data[1]
-                
-                
+
         results[f"{feature1}{feature2}__{model_name}__{method}"] = (y_shape, ydata)
         results[f"{feature1}__bin_values"] = ([f"n_bins__{feature1}"], xdata1)
         results[f"{feature1}"] = (["n_examples"], hist_data1)
@@ -598,7 +614,7 @@ class GlobalInterpret(Attributes):
         # calculate the bin edges to be used in the bootstrapping.
         original_feature_values = self.examples[feature].values
 
-        if (self.examples[feature].dtype.name != "category"):
+        if self.examples[feature].dtype.name != "category":
             bin_edges = np.unique(
                 np.percentile(
                     original_feature_values,
@@ -609,12 +625,12 @@ class GlobalInterpret(Attributes):
             # Initialize an empty ale array
             ale = np.zeros((n_bootstrap, len(bin_edges) - 1))
         else:
-            # Use the unique values for discrete data. 
+            # Use the unique values for discrete data.
             bin_edges = np.unique(original_feature_values)
 
             # Initialize an empty ale array
             ale = np.zeros((n_bootstrap, len(bin_edges)))
- 
+
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
             examples = self.examples.iloc[idx, :].reset_index(drop=True)
@@ -627,13 +643,13 @@ class GlobalInterpret(Attributes):
             # Thus, Define the bins the feature samples fall into. Shift and clip to ensure we are
             # getting the index of the left bin edge and the smallest sample retains its index
             # of 0.
-            if (self.examples[feature].dtype.name != "category"):
+            if self.examples[feature].dtype.name != "category":
                 indices = np.clip(
                     np.digitize(feature_values, bin_edges, right=True) - 1, 0, None
                 )
             else:
-                # indices for discrete data 
-                indices = np.digitize(feature_values, bin_edges)-1
+                # indices for discrete data
+                indices = np.digitize(feature_values, bin_edges) - 1
 
             # Assign the feature quantile values (based on its bin index) to two copied training datasets,
             # one for each bin edge. Then compute the difference between the corresponding predictions
@@ -738,7 +754,7 @@ class GlobalInterpret(Attributes):
             )
             for v in original_feature_values
         ]
-        
+
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
@@ -939,13 +955,18 @@ class GlobalInterpret(Attributes):
         return results
 
     def compute_first_order_ale_cat(
-        self, model_name, feature, subsample=1.0, n_bootstrap=1, feature_encoder=None,
+        self,
+        model_name,
+        feature,
+        subsample=1.0,
+        n_bootstrap=1,
+        feature_encoder=None,
     ):
         """
         Computes first-order ALE function on a single categorical feature.
 
         Script is largely from aleplot_1D_categorical from
-        PyALE with small modifications (https://github.com/DanaJomar/PyALE). 
+        PyALE with small modifications (https://github.com/DanaJomar/PyALE).
 
         Args:
         ----------
@@ -964,13 +985,16 @@ class GlobalInterpret(Attributes):
         """
         from inspect import currentframe, getframeinfo
         from pandas.core.common import SettingWithCopyError
-        pd.options.mode.chained_assignment = 'raise'
-        
+
+        pd.options.mode.chained_assignment = "raise"
+
         if feature_encoder is None:
+
             def feature_encoder_func(data):
-                return data 
+                return data
+
             feature_encoder = feature_encoder_func
-        
+
         model = self.models[model_name]
         # check to make sure feature is valid
         if feature not in self.feature_names:
@@ -983,11 +1007,11 @@ class GlobalInterpret(Attributes):
             )
         else:
             bootstrap_indices = [self.examples.index.to_list()]
-   
+
         original_feature_values = [feature_encoder(self.examples[feature].values)]
         xdata = np.array([np.unique(original_feature_values)])
         xdata.sort()
-        
+
         # Initialize an empty ale array
         ale = []
 
@@ -995,14 +1019,16 @@ class GlobalInterpret(Attributes):
         for k, idx in enumerate(bootstrap_indices):
             examples = self.examples.iloc[idx, :].reset_index(drop=True)
 
-            if (examples[feature].dtype.name != "category") or (not examples[feature].cat.ordered):
-                examples[feature] = examples[feature].astype(str)          
+            if (examples[feature].dtype.name != "category") or (
+                not examples[feature].cat.ordered
+            ):
+                examples[feature] = examples[feature].astype(str)
                 groups_order = order_groups(examples, feature)
                 groups = groups_order.index.values
                 examples[feature] = examples[feature].astype(
-                pd.api.types.CategoricalDtype(categories=groups, ordered=True)
-                   )
-        
+                    pd.api.types.CategoricalDtype(categories=groups, ordered=True)
+                )
+
             groups = examples[feature].unique()
             groups = groups.sort_values()
             feature_codes = examples[feature].cat.codes
@@ -1010,7 +1036,7 @@ class GlobalInterpret(Attributes):
             groups_props = groups_counts / sum(groups_counts)
 
             K = len(groups)
-            
+
             # create copies of the dataframe
             examples_plus = examples.copy()
             examples_neg = examples.copy()
@@ -1027,36 +1053,57 @@ class GlobalInterpret(Attributes):
             try:
                 # predict with original and with the replaced values
                 # encode the categorical feature
-                examples_coded = pd.concat([examples.drop(feature, axis=1), 
-                                            feature_encoder(examples[[feature]])], axis=1)
+                examples_coded = pd.concat(
+                    [
+                        examples.drop(feature, axis=1),
+                        feature_encoder(examples[[feature]]),
+                    ],
+                    axis=1,
+                )
                 # predict
-                if self.model_output =='probability':
-                    y_hat = model.predict_proba(examples_coded[self.feature_names])[:,1]
+                if self.model_output == "probability":
+                    y_hat = model.predict_proba(examples_coded[self.feature_names])[
+                        :, 1
+                    ]
                 else:
                     y_hat = model.predict(examples_coded[self.feature_names])
 
                 # encode the categorical feature
                 examples_plus_coded = pd.concat(
-                    [examples_plus.drop(feature, axis=1), 
-                     feature_encoder(examples_plus[[feature]])], axis=1
-                    )
+                    [
+                        examples_plus.drop(feature, axis=1),
+                        feature_encoder(examples_plus[[feature]]),
+                    ],
+                    axis=1,
+                )
                 # predict
-                if self.model_output =='probability':
-                    y_hat_plus = model.predict_proba(examples_plus_coded[ind_plus][self.feature_names])[:,1]
+                if self.model_output == "probability":
+                    y_hat_plus = model.predict_proba(
+                        examples_plus_coded[ind_plus][self.feature_names]
+                    )[:, 1]
                 else:
-                    y_hat_plus = model.predict(examples_plus_coded[ind_plus][self.feature_names])
-                    
+                    y_hat_plus = model.predict(
+                        examples_plus_coded[ind_plus][self.feature_names]
+                    )
+
                 # encode the categorical feature
                 examples_neg_coded = pd.concat(
-                        [examples_neg.drop(feature, axis=1), 
-                         feature_encoder(examples_neg[[feature]])], axis=1
-                    )
+                    [
+                        examples_neg.drop(feature, axis=1),
+                        feature_encoder(examples_neg[[feature]]),
+                    ],
+                    axis=1,
+                )
                 # predict
-                if self.model_output =='probability':
-                    y_hat_neg = model.predict_proba(examples_neg_coded[ind_neg][self.feature_names])[:,1]
+                if self.model_output == "probability":
+                    y_hat_neg = model.predict_proba(
+                        examples_neg_coded[ind_neg][self.feature_names]
+                    )[:, 1]
                 else:
-                    y_hat_neg = model.predict(examples_neg_coded[ind_neg][self.feature_names])
-                
+                    y_hat_neg = model.predict(
+                        examples_neg_coded[ind_neg][self.feature_names]
+                    )
+
             except Exception as ex:
                 raise Exception(
                     """There seems to be a problem when predicting with the model.
@@ -1067,34 +1114,39 @@ class GlobalInterpret(Attributes):
                         - The encoding function takes the raw feature and returns the"""
                     """ right columns encoding it, including the case of a missing category.
                     """
-                    )
-                
+                )
+
             # compute prediction difference
             Delta_plus = y_hat_plus - y_hat[ind_plus]
             Delta_neg = y_hat[ind_neg] - y_hat_neg
 
-                # compute the mean of the difference per group
+            # compute the mean of the difference per group
             delta_df = pd.concat(
                 [
                     pd.DataFrame(
-                        {"eff": Delta_plus, feature: groups[feature_codes[ind_plus] + 1]}
+                        {
+                            "eff": Delta_plus,
+                            feature: groups[feature_codes[ind_plus] + 1],
+                        }
                     ),
-                    pd.DataFrame({"eff": Delta_neg, feature: groups[feature_codes[ind_neg]]}),
+                    pd.DataFrame(
+                        {"eff": Delta_neg, feature: groups[feature_codes[ind_neg]]}
+                    ),
                 ]
-                )
+            )
             res_df = delta_df.groupby([feature]).mean()
-            res_df.loc[:,"ale"] = res_df.loc[:, "eff"].cumsum()
+            res_df.loc[:, "ale"] = res_df.loc[:, "eff"].cumsum()
 
             res_df.loc[groups[0]] = 0
             # sort the index (which is at this point an ordered categorical) as a safety measure
             res_df = res_df.sort_index()
-            
-            # Subtract the mean value to get the centered value. 
+
+            # Subtract the mean value to get the centered value.
             ale_temp = res_df["ale"] - sum(res_df["ale"] * groups_props)
             ale.append(ale_temp)
 
         ale = np.array(ale)
-        
+
         results = self._store_results(
             method="ale",
             model_name=model_name,
@@ -1102,11 +1154,11 @@ class GlobalInterpret(Attributes):
             ydata=ale,
             xdata=xdata,
             hist_data=original_feature_values,
-            categorical = True,
+            categorical=True,
         )
-        
+
         return results
-    
+
     def friedman_h_statistic(self, model_name, feature_tuple, n_bins=30, subsample=1.0):
         """
         Compute the H-statistic for two-way interactions between two features.
@@ -1154,32 +1206,36 @@ class GlobalInterpret(Attributes):
 
         return sqrt(H_squared)
 
-
-    def compute_scalar_interaction_stats(self, method, data, model_names, n_bins=30, subsample=1.0, n_bootstrap=1, n_jobs=1, **kwargs):
+    def compute_scalar_interaction_stats(
+        self,
+        method,
+        data,
+        model_names,
+        n_bins=30,
+        subsample=1.0,
+        n_bootstrap=1,
+        n_jobs=1,
+        **kwargs,
+    ):
         """
         Wrapper function for computing the interaction strength statistic (see below).
-        Will perform calculation in parallel for multiple models. 
+        Will perform calculation in parallel for multiple models.
         """
-        if method == 'ias':
-            func=self.compute_interaction_strength
-        elif method == 'h_stat':
+        if method == "ias":
+            func = self.compute_interaction_strength
+        elif method == "h_stat":
             func = self.friedman_h_statistic
 
         self.data = data
-        args_iterator = to_iterator(
-            model_names, [n_bins], [subsample], [n_bootstrap]
-        )
-        kwargs['n_jobs'] = n_jobs
+        args_iterator = to_iterator(model_names, [n_bins], [subsample], [n_bootstrap])
+        kwargs["n_jobs"] = n_jobs
         results = run_parallel(
-            func=func, 
-            args_iterator=args_iterator, 
-            kwargs=kwargs, nprocs_to_use=n_jobs
+            func=func, args_iterator=args_iterator, kwargs=kwargs, nprocs_to_use=n_jobs
         )
-        
+
         results = merge_dict(results)
 
-        return results 
-
+        return results
 
     def compute_interaction_strength(
         self, model_name, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs
@@ -1191,7 +1247,7 @@ class GlobalInterpret(Attributes):
 
         Args:
         --------------------
-            results : xarray.Dataset 
+            results : xarray.Dataset
 
             model_names : list of strings
 
@@ -1210,25 +1266,24 @@ class GlobalInterpret(Attributes):
         ale_subsample = kwargs.get("ale_subsample", subsample)
         model = self.models[model_name]
         feature_names = list(self.examples.columns)
-        
-        if 'Run Date' in feature_names:
-            feature_names.remove('Run Date')
+
+        if "Run Date" in feature_names:
+            feature_names.remove("Run Date")
 
         try:
             data = self.data
         except:
-            # Get the ALE curve for each feature    
+            # Get the ALE curve for each feature
             feature_names = list(self.examples.columns)
-            n_jobs = kwargs.get('n_jobs', 1) 
+            n_jobs = kwargs.get("n_jobs", 1)
             data = self._run_interpret_curves(
-                    method="ale",
-                    features=feature_names,
-                    n_bins=n_bins,
-                    n_jobs=n_jobs,
-                    subsample=ale_subsample,
-                    n_bootstrap=1,
-                    )
-       
+                method="ale",
+                features=feature_names,
+                n_bins=n_bins,
+                n_jobs=n_jobs,
+                subsample=ale_subsample,
+                n_bootstrap=1,
+            )
 
         # Get the interpolated ALE curves
         ale_main_effects = {}
@@ -1236,7 +1291,7 @@ class GlobalInterpret(Attributes):
             try:
                 main_effect = data[f"{f}__{model_name}__ale"].values.squeeze()
             except:
-                continue 
+                continue
             x_values = data[f"{f}__bin_values"].values
 
             ale_main_effects[f] = interp1d(
@@ -1263,9 +1318,14 @@ class GlobalInterpret(Attributes):
             avg_prediction = np.mean(predictions)
 
             # Get the ALE value for each feature per example
-            main_effects = np.array([ale_main_effects[f](examples[:,i]) for i,f in enumerate(feature_names)])
-            # Sum the ALE values per example and add on the average value 
-            main_effects = np.sum(main_effects.T, axis=1) + avg_prediction 
+            main_effects = np.array(
+                [
+                    ale_main_effects[f](examples[:, i])
+                    for i, f in enumerate(feature_names)
+                ]
+            )
+            # Sum the ALE values per example and add on the average value
+            main_effects = np.sum(main_effects.T, axis=1) + avg_prediction
 
             num = np.sum((predictions - main_effects) ** 2)
             denom = np.sum((predictions - avg_prediction) ** 2)
@@ -1273,19 +1333,25 @@ class GlobalInterpret(Attributes):
             # Compute the interaction strength
             ias.append(num / denom)
 
-        return {model_name : np.array(ias)}
-
+        return {model_name: np.array(ias)}
 
     def compute_ale_variance(
-        self, data, model_names, features=None, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs
+        self,
+        data,
+        model_names,
+        features=None,
+        n_bins=30,
+        subsample=1.0,
+        n_bootstrap=1,
+        **kwargs,
     ):
         """
-        Compute the standard deviation of the ALE values 
-        for each feature and rank then for predictor importance. 
+        Compute the standard deviation of the ALE values
+        for each feature and rank then for predictor importance.
 
         Args:
         --------------------
-            results : xarray.Dataset 
+            results : xarray.Dataset
 
             model_names : list of strings
 
@@ -1301,14 +1367,14 @@ class GlobalInterpret(Attributes):
 
 
         """
-        results={}
+        results = {}
         for model_name in model_names:
             if data is None:
-                # Get the ALE curve for each feature    
+                # Get the ALE curve for each feature
                 ale_subsample = kwargs.get("ale_subsample", subsample)
                 feature_names = list(self.examples.columns)
                 model = self.models[model_name]
-                n_jobs = kwargs.get('n_jobs', 1)
+                n_jobs = kwargs.get("n_jobs", 1)
                 data = self._run_interpret_curves(
                     method="ale",
                     features=feature_names,
@@ -1316,53 +1382,68 @@ class GlobalInterpret(Attributes):
                     n_jobs=n_jobs,
                     subsample=ale_subsample,
                     n_bootstrap=n_bootstrap,
-                    )
+                )
             else:
-                feature_names = list(set([f.split('__')[0] for f in data.data_vars if 'ale' in f ]))
+                feature_names = list(
+                    set([f.split("__")[0] for f in data.data_vars if "ale" in f])
+                )
 
             # Compute the std over the bin axis
-            ale_std = np.array([np.std(data[f"{f}__{model_name}__ale"].values, ddof=1, axis=1) for f in feature_names])
+            ale_std = np.array(
+                [
+                    np.std(data[f"{f}__{model_name}__ale"].values, ddof=1, axis=1)
+                    for f in feature_names
+                ]
+            )
 
-            # Average over the bootstrap indices 
+            # Average over the bootstrap indices
             idx = np.argsort(np.mean(ale_std, axis=1))[::-1]
 
             feature_names_sorted = np.array(feature_names)[idx]
             ale_std_sorted = ale_std[idx, :]
 
             results[f"ale_variance_rankings__{model_name}"] = (
-                    [f"n_vars_ale_variance"],
-                    feature_names_sorted,
-                )
+                [f"n_vars_ale_variance"],
+                feature_names_sorted,
+            )
             results[f"ale_variance_scores__{model_name}"] = (
-                [f"n_vars_ale_variance", 'n_bootstrap'],
-                    ale_std_sorted,
-                )
+                [f"n_vars_ale_variance", "n_bootstrap"],
+                ale_std_sorted,
+            )
 
         results_ds = to_xarray(results)
 
-        return results_ds 
-            
+        return results_ds
+
     def compute_interaction_rankings(
-        self, data, model_names, features, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs):
+        self,
+        data,
+        model_names,
+        features,
+        n_bins=30,
+        subsample=1.0,
+        n_bootstrap=1,
+        **kwargs,
+    ):
         """
-        Compute the variable interaction rankings from Greenwell et al. 2018, but 
-        using the purely second-order ALE rather than the second-order PD. 
-    
-        For a given second-order ALE, 
+        Compute the variable interaction rankings from Greenwell et al. 2018, but
+        using the purely second-order ALE rather than the second-order PD.
+
+        For a given second-order ALE,
          1. Compute the standard deviation over one axis and then take the std of those values
          2. Compute the standard deviation over another axis and then take the std of those values
-         3. Average 1 and 2 together. 
-     
-        Sort by magnitudes given in (3). Larger values (relative to other values) are 
-        possibly indicative of  stronger feature interactions. 
-    
-        
+         3. Average 1 and 2 together.
+
+        Sort by magnitudes given in (3). Larger values (relative to other values) are
+        possibly indicative of  stronger feature interactions.
+
+
         Args:
         --------------------
-            results : xarray.Dataset 
+            results : xarray.Dataset
 
-            model_names : list of strings 
-            
+            model_names : list of strings
+
             features : lists of 2-tuples
 
             n_bins : integer
@@ -1378,7 +1459,7 @@ class GlobalInterpret(Attributes):
         Returns:
             results_ds, xarray.Dataset
         """
-        results={}
+        results = {}
         for model_name in model_names:
             if data is None:
                 # Get the ALE curve for each feature
@@ -1387,7 +1468,7 @@ class GlobalInterpret(Attributes):
                     features = list(itertools.combinations(feature_names, r=2))
                 ale_subsample = kwargs.get("ale_subsample", subsample)
                 model = self.models[model_name]
-                n_jobs = kwargs.get('n_jobs', 1)
+                n_jobs = kwargs.get("n_jobs", 1)
                 data = self._run_interpret_curves(
                     method="ale",
                     features=features,
@@ -1395,56 +1476,45 @@ class GlobalInterpret(Attributes):
                     n_jobs=n_jobs,
                     subsample=ale_subsample,
                     n_bootstrap=n_bootstrap,
-                    )
-                
+                )
+
             interaction_effects = []
-            for f in features: 
-                data_temp = data[f'{f[0]}__{f[1]}__{model_name}__ale'].values
-                std_feature0 = np.std( np.std(data_temp, ddof=1, axis=1) , ddof=1, axis=1)
-                std_feature1 = np.std( np.std(data_temp, ddof=1, axis=2), ddof=1, axis=1)
-                interaction_effects.append(0.5*(std_feature0 + std_feature1))
+            for f in features:
+                data_temp = data[f"{f[0]}__{f[1]}__{model_name}__ale"].values
+                std_feature0 = np.std(np.std(data_temp, ddof=1, axis=1), ddof=1, axis=1)
+                std_feature1 = np.std(np.std(data_temp, ddof=1, axis=2), ddof=1, axis=1)
+                interaction_effects.append(0.5 * (std_feature0 + std_feature1))
 
             interaction_effects = np.array(interaction_effects)
             # Average over the bootstrap indices
             idx = np.argsort(np.mean(interaction_effects, axis=1))[::-1]
-    
+
             feature_names_sorted = np.array(features)[idx]
-            interaction_effects_sorted = interaction_effects[idx,:]
-            feature_names_sorted = [f'{f[0]}__{f[1]}' for f in feature_names_sorted]
-    
+            interaction_effects_sorted = interaction_effects[idx, :]
+            feature_names_sorted = [f"{f[0]}__{f[1]}" for f in feature_names_sorted]
+
             results[f"ale_variance_interactions_rankings__{model_name}"] = (
-                    [f"n_vars_ale_variance_interactions" ],
-                    feature_names_sorted,
-                    )
+                [f"n_vars_ale_variance_interactions"],
+                feature_names_sorted,
+            )
             results[f"ale_variance_interactions_scores__{model_name}"] = (
-                [f"n_vars_ale_variance_interactions", 'n_bootstrap'],
-                    interaction_effects_sorted,
-                  )
+                [f"n_vars_ale_variance_interactions", "n_bootstrap"],
+                interaction_effects_sorted,
+            )
 
         results_ds = to_xarray(results)
-    
+
         return results_ds
-    
-    
+
     def number_of_features_used(self, model, examples):
         """
         Compute the number of features (NF) from Molnar et al. 2019
         """
-        original_predictions = model.predict_proba(examples)[:,1]
+        original_predictions = model.predict_proba(examples)[:, 1]
         features = list(examples.columns)
         for f in features:
             examples_temp = examples.copy()
             examples_temp.loc[:, f] = np.random.permutation(examples_temp[f].values)
-        
-            new_predictions = model.predict_proba(examples_temp)[:,1]
-            change = np.absolute(new_predictions-original_predictions)
-        
 
-
-
-
-
-
-
-
-
+            new_predictions = model.predict_proba(examples_temp)[:, 1]
+            change = np.absolute(new_predictions - original_predictions)

@@ -111,7 +111,7 @@ class PlotFeatureContributions(PlotStructure):
                 else:
                     feat_val = round(feat_val)
 
-                special_label = label.replace(' ', ' \ ').replace("$", '')
+                special_label = label.replace(" ", " \ ").replace("$", "")
                 if units == "":
                     text = fr"$\bf{special_label}$" + f" ({feat_val})"
                 else:

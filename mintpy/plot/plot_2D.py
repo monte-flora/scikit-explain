@@ -4,7 +4,7 @@ from ..common.utils import to_list, is_list
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
-from matplotlib import colors 
+from matplotlib import colors
 import itertools
 import scipy.stats as sps
 import numpy as np
@@ -22,6 +22,7 @@ class MidpointNormalize(colors.Normalize):
         # simple example...
         x, y = [self.vmin, self.vcenter, self.vmax], [0, 0.5, 1]
         return np.ma.masked_array(np.interp(value, x, y))
+
 
 class PlotInterpret2D(PlotStructure):
     def add_histogram_axis(
@@ -172,10 +173,10 @@ class PlotInterpret2D(PlotStructure):
                 f"{feature_set[0]}__{feature_set[1]}__{model_name}__{method}"
             ].values.copy()
             zdata_temp = np.ma.getdata(zdata_temp)
-            
+
             if to_probability:
                 zdata_temp *= 100.0
-                
+
             ale_max.append(np.nanmax(zdata_temp))
             ale_min.append(np.nanmin(zdata_temp))
 
@@ -196,7 +197,7 @@ class PlotInterpret2D(PlotStructure):
             round_to=5,
             center=True,
         )
-        
+
         cmap = plt.get_cmap(cmap)
         counter = 0
         n = 1
@@ -246,8 +247,8 @@ class PlotInterpret2D(PlotStructure):
             #    zdata = np.ma.getdata(zdata)
             # else:
             #    masked = np.zeros((zdata[0].shape))
-            #masked = [False, False]
-            
+            # masked = [False, False]
+
             # can only do a contour plot with 2-d data
             x1, x2 = np.meshgrid(xdata1, xdata2, indexing="xy")
 
@@ -256,24 +257,24 @@ class PlotInterpret2D(PlotStructure):
                 zdata = np.mean(zdata, axis=0)
             else:
                 zdata = zdata.squeeze()
-            
+
             if to_probability:
                 zdata *= 100.0
-                
+
             cf = main_ax.pcolormesh(
                 x1,
                 x2,
                 zdata.T,
                 cmap=cmap,
                 alpha=0.8,
-                norm=BoundaryNorm(boundaries=levels, ncolors=cmap.N, clip=True)
+                norm=BoundaryNorm(boundaries=levels, ncolors=cmap.N, clip=True),
             )
-            
+
             ### cf = main_ax.contourf(x1, x2, zdata, cmap=cmap, alpha=0.8, levels=levels)
-            #masked = np.ma.masked_where(zdata, zdata==np.nan) 
+            # masked = np.ma.masked_where(zdata, zdata==np.nan)
             mark_empty = False
-            
-            if mark_empty: #and np.any(masked):
+
+            if mark_empty:  # and np.any(masked):
                 # Do not autoscale, so that boxes at the edges (contourf only plots the bin
                 # centres, not their edges) don't enlarge the plot.
                 plt.autoscale(False)
@@ -301,7 +302,7 @@ class PlotInterpret2D(PlotStructure):
                 self.plot_2d_kde(main_ax, xdata1_hist, xdata2_hist)
             except:
                 pass
-            
+
             self.add_histogram_axis(
                 top_ax,
                 xdata1_hist,

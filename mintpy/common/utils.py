@@ -7,57 +7,60 @@ from sklearn.metrics import brier_score_loss, average_precision_score
 from statsmodels.distributions.empirical_distribution import ECDF
 from scipy.stats import t
 
+
 def is_correlated(corr_matrix, feature_pairs, rho_threshold=0.8):
     """
-    Returns dict where the keys are the feature pairs and the items 
+    Returns dict where the keys are the feature pairs and the items
     are booleans of whether the pair is linearly correlated above the
-    given threshold. 
+    given threshold.
     """
-    results={}
+    results = {}
     for pair in feature_pairs:
-        f1,f2 = pair.split('__')
+        f1, f2 = pair.split("__")
         corr = corr_matrix[f1][f2]
-        results[pair] = round(corr,3) >= rho_threshold
+        results[pair] = round(corr, 3) >= rho_threshold
     return results
 
+
 def is_fitted(model):
-    '''
+    """
     Checks if a scikit-learn estimator/transformer has already been fit.
-    
-    
+
+
     Parameters
     ----------
-    model: scikit-learn estimator (e.g. RandomForestClassifier) 
+    model: scikit-learn estimator (e.g. RandomForestClassifier)
         or transformer (e.g. MinMaxScaler) object
-        
-    
+
+
     Returns
     -------
     Boolean that indicates if ``model`` has already been fit (True) or not (False).
-    '''
-    
-    attrs = [v for v in vars(model)
-             if v.endswith("_") and not v.startswith("__")]
-    
+    """
+
+    attrs = [v for v in vars(model) if v.endswith("_") and not v.startswith("__")]
+
     return len(attrs) != 0
+
 
 def determine_feature_dtype(examples, features):
     """
-    Determine if any features are categorical. 
+    Determine if any features are categorical.
     """
     feature_names = list(examples.columns)
-    non_cat_features=[]
-    cat_features=[]
+    non_cat_features = []
+    cat_features = []
     for f in features:
         if f not in feature_names:
             raise KeyError(f"'{f}' is not a valid feature.")
-        
-        if str(examples.dtypes[f]) == 'category':
+
+        if str(examples.dtypes[f]) == "category":
             cat_features.append(f)
         else:
             non_cat_features.append(f)
-    
+
     return non_cat_features, cat_features
+
 
 def brier_skill_score(target_values, forecast_probabilities):
     """Computes the brier skill score"""
@@ -77,7 +80,7 @@ def norm_aupdc(targets, predictions, **kwargs):
     # Number of positive examples
     pos = np.count_nonzero(targets)
     if pos == 0:
-        print('No positive examples for the NAUPDC calculation! Returning a NAN value.')
+        print("No positive examples for the NAUPDC calculation! Returning a NAN value.")
         return np.nan
 
     # Number of negative examples
@@ -244,14 +247,14 @@ def load_netcdf(fnames):
         data.append(ds)
 
     try:
-        ds_set = xr.merge(data, combine_attrs="no_conflicts", compat='override')
+        ds_set = xr.merge(data, combine_attrs="no_conflicts", compat="override")
     except:
-        models_used = [ds.attrs['models used'] for ds in data]
-        ds_set = xr.merge(data, combine_attrs="override", compat='override')
-        ds_set.attrs['models used'] = models_used 
+        models_used = [ds.attrs["models used"] for ds in data]
+        ds_set = xr.merge(data, combine_attrs="override", compat="override")
+        ds_set.attrs["models used"] = models_used
 
-    # Check that names 
-    #model_names = ds_set.attrs['models used']
+    # Check that names
+    # model_names = ds_set.attrs['models used']
     # if len(list(set(alist))) != len(alist):
     #        alist = [x+f'_{i}' for i,x in enumerate(alist)]
 
@@ -264,7 +267,7 @@ def save_netcdf(fname, ds, complevel=5):
     encoding = {var: comp for var in ds.data_vars}
     ds.to_netcdf(path=fname, encoding=encoding)
     ds.close()
-    del ds 
+    del ds
 
 
 def combine_top_features(results_dict, n_vars=None):
@@ -536,40 +539,49 @@ def retrieve_important_vars(results, model_names, multipass=True):
 
     return important_vars_dict
 
-def find_correlated_pairs_among_top_features(corr_matrix, top_features, rho_threshold=0.8,):
+
+def find_correlated_pairs_among_top_features(
+    corr_matrix,
+    top_features,
+    rho_threshold=0.8,
+):
     """
-    Of the top features, find correlated pairs above some 
+    Of the top features, find correlated pairs above some
     linear correlation coefficient threshold
-    
+
     Args:
     ----------------------
-        corr_matrix : pandas.DataFrame 
+        corr_matrix : pandas.DataFrame
         top_features : list of strings
         rho_threshold : float
-    
+
     """
-    top_feature_indices = {f:i for i,f in enumerate(top_features)}
-    pairs=[]
+    top_feature_indices = {f: i for i, f in enumerate(top_features)}
+    pairs = []
     for feature in top_features:
         try:
-            most_corr_feature = corr_matrix[feature].sort_values(ascending=False).index[1]
+            most_corr_feature = (
+                corr_matrix[feature].sort_values(ascending=False).index[1]
+            )
         except:
-            continue 
-        
+            continue
+
         if most_corr_feature in top_features:
             most_corr_value = corr_matrix[feature].sort_values(ascending=False)[1]
-            if round(most_corr_value,5) >= rho_threshold:
+            if round(most_corr_value, 5) >= rho_threshold:
                 pairs.append((feature, most_corr_feature))
-    
-    
-    pairs = list(set([ tuple(sorted(t)) for t in pairs ]))
-    pair_indices = [(top_feature_indices[p[0]], top_feature_indices[p[1]]) for p in pairs]
 
-    return pairs, pair_indices 
+    pairs = list(set([tuple(sorted(t)) for t in pairs]))
+    pair_indices = [
+        (top_feature_indices[p[0]], top_feature_indices[p[1]]) for p in pairs
+    ]
+
+    return pairs, pair_indices
+
 
 def cmds(D, k=2):
     """Classical multidimensional scaling
-    
+
     Theory and code references:
     https://en.wikipedia.org/wiki/Multidimensional_scaling#Classical_multidimensional_scaling
     http://www.nervouscomputer.com/hfs/cmdscale-in-python/
@@ -606,14 +618,14 @@ def cmds(D, k=2):
 
 
 def order_groups(X, feature):
-    """Assign an order to the values of a categorical feature. 
-    
-    The function returns an order to the unique values in X[feature] according to 
+    """Assign an order to the values of a categorical feature.
+
+    The function returns an order to the unique values in X[feature] according to
     their similarity based on the other features.
     The distance between two categories is the sum over the distances of each feature.
-    
+
     Arguments:
-    X -- A pandas DataFrame containing all the features to considering in the ordering 
+    X -- A pandas DataFrame containing all the features to considering in the ordering
     (including the categorical feature to be ordered).
     feature -- String, the name of the column holding the categorical feature to be ordered.
     """
@@ -668,12 +680,12 @@ def order_groups(X, feature):
 def quantile_ied(x_vec, q):
     """
     Inverse of empirical distribution function (quantile R type 1).
-    
+
     More details in
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mstats.mquantiles.html
-    https://stat.ethz.ch/R-manual/R-devel/library/stats/html/quantile.html    
+    https://stat.ethz.ch/R-manual/R-devel/library/stats/html/quantile.html
     https://en.wikipedia.org/wiki/Quantile
-    
+
     Arguments:
     x_vec -- A pandas series containing the values to compute the quantile for
     q -- An array of probabilities (values between 0 and 1)
@@ -700,8 +712,8 @@ def quantile_ied(x_vec, q):
 
 def CI_estimate(x_vec, C=0.95):
     """Estimate the size of the confidence interval of a data sample.
-    
-    The confidence interval of the given data sample (x_vec) is 
+
+    The confidence interval of the given data sample (x_vec) is
     [mean(x_vec) - returned value, mean(x_vec) + returned value].
     """
     alpha = 1 - C
@@ -710,4 +722,3 @@ def CI_estimate(x_vec, C=0.95):
     critical_val = 1 - (alpha / 2)
     z_star = stand_err * t.ppf(critical_val, n - 1)
     return z_star
-

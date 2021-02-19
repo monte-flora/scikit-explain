@@ -24,11 +24,17 @@ from sklearn.base import clone
 from .utils import get_data_subset
 
 
-__all__ = ["model_scorer", "score_untrained_sklearn_model",
-           "score_untrained_sklearn_model_with_probabilities",
-           "score_trained_sklearn_model",
-           "score_trained_sklearn_model_with_probabilities", "train_model",
-           "get_model", "predict_model", "predict_proba_model"]
+__all__ = [
+    "model_scorer",
+    "score_untrained_sklearn_model",
+    "score_untrained_sklearn_model_with_probabilities",
+    "score_trained_sklearn_model",
+    "score_trained_sklearn_model_with_probabilities",
+    "train_model",
+    "get_model",
+    "predict_model",
+    "predict_proba_model",
+]
 
 
 def train_model(model, training_inputs, training_outputs):
@@ -51,41 +57,51 @@ def predict_model(model, scoring_inputs):
 
 
 def predict_proba_model(model, scoring_inputs):
-    """Uses a trained scikit-learn model to predict class probabilities for the 
+    """Uses a trained scikit-learn model to predict class probabilities for the
     scoring data"""
-    return model.predict_proba(scoring_inputs)[:,1] 
+    return model.predict_proba(scoring_inputs)[:, 1]
 
 
 class model_scorer(object):
     """General purpose scoring method which takes a particular model, trains the
     model over the given training data, uses the trained model to predict on the
-    given scoring data, and then evaluates those predictions using some 
+    given scoring data, and then evaluates those predictions using some
     evaluation function. Additionally provides the tools for bootstrapping the
     scores and providing a distribution of scores to be used for statistics.
     """
 
-    def __init__(self, model, training_fn, prediction_fn, evaluation_fn, default_score=0.0, nbootstrap=None, subsample=1, **kwargs):
+    def __init__(
+        self,
+        model,
+        training_fn,
+        prediction_fn,
+        evaluation_fn,
+        default_score=0.0,
+        nbootstrap=None,
+        subsample=1,
+        **kwargs
+    ):
         """Initializes the scoring object by storing the training, predicting,
         and evaluation functions
 
         :param model: a scikit-learn model
-        :param training_fn: a function for training a scikit-learn model. Must 
-            be of the form ``(model, training_inputs, training_outputs) -> 
+        :param training_fn: a function for training a scikit-learn model. Must
+            be of the form ``(model, training_inputs, training_outputs) ->
             trained_model | None``. If the function returns ``None``, then it is
             assumed that the model training failed.
             Probably :func:`PermutationImportance.sklearn_api.train_model` or
             :func:`PermutationImportance.sklearn_api.get_model`
-        :param predicting_fn: a function for predicting on scoring data using a 
-            scikit-learn model. Must be of the form ``(model, scoring_inputs) -> 
-            predictions``. Predictions may be either deterministic or 
+        :param predicting_fn: a function for predicting on scoring data using a
+            scikit-learn model. Must be of the form ``(model, scoring_inputs) ->
+            predictions``. Predictions may be either deterministic or
             probabilistic, depending on what the evaluation_fn accepts.
             Probably :func:`PermutationImportance.sklearn_api.predict_model` or
             :func:`PermutationImportance.sklearn_api.predict_proba_model`
-        :param evaluation_fn: a function which takes the deterministic or 
-            probabilistic model predictions and scores them against the true 
+        :param evaluation_fn: a function which takes the deterministic or
+            probabilistic model predictions and scores them against the true
             values. Must be of the form ``(truths, predictions) -> some_value``
-            Probably one of the metrics in 
-            :mod:`PermutationImportance.metrics` or 
+            Probably one of the metrics in
+            :mod:`PermutationImportance.metrics` or
             `sklearn.metrics <https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics>`_
         :param default_score: value to return if the model cannot be trained
         :param nbootstrap: number of times to perform scoring on each variable.
@@ -118,12 +134,14 @@ class model_scorer(object):
         (training_inputs, training_outputs) = training_data
         (scoring_inputs, scoring_outputs) = scoring_data
 
-        subsample = int(len(scoring_data[0]) *
-                        self.subsample) if self.subsample <= 1 else self.subsample
+        subsample = (
+            int(len(scoring_data[0]) * self.subsample)
+            if self.subsample <= 1
+            else self.subsample
+        )
 
         # Try to train model
-        trained_model = self.training_fn(
-            self.model, training_inputs, training_outputs)
+        trained_model = self.training_fn(self.model, training_inputs, training_outputs)
         # If we didn't succeed in training (probably because there weren't any
         # training predictors), return the default_score
         if trained_model is None:
@@ -144,24 +162,30 @@ class model_scorer(object):
                 rows = np.random.choice(scoring_outputs.shape[0], subsample)
 
                 subsampled_predictions = get_data_subset(predictions, rows)
-                subsampled_scoring_outputs = get_data_subset(
-                    scoring_outputs, rows)
-                scores.append(self.evaluation_fn(
-                    subsampled_scoring_outputs, subsampled_predictions, **self.kwargs))
-                
+                subsampled_scoring_outputs = get_data_subset(scoring_outputs, rows)
+                scores.append(
+                    self.evaluation_fn(
+                        subsampled_scoring_outputs,
+                        subsampled_predictions,
+                        **self.kwargs
+                    )
+                )
+
             return np.array(scores)
 
 
-def score_untrained_sklearn_model(model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs):
-    """A convenience method which uses the default training and the 
+def score_untrained_sklearn_model(
+    model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs
+):
+    """A convenience method which uses the default training and the
     deterministic prediction methods for scikit-learn to evaluate a model
 
     :param model: a scikit-learn model
-    :param evaluation_fn: a function which takes the deterministic or 
-        probabilistic model predictions and scores them against the true 
+    :param evaluation_fn: a function which takes the deterministic or
+        probabilistic model predictions and scores them against the true
         values. Must be of the form ``(truths, predictions) -> some_value``
-        Probably one of the metrics in 
-        :mod:`PermutationImportance.metrics` or 
+        Probably one of the metrics in
+        :mod:`PermutationImportance.metrics` or
         `sklearn.metrics <https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics>`_
     :param nbootstrap: number of times to perform scoring on each variable.
         Results over different bootstrap iterations are averaged. Defaults to 1
@@ -171,22 +195,32 @@ def score_untrained_sklearn_model(model, evaluation_fn, nbootstrap=None, subsamp
         If not specified, subsampling will not be used and the entire data will
         be used (without replacement)
     :param kwargs: all other kwargs passed on to the evaluation_fn
-    :returns: a callable which accepts ``(training_data, scoring_data)`` and 
+    :returns: a callable which accepts ``(training_data, scoring_data)`` and
         returns some value (probably a float or an array of floats)
     """
-    return model_scorer(model, training_fn=train_model, prediction_fn=predict_model, evaluation_fn=evaluation_fn, nbootstrap=nbootstrap, subsample=subsample, **kwargs)
+    return model_scorer(
+        model,
+        training_fn=train_model,
+        prediction_fn=predict_model,
+        evaluation_fn=evaluation_fn,
+        nbootstrap=nbootstrap,
+        subsample=subsample,
+        **kwargs
+    )
 
 
-def score_untrained_sklearn_model_with_probabilities(model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs):
-    """A convenience method which uses the default training and the 
+def score_untrained_sklearn_model_with_probabilities(
+    model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs
+):
+    """A convenience method which uses the default training and the
     probabilistic prediction methods for scikit-learn to evaluate a model
 
     :param model: a scikit-learn model
-    :param evaluation_fn: a function which takes the deterministic or 
-        probabilistic model predictions and scores them against the true 
+    :param evaluation_fn: a function which takes the deterministic or
+        probabilistic model predictions and scores them against the true
         values. Must be of the form ``(truths, predictions) -> some_value``
-        Probably one of the metrics in 
-        :mod:`PermutationImportance.metrics` or 
+        Probably one of the metrics in
+        :mod:`PermutationImportance.metrics` or
         `sklearn.metrics <https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics>`_
     :param nbootstrap: number of times to perform scoring on each variable.
         Results over different bootstrap iterations are averaged. Defaults to 1
@@ -196,22 +230,32 @@ def score_untrained_sklearn_model_with_probabilities(model, evaluation_fn, nboot
         If not specified, subsampling will not be used and the entire data will
         be used (without replacement)
     :param kwargs: all other kwargs passed on to the evaluation_fn
-    :returns: a callable which accepts ``(training_data, scoring_data)`` and 
+    :returns: a callable which accepts ``(training_data, scoring_data)`` and
         returns some value (probably a float or an array of floats)
     """
-    return model_scorer(model, training_fn=train_model, prediction_fn=predict_proba_model, evaluation_fn=evaluation_fn, nbootstrap=nbootstrap, subsample=subsample, **kwargs)
+    return model_scorer(
+        model,
+        training_fn=train_model,
+        prediction_fn=predict_proba_model,
+        evaluation_fn=evaluation_fn,
+        nbootstrap=nbootstrap,
+        subsample=subsample,
+        **kwargs
+    )
 
 
-def score_trained_sklearn_model(model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs):
+def score_trained_sklearn_model(
+    model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs
+):
     """A convenience method which does not retrain a scikit-learn model and uses
     deterministic prediction methods to evaluate the model
 
     :param model: a scikit-learn model
-    :param evaluation_fn: a function which takes the deterministic or 
-        probabilistic model predictions and scores them against the true 
+    :param evaluation_fn: a function which takes the deterministic or
+        probabilistic model predictions and scores them against the true
         values. Must be of the form ``(truths, predictions) -> some_value``
-        Probably one of the metrics in 
-        :mod:`PermutationImportance.metrics` or 
+        Probably one of the metrics in
+        :mod:`PermutationImportance.metrics` or
         `sklearn.metrics <https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics>`_
     :param nbootstrap: number of times to perform scoring on each variable.
         Results over different bootstrap iterations are averaged. Defaults to 1
@@ -221,22 +265,32 @@ def score_trained_sklearn_model(model, evaluation_fn, nbootstrap=None, subsample
         If not specified, subsampling will not be used and the entire data will
         be used (without replacement)
     :param kwargs: all other kwargs passed on to the evaluation_fn
-    :returns: a callable which accepts ``(training_data, scoring_data)`` and 
+    :returns: a callable which accepts ``(training_data, scoring_data)`` and
         returns some value (probably a float or an array of floats)
     """
-    return model_scorer(model, training_fn=get_model, prediction_fn=predict_model, evaluation_fn=evaluation_fn, nbootstrap=nbootstrap, subsample=subsample, **kwargs)
+    return model_scorer(
+        model,
+        training_fn=get_model,
+        prediction_fn=predict_model,
+        evaluation_fn=evaluation_fn,
+        nbootstrap=nbootstrap,
+        subsample=subsample,
+        **kwargs
+    )
 
 
-def score_trained_sklearn_model_with_probabilities(model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs):
+def score_trained_sklearn_model_with_probabilities(
+    model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs
+):
     """A convenience method which does not retrain a scikit-learn model and uses
     probabilistic prediction methods to evaluate the model
 
     :param model: a scikit-learn model
-    :param evaluation_fn: a function which takes the deterministic or 
-        probabilistic model predictions and scores them against the true 
+    :param evaluation_fn: a function which takes the deterministic or
+        probabilistic model predictions and scores them against the true
         values. Must be of the form ``(truths, predictions) -> some_value``
-        Probably one of the metrics in 
-        :mod:`PermutationImportance.metrics` or 
+        Probably one of the metrics in
+        :mod:`PermutationImportance.metrics` or
         `sklearn.metrics <https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics>`_
     :param nbootstrap: number of times to perform scoring on each variable.
         Results over different bootstrap iterations are averaged. Defaults to 1
@@ -246,7 +300,15 @@ def score_trained_sklearn_model_with_probabilities(model, evaluation_fn, nbootst
         If not specified, subsampling will not be used and the entire data will
         be used (without replacement)
     :param kwargs: all other kwargs passed on to the evaluation_fn
-    :returns: a callable which accepts ``(training_data, scoring_data)`` and 
+    :returns: a callable which accepts ``(training_data, scoring_data)`` and
         returns some value (probably a float or an array of floats)
     """
-    return model_scorer(model, training_fn=get_model, prediction_fn=predict_proba_model, evaluation_fn=evaluation_fn, nbootstrap=nbootstrap, subsample=subsample, **kwargs)
+    return model_scorer(
+        model,
+        training_fn=get_model,
+        prediction_fn=predict_proba_model,
+        evaluation_fn=evaluation_fn,
+        nbootstrap=nbootstrap,
+        subsample=subsample,
+        **kwargs
+    )

@@ -8,6 +8,7 @@ It allows for a lazy imap over an iterable and the return of very large objects
 """
 
 from multiprocessing import Process, Queue, cpu_count
+
 try:
     from Queue import Full as QueueFull
     from Queue import Empty as QueueEmpty
@@ -25,10 +26,10 @@ def worker(func, recvq, sendq):
 
 
 def pool_imap_unordered(func, iterable, procs=cpu_count()):
-    """Lazily imaps in an unordered manner over an iterable in parallel as a 
+    """Lazily imaps in an unordered manner over an iterable in parallel as a
     generator
 
-    :Author: Grant Jenks <https://stackoverflow.com/users/232571/grantj> 
+    :Author: Grant Jenks <https://stackoverflow.com/users/232571/grantj>
 
     :param func: function to perform on each iterable
     :param iterable: iterable which has items to map over

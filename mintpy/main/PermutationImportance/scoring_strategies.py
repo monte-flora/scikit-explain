@@ -13,16 +13,21 @@ import numpy as np
 
 from .error_handling import InvalidStrategyException
 
-__all__ = ["verify_scoring_strategy", "VALID_SCORING_STRATEGIES",
-           "argmin_of_mean", "argmax_of_mean", "indexer_of_converter"]
+__all__ = [
+    "verify_scoring_strategy",
+    "VALID_SCORING_STRATEGIES",
+    "argmin_of_mean",
+    "argmax_of_mean",
+    "indexer_of_converter",
+]
 
 
 def verify_scoring_strategy(scoring_strategy):
     """Asserts that the scoring strategy is valid and interprets various strings
 
     :param scoring_strategy: a function to be used for determining optimal
-        variables or a string. If a function, should be of the form 
-        ``([some value]) -> index``. If a string, must be one of the options in 
+        variables or a string. If a function, should be of the form
+        ``([some value]) -> index``. If a string, must be one of the options in
         ``VALID_SCORING_STRATEGIES``
     :returns: a function to be used for determining optimal variables
     """
@@ -32,23 +37,24 @@ def verify_scoring_strategy(scoring_strategy):
         return VALID_SCORING_STRATEGIES[scoring_strategy]
     else:
         raise InvalidStrategyException(
-            scoring_strategy, options=list(VALID_SCORING_STRATEGIES.keys()))
+            scoring_strategy, options=list(VALID_SCORING_STRATEGIES.keys())
+        )
 
 
 class indexer_of_converter(object):
     """This object is designed to help construct a scoring strategy by breaking
     the process of determining an optimal score into two pieces:
-    First, each of the scores are converted to a simpler representation. For 
+    First, each of the scores are converted to a simpler representation. For
     instance, an array of scores resulting from a bootstrapped evaluation method
     may be converted to just their mean.
-    Second, each of the simpler representations are compared to determine the 
+    Second, each of the simpler representations are compared to determine the
     index of the one which is most optimal. This is typically just an ``argmin``
     or ``argmax`` call.
     """
 
     def __init__(self, indexer, converter):
         """Constructs a function which first converts all objects in a list to
-        something simpler and then uses the indexer to determine the index of 
+        something simpler and then uses the indexer to determine the index of
         the most "optimal" one
 
         :param indexer: a function which converts a list of probably simply
@@ -69,12 +75,12 @@ argmax_of_mean = indexer_of_converter(np.argmax, np.mean)
 
 
 VALID_SCORING_STRATEGIES = {
-    'max': argmax_of_mean,
-    'maximize': argmax_of_mean,
-    'argmax': np.argmax,
-    'min': argmin_of_mean,
-    'minimize': argmin_of_mean,
-    'argmin': np.argmin,
-    'argmin_of_mean': argmin_of_mean,
-    'argmax_of_mean': argmax_of_mean,
+    "max": argmax_of_mean,
+    "maximize": argmax_of_mean,
+    "argmax": np.argmax,
+    "min": argmin_of_mean,
+    "minimize": argmin_of_mean,
+    "argmin": np.argmin,
+    "argmin_of_mean": argmin_of_mean,
+    "argmax_of_mean": argmax_of_mean,
 }

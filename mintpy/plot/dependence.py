@@ -11,6 +11,7 @@ except ImportError:
     pass
 
 from shap.plots import colors
+
 try:
     from shap.utils import convert_name, approximate_interactions
 except:

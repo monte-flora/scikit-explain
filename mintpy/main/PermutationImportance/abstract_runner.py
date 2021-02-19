@@ -23,18 +23,20 @@ from .scoring_strategies import verify_scoring_strategy
 from .utils import add_ranks_to_dict, get_data_subset
 
 
-def abstract_variable_importance(training_data, 
-                                 scoring_data, 
-                                 scoring_fn, 
-                                 scoring_strategy, 
-                                 selection_strategy,
-                                 random_state,
-                                 variable_names=None,
-                                 nimportant_vars=None, 
-                                 method=None, 
-                                 njobs=1, 
-                                 verbose=False, 
-                                 **kwargs):
+def abstract_variable_importance(
+    training_data,
+    scoring_data,
+    scoring_fn,
+    scoring_strategy,
+    selection_strategy,
+    random_state,
+    variable_names=None,
+    nimportant_vars=None,
+    method=None,
+    njobs=1,
+    verbose=False,
+    **kwargs
+):
     """Performs an abstract variable importance over data given a particular
     set of functions for scoring, determining optimal variables, and selecting
     data
@@ -56,22 +58,26 @@ def abstract_variable_importance(training_data,
         name of the ``selection_strategy`` if not given
     :param njobs: an integer for the number of threads to use. If negative, will
         use ``num_cpus + njobs``. Defaults to 1
-    :returns: :class:`PermutationImportance.result.ImportanceResult` object 
+    :returns: :class:`PermutationImportance.result.ImportanceResult` object
         which contains the results for each run
     """
     training_data = verify_data(training_data)
     scoring_data = verify_data(scoring_data)
     scoring_strategy = verify_scoring_strategy(scoring_strategy)
     variable_names = determine_variable_names(scoring_data, variable_names)
-    
-    nimportant_vars = len(
-        variable_names) if nimportant_vars is None else nimportant_vars
-    
-    method = getattr(selection_strategy, "name", getattr(
-        selection_strategy, "__name__")) if method is None else method
-    
+
+    nimportant_vars = (
+        len(variable_names) if nimportant_vars is None else nimportant_vars
+    )
+
+    method = (
+        getattr(selection_strategy, "name", getattr(selection_strategy, "__name__"))
+        if method is None
+        else method
+    )
+
     njobs = mp.cpu_count() if njobs <= 0 else njobs
-    njobs = int(njobs*mp.cpu_count()) if (njobs < 1 and njobs >= 0) else njobs
+    njobs = int(njobs * mp.cpu_count()) if (njobs < 1 and njobs >= 0) else njobs
 
     important_vars = list()
     num_vars = len(variable_names)
@@ -81,36 +87,41 @@ def abstract_variable_importance(training_data,
     result_obj = ImportanceResult(method, variable_names, original_score)
     for i, _ in enumerate(range(nimportant_vars)):
         if verbose:
-            print('Starting on the important variable {} out of {}...'.format(i+1, nimportant_vars))
-        
+            print(
+                "Starting on the important variable {} out of {}...".format(
+                    i + 1, nimportant_vars
+                )
+            )
+
         selection_iter = selection_strategy(
-            training_data, scoring_data, num_vars, important_vars, random_state, **kwargs)
-        
+            training_data,
+            scoring_data,
+            num_vars,
+            important_vars,
+            random_state,
+            **kwargs
+        )
+
         if njobs == 1:
-            result = _singlethread_iteration(
-                selection_iter, scoring_fn)
+            result = _singlethread_iteration(selection_iter, scoring_fn)
         else:
-            result = _multithread_iteration(
-                selection_iter, scoring_fn, njobs)
-            
-        next_result = add_ranks_to_dict(
-            result, variable_names, scoring_strategy)
-        best_var = min(
-            next_result.keys(), key=lambda key: next_result[key][0])
+            result = _multithread_iteration(selection_iter, scoring_fn, njobs)
+
+        next_result = add_ranks_to_dict(result, variable_names, scoring_strategy)
+        best_var = min(next_result.keys(), key=lambda key: next_result[key][0])
         best_index = np.flatnonzero(variable_names == best_var)[0]
-        result_obj.add_new_results(
-            next_result, next_important_variable=best_var)
+        result_obj.add_new_results(next_result, next_important_variable=best_var)
         important_vars.append(best_index)
 
     return result_obj
 
 
 def _singlethread_iteration(selection_iterator, scoring_fn):
-    """Handles a single pass of the abstract variable importance algorithm, 
+    """Handles a single pass of the abstract variable importance algorithm,
     assuming a single worker thread
 
     :param selection_iterator: an iterator which yields triples
-        ``(variable, training_data, scoring_data)``. Typically a 
+        ``(variable, training_data, scoring_data)``. Typically a
         :class:`PermutationImportance.selection_strategies.SelectionStrategy`
     :param scoring_fn: a function to be used for scoring. Should be of the form
         ``(training_data, scoring_data) -> float``
@@ -128,7 +139,7 @@ def _multithread_iteration(selection_iterator, scoring_fn, njobs):
     multithreading
 
     :param selection_iterator: an iterator which yields triples
-        ``(variable, training_data, scoring_data)``. Typically a 
+        ``(variable, training_data, scoring_data)``. Typically a
         :class:`PermutationImportance.selection_strategies.SelectionStrategy`
     :param scoring_fn: a function to be used for scoring. Should be of the form
         ``(training_data, scoring_data) -> float``

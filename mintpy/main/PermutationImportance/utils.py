@@ -11,7 +11,7 @@ __all__ = ["add_ranks_to_dict", "get_data_subset", "make_data_from_columns"]
 
 
 def add_ranks_to_dict(result, variable_names, scoring_strategy):
-    """Takes a list of (var, score) and converts to a dictionary of 
+    """Takes a list of (var, score) and converts to a dictionary of
     {var: (rank, score)}
     :param result: a dict of {var_index: score}
     :param variable_names: a list of variable names
@@ -61,7 +61,8 @@ def get_data_subset(data, rows=None, columns=None):
             return data[np.ix_(rows, columns)]
     else:
         raise InvalidDataException(
-            data, "Data must be a pandas dataframe or numpy array")
+            data, "Data must be a pandas dataframe or numpy array"
+        )
 
 
 def make_data_from_columns(columns_list, index=None):
@@ -71,8 +72,11 @@ def make_data_from_columns(columns_list, index=None):
     """
     if len(columns_list) == 0:
         raise InvalidDataException(
-            columns_list, "Must have at least one column to synthesize dataset")
-    if isinstance(columns_list[0], pd.DataFrame) or isinstance(columns_list[0], pd.Series):
+            columns_list, "Must have at least one column to synthesize dataset"
+        )
+    if isinstance(columns_list[0], pd.DataFrame) or isinstance(
+        columns_list[0], pd.Series
+    ):
         df = pd.concat([c.reset_index(drop=True) for c in columns_list], axis=1)
         if index is not None:
             return df.set_index(index)
@@ -82,27 +86,29 @@ def make_data_from_columns(columns_list, index=None):
         return np.column_stack(columns_list)
     else:
         raise InvalidDataException(
-            columns_list, "Columns_list must come from a pandas dataframe or numpy arrays")
+            columns_list,
+            "Columns_list must come from a pandas dataframe or numpy arrays",
+        )
 
 
 def conditional_permutations(data, n_bins, random_state):
     """
     Conditionally permute each feature in a dataset.
 
-    Code appended to the PermutationImportance package by Montgomery Flora 2021. 
-    
+    Code appended to the PermutationImportance package by Montgomery Flora 2021.
+
     Args:
     -------------------
         data : pd.DataFrame or np.ndarray shape=(n_examples, n_features,)
-        n_bins : interger 
-            number of bins to divide a feature into. Based on a 
-            percentile method to ensure that each bin receieves 
+        n_bins : interger
+            number of bins to divide a feature into. Based on a
+            percentile method to ensure that each bin receieves
             a similar number of examples
         random_state : np.random.RandomState instance
             Pseudo-random number generator to control the permutations of each
             feature.
             Pass an int to get reproducible results across function calls.
-    
+
     Returns:
     -------------------
         permuted_data : a permuted version of data
@@ -110,47 +116,49 @@ def conditional_permutations(data, n_bins, random_state):
     permuted_data = data.copy()
 
     for i in range(np.shape(data)[1]):
-        # Get the bin values of feature 
+        # Get the bin values of feature
         if isinstance(data, pd.DataFrame):
-            feature_values = data.iloc[:,i]
+            feature_values = data.iloc[:, i]
         elif isinstance(data, np.ndarray):
-            feature_values = data[:,i]
+            feature_values = data[:, i]
         else:
             raise InvalidDataException(
-                    data, "Data must be a pandas dataframe or numpy array")
-        
+                data, "Data must be a pandas dataframe or numpy array"
+            )
+
         bin_edges = np.unique(
             np.percentile(
                 feature_values,
                 np.linspace(0, 100, n_bins + 1),
                 interpolation="lower",
-                )
             )
-     
+        )
+
         bin_indices = np.clip(
-                np.digitize(feature_values, bin_edges, right=True) - 1, 0, None
-            )
-        
+            np.digitize(feature_values, bin_edges, right=True) - 1, 0, None
+        )
+
         shuffled_indices = bin_indices.copy()
         unique_bin_values = np.unique(bin_indices)
-        
-        # bin_indices is composed of bin indices for a corresponding value of feature_values  
+
+        # bin_indices is composed of bin indices for a corresponding value of feature_values
         for bin_idx in unique_bin_values:
-            # idx is the actual index of indices where the bin index == i 
-            idx = np.where(bin_indices==bin_idx)[0]
-            # Replace the bin indices with a permutation of the actual indices 
+            # idx is the actual index of indices where the bin index == i
+            idx = np.where(bin_indices == bin_idx)[0]
+            # Replace the bin indices with a permutation of the actual indices
             shuffled_indices[idx] = random_state.permutation(idx)
 
         if isinstance(data, pd.DataFrame):
-            permuted_data.iloc[:,i] = data.iloc[shuffled_indices,i]
+            permuted_data.iloc[:, i] = data.iloc[shuffled_indices, i]
         else:
-            permuted_data[:,i] = data[shuffled_indices,i]
-        
+            permuted_data[:, i] = data[shuffled_indices, i]
+
     return permuted_data
+
 
 def check_random_state(seed):
     """Turn seed into a np.random.RandomState instance
-    Parameters. Function comes for sci-kit-learn. 
+    Parameters. Function comes for sci-kit-learn.
     ----------
     seed : None, int or instance of RandomState
         If seed is None, return the RandomState singleton used by np.random.
@@ -164,5 +172,6 @@ def check_random_state(seed):
         return np.random.RandomState(seed)
     if isinstance(seed, np.random.RandomState):
         return seed
-    raise ValueError('%r cannot be used to seed a numpy.random.RandomState'
-                     ' instance' % seed)
+    raise ValueError(
+        "%r cannot be used to seed a numpy.random.RandomState" " instance" % seed
+    )

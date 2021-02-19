@@ -11,7 +11,11 @@ should also work."""
 
 import numpy as np
 
-from .error_handling import AmbiguousProbabilisticForecastsException, UnmatchingProbabilisticForecastsException, UnmatchedLengthPredictionsException
+from .error_handling import (
+    AmbiguousProbabilisticForecastsException,
+    UnmatchingProbabilisticForecastsException,
+    UnmatchedLengthPredictionsException,
+)
 
 
 __all__ = ["gerrity_score", "peirce_skill_score", "heidke_skill_score"]
@@ -75,8 +79,7 @@ def _get_contingency_table(truths, predictions, classes=None):
     if len(truths.shape) == 2:
         # Fully probabilistic model
         if len(predictions.shape) != 2 or predictions.shape[1] != truths.shape[1]:
-            raise UnmatchingProbabilisticForecastsException(
-                truths, predictions)
+            raise UnmatchingProbabilisticForecastsException(truths, predictions)
         table = np.zeros((truths.shape[1], truths.shape[1]), dtype=np.float32)
         trues = np.argmax(truths, axis=1)
         preds = np.argmax(predictions, axis=1)
@@ -86,8 +89,7 @@ def _get_contingency_table(truths, predictions, classes=None):
         if len(predictions.shape) == 2:
             # in this case, we require the class listing
             if classes is None:
-                raise AmbiguousProbabilisticForecastsException(
-                    truths, predictions)
+                raise AmbiguousProbabilisticForecastsException(truths, predictions)
             preds = np.take(classes, np.argmax(predictions, axis=1))
         else:
             preds = predictions
@@ -97,8 +99,9 @@ def _get_contingency_table(truths, predictions, classes=None):
         table = np.zeros((len(classes), len(classes)), dtype=np.float32)
         for i, c1 in enumerate(classes):
             for j, c2 in enumerate(classes):
-                table[i, j] = [p == c1 and t == c2 for p,
-                               t in zip(preds, truths)].count(True)
+                table[i, j] = [
+                    p == c1 and t == c2 for p, t in zip(preds, truths)
+                ].count(True)
     return table
 
 
@@ -137,7 +140,7 @@ def _gerrity_score(table):
     MulticlassContingencyTable class. It is used here with permission of
     David John Gagne II <djgagne@ou.edu>
 
-    Gerrity Score, which weights each cell in the contingency table by its 
+    Gerrity Score, which weights each cell in the contingency table by its
     observed relative frequency.
     """
     k = table.shape[0]
@@ -148,11 +151,13 @@ def _gerrity_score(table):
     s = np.zeros(table.shape, dtype=float)
     for (i, j) in np.ndindex(*s.shape):
         if i == j:
-            s[i, j] = 1.0 / (k - 1.0) * \
-                (np.sum(1.0 / a[0:j]) + np.sum(a[j:k-1]))
+            s[i, j] = 1.0 / (k - 1.0) * (np.sum(1.0 / a[0:j]) + np.sum(a[j : k - 1]))
         elif i < j:
-            s[i, j] = 1.0 / (k - 1.0) * (np.sum(1.0 / a[0:i]
-                                                ) - (j - i) + np.sum(a[j:k-1]))
+            s[i, j] = (
+                1.0
+                / (k - 1.0)
+                * (np.sum(1.0 / a[0:i]) - (j - i) + np.sum(a[j : k - 1]))
+            )
         else:
             s[i, j] = s[j, i]
     return np.sum(table / float(table.sum()) * s)

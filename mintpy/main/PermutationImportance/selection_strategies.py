@@ -22,14 +22,16 @@ import pandas as pd
 
 from .utils import get_data_subset, make_data_from_columns, conditional_permutations
 
-__all__ = ["SequentialForwardSelectionStrategy",
-           "SequentialBackwardSelectionStrategy",
-           "PermutationImportanceSelectionStrategy",
-           "SelectionStrategy"]
+__all__ = [
+    "SequentialForwardSelectionStrategy",
+    "SequentialBackwardSelectionStrategy",
+    "PermutationImportanceSelectionStrategy",
+    "SelectionStrategy",
+]
 
 
 class SelectionStrategy(object):
-    """The base ``SelectionStrategy`` only provides the tools for storing the 
+    """The base ``SelectionStrategy`` only provides the tools for storing the
     data and other important information as well as the convenience method for
     iterating over the selection strategies triples lazily."""
 
@@ -52,14 +54,20 @@ class SelectionStrategy(object):
     def generate_datasets(self, important_variables):
         """Generator which returns triples (variable, training_data, scoring_data)"""
         raise NotImplementedError(
-            "Please implement a strategy for generating datasets on class %s" % self.name)
+            "Please implement a strategy for generating datasets on class %s"
+            % self.name
+        )
 
     def generate_all_datasets(self):
         """By default, loops over all variables not yet considered important"""
         for var in range(self.num_vars):
             if var not in self.important_vars:
                 training_data, scoring_data = self.generate_datasets(
-                    self.important_vars + [var, ])
+                    self.important_vars
+                    + [
+                        var,
+                    ]
+                )
                 yield (var, training_data, scoring_data)
 
     def __iter__(self):
@@ -67,7 +75,7 @@ class SelectionStrategy(object):
 
 
 class SequentialForwardSelectionStrategy(SelectionStrategy):
-    """Sequential Forward Selection tests all variables which are not yet 
+    """Sequential Forward Selection tests all variables which are not yet
     considered important by adding that columns to the other columns which are
     returned. This means that the shape of the training data will be
     ``(num_rows, num_important_vars + 1)``."""
@@ -75,7 +83,7 @@ class SequentialForwardSelectionStrategy(SelectionStrategy):
     name = "Sequential Forward Selection"
 
     def generate_datasets(self, important_variables):
-        """Check each of the non-important variables. Dataset is the columns 
+        """Check each of the non-important variables. Dataset is the columns
         which are important
         :returns: (training_data, scoring_data)
         """
@@ -84,68 +92,81 @@ class SequentialForwardSelectionStrategy(SelectionStrategy):
 
         columns = important_variables
         # Make a slice of the training inputs
-        training_inputs_subset = get_data_subset(
-            training_inputs, None, columns)
+        training_inputs_subset = get_data_subset(training_inputs, None, columns)
         # Make a slice of the scoring inputs
-        scoring_inputs_subset = get_data_subset(
-            scoring_inputs, None, columns)
-        return (training_inputs_subset, training_outputs), (scoring_inputs_subset, scoring_outputs)
+        scoring_inputs_subset = get_data_subset(scoring_inputs, None, columns)
+        return (training_inputs_subset, training_outputs), (
+            scoring_inputs_subset,
+            scoring_outputs,
+        )
 
 
 class SequentialBackwardSelectionStrategy(SelectionStrategy):
-    """Sequential Backward Selection tests all variables which are not yet 
+    """Sequential Backward Selection tests all variables which are not yet
     considered important by removing that column from the data. This means that
-    the shape of the training data will be 
+    the shape of the training data will be
     ``(num_rows, num_vars - num_important_vars - 1)``."""
 
     name = "Sequential Backward Selection"
 
     def generate_datasets(self, important_variables):
-        """Check each of the non-important variables. Dataset is the columns 
+        """Check each of the non-important variables. Dataset is the columns
         which are not important
         :yields: a sequence of (variable being evaluated, columns to include)
         """
         training_inputs, training_outputs = self.training_data
         scoring_inputs, scoring_outputs = self.scoring_data
 
-        columns = [x for x in range(self.num_vars)
-                   if x not in important_variables]
+        columns = [x for x in range(self.num_vars) if x not in important_variables]
         # Make a slice of the training inputs
-        training_inputs_subset = get_data_subset(
-            training_inputs, None, columns)
+        training_inputs_subset = get_data_subset(training_inputs, None, columns)
         # Make a slice of the scoring inputs
-        scoring_inputs_subset = get_data_subset(
-            scoring_inputs, None, columns)
-        return (training_inputs_subset, training_outputs), (scoring_inputs_subset, scoring_outputs)
+        scoring_inputs_subset = get_data_subset(scoring_inputs, None, columns)
+        return (training_inputs_subset, training_outputs), (
+            scoring_inputs_subset,
+            scoring_outputs,
+        )
 
 
 class PermutationImportanceSelectionStrategy(SelectionStrategy):
     """Permutation Importance tests all variables which are not yet considered
-    important by shuffling that column in addition to the columns of the 
+    important by shuffling that column in addition to the columns of the
     variables which are considered important. The shape of the data will remain
     constant, but at each step, one additional column will be permuted."""
 
     name = "Permutation Importance"
 
-    def __init__(self, training_data, scoring_data, num_vars, important_vars, random_state, **kwargs):
+    def __init__(
+        self,
+        training_data,
+        scoring_data,
+        num_vars,
+        important_vars,
+        random_state,
+        **kwargs
+    ):
         """Initializes the object by storing the data and keeping track of other
         important information
         :param training_data: (training_inputs, training_outputs)
         :param scoring_data: (scoring_inputs, scoring_outputs)
         :param num_vars: integer for the total number of variables
-        :param important_vars: a list of the indices of variables which are 
+        :param important_vars: a list of the indices of variables which are
             already considered important
         """
         super(PermutationImportanceSelectionStrategy, self).__init__(
-            training_data, scoring_data, num_vars, important_vars)
-        
+            training_data, scoring_data, num_vars, important_vars
+        )
+
         # Also initialize the "shuffled data"
         scoring_inputs, __ = self.scoring_data
         indices = random_state.permutation(len(scoring_inputs))
         self.shuffled_scoring_inputs = get_data_subset(
-            scoring_inputs, indices)  # This copies
+            scoring_inputs, indices
+        )  # This copies
         # keep track of the initial index (assuming this is pandas data)
-        self.original_index = scoring_inputs.index if isinstance(scoring_inputs, pd.DataFrame) else None
+        self.original_index = (
+            scoring_inputs.index if isinstance(scoring_inputs, pd.DataFrame) else None
+        )
 
     def generate_datasets(self, important_variables):
         """Check each of the non-important variables. Dataset has columns which
@@ -154,38 +175,61 @@ class PermutationImportanceSelectionStrategy(SelectionStrategy):
         """
         scoring_inputs, scoring_outputs = self.scoring_data
         complete_scoring_inputs = make_data_from_columns(
-            [get_data_subset(self.shuffled_scoring_inputs if i in important_variables else scoring_inputs, None, [i]) for i in range(self.num_vars)], index=self.original_index)
+            [
+                get_data_subset(
+                    self.shuffled_scoring_inputs
+                    if i in important_variables
+                    else scoring_inputs,
+                    None,
+                    [i],
+                )
+                for i in range(self.num_vars)
+            ],
+            index=self.original_index,
+        )
 
         return self.training_data, (complete_scoring_inputs, scoring_outputs)
 
 
 class ConditionalPermutationImportanceSelectionStrategy(SelectionStrategy):
-    """ Conditional Permutation Importance tests all variables which are not yet considered
-    important by performing conditional permutation on that column in addition to the columns of the 
+    """Conditional Permutation Importance tests all variables which are not yet considered
+    important by performing conditional permutation on that column in addition to the columns of the
     variables which are considered important. The shape of the data will remain
     constant, but at each step, one additional column will be permuted."""
 
     name = "Conditional Permutation Importance"
 
-    def __init__(self, training_data, scoring_data, num_vars, important_vars, random_state, **kwargs):
+    def __init__(
+        self,
+        training_data,
+        scoring_data,
+        num_vars,
+        important_vars,
+        random_state,
+        **kwargs
+    ):
         """Initializes the object by storing the data and keeping track of other
         important information
         :param training_data: (training_inputs, training_outputs)
         :param scoring_data: (scoring_inputs, scoring_outputs)
         :param num_vars: integer for the total number of variables
-        :param important_vars: a list of the indices of variables which are 
+        :param important_vars: a list of the indices of variables which are
             already considered important
         """
         super(ConditionalPermutationImportanceSelectionStrategy, self).__init__(
-            training_data, scoring_data, num_vars, important_vars)
-        n_bins = kwargs.get('n_bins', 50)
-        
+            training_data, scoring_data, num_vars, important_vars
+        )
+        n_bins = kwargs.get("n_bins", 50)
+
         # Also initialize the "shuffled data"
         scoring_inputs, __ = self.scoring_data
         self.shuffled_scoring_inputs = conditional_permutations(
-            scoring_inputs, n_bins, random_state) # This copies
+            scoring_inputs, n_bins, random_state
+        )  # This copies
         # keep track of the initial index (assuming this is pandas data)
-        self.original_index = scoring_inputs.index if isinstance(scoring_inputs, pd.DataFrame) else None
+        self.original_index = (
+            scoring_inputs.index if isinstance(scoring_inputs, pd.DataFrame) else None
+        )
 
     def generate_datasets(self, important_variables):
         """Check each of the non-important variables. Dataset has columns which
@@ -195,9 +239,17 @@ class ConditionalPermutationImportanceSelectionStrategy(SelectionStrategy):
         scoring_inputs, scoring_outputs = self.scoring_data
         # If a feature has been deemed important it remains shuffled
         complete_scoring_inputs = make_data_from_columns(
-            [get_data_subset(self.shuffled_scoring_inputs if i in important_variables else scoring_inputs, None, [i]) 
-             for i in range(self.num_vars)], index=self.original_index)
+            [
+                get_data_subset(
+                    self.shuffled_scoring_inputs
+                    if i in important_variables
+                    else scoring_inputs,
+                    None,
+                    [i],
+                )
+                for i in range(self.num_vars)
+            ],
+            index=self.original_index,
+        )
 
         return self.training_data, (complete_scoring_inputs, scoring_outputs)
-
-

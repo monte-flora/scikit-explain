@@ -7,7 +7,10 @@ class InvalidStrategyException(Exception):
 
     def __init__(self, strategy, msg=None, options=None):
         if msg is None:
-            msg = "%s is not a valid strategy for determining the optimal variable. " % strategy
+            msg = (
+                "%s is not a valid strategy for determining the optimal variable. "
+                % strategy
+            )
             msg += "\nShould be a callable or a valid string option. "
             if options is not None:
                 msg += "Valid options are\n%r" % options
@@ -45,7 +48,9 @@ class UnmatchedLengthPredictionsException(Exception):
     def __init__(self, truths, predictions, msg=None):
         if msg is None:
             msg = "Shapes of truths and predictions do not match: %r and %r" % (
-                truths.shape, predictions.shape)
+                truths.shape,
+                predictions.shape,
+            )
 
         super(UnmatchedLengthPredictionsException, self).__init__(msg)
         self.truths = truths
@@ -58,7 +63,9 @@ class UnmatchingProbabilisticForecastsException(Exception):
     def __init__(self, truths, predictions, msg=None):
         if msg is None:
             msg = "Shapes of truths and predictions do not match: %r and %r" % (
-                truths.shape, predictions.shape)
+                truths.shape,
+                predictions.shape,
+            )
 
         super(UnmatchingProbabilisticForecastsException, self).__init__(msg)
         self.truths = truths
@@ -66,7 +73,7 @@ class UnmatchingProbabilisticForecastsException(Exception):
 
 
 class AmbiguousProbabilisticForecastsException(Exception):
-    """Thrown when classes were not provided for converting probabilistic 
+    """Thrown when classes were not provided for converting probabilistic
     predictions to deterministic ones but are required"""
 
     def __init__(self, truths, predictions, msg=None):
@@ -79,6 +86,7 @@ class AmbiguousProbabilisticForecastsException(Exception):
 
 
 class FullImportanceResultWarning(Warning):
-    """Thrown when we try to add a result to a full 
+    """Thrown when we try to add a result to a full
     :class:`PermutationImportance.result.ImportanceResult`"""
+
     pass

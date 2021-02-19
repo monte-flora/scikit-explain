@@ -425,15 +425,15 @@ class PlotStructure:
         ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.yaxis.set_minor_locator(AutoMinorLocator())
 
-    def set_n_ticks(self, ax, option='y'):
+    def set_n_ticks(self, ax, option="y"):
         """
         Set the max number of ticks per x- and y-axis for a
         subplot ax
         """
-        if option == 'y' or option == 'both':
+        if option == "y" or option == "both":
             ax.yaxis.set_major_locator(MaxNLocator(5))
             ax.yaxis.set_major_locator(MaxNLocator(4))
-        if option == 'x' or option == 'both':
+        if option == "x" or option == "both":
             ax.xaxis.set_major_locator(MaxNLocator(5))
             ax.xaxis.set_major_locator(MaxNLocator(4))
 
@@ -445,23 +445,26 @@ class PlotStructure:
         ax.spines["top"].set_visible(False)
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
-        
+
     def annotate_bars(self, ax, bottom_idx, top_idx, x=0):
         """
         Adds a square bracket that contains two points. Used to
-        connect predictors in the predictor ranking plot 
-        for highly correlated pairs. 
+        connect predictors in the predictor ranking plot
+        for highly correlated pairs.
         """
-        ax.annotate('', xy=(x,bottom_idx),  
-            xytext=(x,top_idx), 
-            arrowprops=dict(arrowstyle="<->,head_length=0.05,head_width=0.05",
-                            ec="xkcd:slate gray",
-                            connectionstyle="bar,fraction=0.2",
-                            shrinkA=0.5, 
-                            shrinkB=0.5,
-                            linewidth=0.5,
-                            )
-            )
+        ax.annotate(
+            "",
+            xy=(x, bottom_idx),
+            xytext=(x, top_idx),
+            arrowprops=dict(
+                arrowstyle="<->,head_length=0.05,head_width=0.05",
+                ec="xkcd:slate gray",
+                connectionstyle="bar,fraction=0.2",
+                shrinkA=0.5,
+                shrinkB=0.5,
+                linewidth=0.5,
+            ),
+        )
 
     def add_colorbar(
         self,

@@ -33,7 +33,7 @@ class ImportanceResult(object):
 
         :param method: string for the type of variable importance used
         :param variable_names: a list of names for variables
-        :param original_score: the score of the model when no variables are 
+        :param original_score: the score of the model when no variables are
             important
         """
         self.method = method
@@ -58,28 +58,30 @@ class ImportanceResult(object):
         if not self.complete:
             if next_important_variable is None:
                 next_important_variable = min(
-                    new_results.keys(), key=lambda key: new_results[key][0])
+                    new_results.keys(), key=lambda key: new_results[key][0]
+                )
             self.results.append(new_results)
             new_context = self.contexts[-1].copy()
             self.contexts.append(new_context)
             __, score = new_results[next_important_variable]
-            self.contexts[-1][next_important_variable] = (
-                len(self.results) - 1, score)
+            self.contexts[-1][next_important_variable] = (len(self.results) - 1, score)
             # Check to see if this result could constitute the last possible one
             if len(self.results) == len(self.variable_names):
                 self.results.append(dict())
                 self.complete = True
         else:
             warnings.warn(
-                "Cannot add new result to full ImportanceResult", FullImportanceResultWarning)
+                "Cannot add new result to full ImportanceResult",
+                FullImportanceResultWarning,
+            )
 
     def retrieve_singlepass(self):
-        """Returns the singlepass results as a dictionary with keys of variable 
+        """Returns the singlepass results as a dictionary with keys of variable
         names and values of ``(rank, score)``."""
         return self.results[0]
 
     def retrieve_multipass(self):
-        """Returns the multipass results as a dictionary with keys of variable 
+        """Returns the multipass results as a dictionary with keys of variable
         names and values of ``(rank, score)``."""
         return self.contexts[-1]
 
