@@ -4,12 +4,24 @@ from ..common.utils import to_list, is_list
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
+from matplotlib import colors 
 import itertools
 import scipy.stats as sps
 import numpy as np
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
+
+class MidpointNormalize(colors.Normalize):
+    def __init__(self, vmin=None, vmax=None, vcenter=None, clip=False):
+        self.vcenter = vcenter
+        colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+        x, y = [self.vmin, self.vcenter, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y))
 
 class PlotInterpret2D(PlotStructure):
     def add_histogram_axis(
@@ -156,18 +168,19 @@ class PlotInterpret2D(PlotStructure):
         ale_max = []
         ale_min = []
         for feature_set, model_name in itertools.product(features, model_names):
-            zdata = data[
+            zdata_temp = data[
                 f"{feature_set[0]}__{feature_set[1]}__{model_name}__{method}"
-            ].values
-            zdata = np.ma.getdata(zdata)
+            ].values.copy()
+            zdata_temp = np.ma.getdata(zdata_temp)
+            
             if to_probability:
-                zdata *= 100.0
+                zdata_temp *= 100.0
+                
+            ale_max.append(np.nanmax(zdata_temp))
+            ale_min.append(np.nanmin(zdata_temp))
 
-            ale_max.append(np.nanmax(zdata))
-            ale_min.append(np.nanmin(zdata))
-
-            max_value = np.nanmax(zdata)
-            min_value = np.nanmin(zdata)
+            max_value = np.nanmax(zdata_temp)
+            min_value = np.nanmin(zdata_temp)
 
             if max_value == 0.0 and min_value == 0:
                 feature_levels[feature_set]["max"].append(0.01)
@@ -178,12 +191,12 @@ class PlotInterpret2D(PlotStructure):
 
         levels = self.calculate_ticks(
             nticks=20,
-            upperbound=np.nanpercentile(ale_max, 75),
-            lowerbound=np.nanpercentile(ale_min, 25),
+            upperbound=np.nanpercentile(ale_max, 100),
+            lowerbound=np.nanpercentile(ale_min, 0),
             round_to=5,
             center=True,
         )
-
+        
         cmap = plt.get_cmap(cmap)
         counter = 0
         n = 1
@@ -233,11 +246,8 @@ class PlotInterpret2D(PlotStructure):
             #    zdata = np.ma.getdata(zdata)
             # else:
             #    masked = np.zeros((zdata[0].shape))
-            masked = [False, False]
-
-            if to_probability:
-                zdata *= 100.0
-
+            #masked = [False, False]
+            
             # can only do a contour plot with 2-d data
             x1, x2 = np.meshgrid(xdata1, xdata2, indexing="xy")
 
@@ -245,20 +255,25 @@ class PlotInterpret2D(PlotStructure):
             if np.ndim(zdata) > 2:
                 zdata = np.mean(zdata, axis=0)
             else:
-                zdata = zdata[0]
-
-            mark_empty = False
-
+                zdata = zdata.squeeze()
+            
+            if to_probability:
+                zdata *= 100.0
+                
             cf = main_ax.pcolormesh(
                 x1,
                 x2,
                 zdata.T,
                 cmap=cmap,
                 alpha=0.8,
-                norm=BoundaryNorm(levels, ncolors=cmap.N, clip=True),
+                norm=BoundaryNorm(boundaries=levels, ncolors=cmap.N, clip=True)
             )
-
-            if mark_empty and np.any(masked):
+            
+            ### cf = main_ax.contourf(x1, x2, zdata, cmap=cmap, alpha=0.8, levels=levels)
+            #masked = np.ma.masked_where(zdata, zdata==np.nan) 
+            mark_empty = False
+            
+            if mark_empty: #and np.any(masked):
                 # Do not autoscale, so that boxes at the edges (contourf only plots the bin
                 # centres, not their edges) don't enlarge the plot.
                 plt.autoscale(False)
@@ -286,6 +301,7 @@ class PlotInterpret2D(PlotStructure):
                 self.plot_2d_kde(main_ax, xdata1_hist, xdata2_hist)
             except:
                 pass
+            
             self.add_histogram_axis(
                 top_ax,
                 xdata1_hist,

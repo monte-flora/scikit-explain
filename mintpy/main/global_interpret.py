@@ -834,6 +834,7 @@ class GlobalInterpret(Attributes):
             # Record where elements were missing.
             missing_bin_mask = ale.mask.copy()[1:, 1:]
 
+            # Replace the invalid bin values with the nearest valid ones.
             if np.any(missing_bin_mask):
                 # Replace missing entries with their nearest neighbours.
 

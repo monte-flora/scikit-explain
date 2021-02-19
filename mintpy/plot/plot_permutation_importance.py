@@ -372,8 +372,8 @@ class PlotImportance(PlotStructure):
                                                                        top_features, 
                                                                        rho_threshold=rho_threshold,
                                                                        )
-        x=0.001
-        dx=0.002
+        x=0.0001
+        dx=0.0002
         bottom_indices=[]
         top_indices=[]
         for p in pair_indices:
