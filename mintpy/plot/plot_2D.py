@@ -121,7 +121,10 @@ class PlotInterpret2D(PlotStructure):
         """
         Generic function for 2-D PDP/ALE
         """
-
+        contours = kwargs.get('contours', False)
+        kde_curves = kwargs.get('kde_curves', True)
+        scatter = kwargs.get('scatter', True)
+        
         if not is_list(model_names):
             model_names = to_list(model_names)
 
@@ -177,16 +180,21 @@ class PlotInterpret2D(PlotStructure):
             if to_probability:
                 zdata_temp *= 100.0
 
-            ale_max.append(np.nanmax(zdata_temp))
-            ale_min.append(np.nanmin(zdata_temp))
-
+            # if the max value is super small
+            if np.round(np.max(np.absolute(zdata_temp)), 10) < 1e-5 :
+                zdata_temp[:] = 0.0
+                
             max_value = np.nanmax(zdata_temp)
             min_value = np.nanmin(zdata_temp)
 
-            if max_value == 0.0 and min_value == 0:
+            if np.all((zdata_temp == 0.0)):
+                ale_max.append(0.01)
+                ale_min.append(-0.01)
                 feature_levels[feature_set]["max"].append(0.01)
                 feature_levels[feature_set]["min"].append(-0.01)
             else:
+                ale_max.append(max_value)
+                ale_min.append(min_value)
                 feature_levels[feature_set]["max"].append(max_value)
                 feature_levels[feature_set]["min"].append(min_value)
 
@@ -197,7 +205,7 @@ class PlotInterpret2D(PlotStructure):
             round_to=5,
             center=True,
         )
-
+        
         cmap = plt.get_cmap(cmap)
         counter = 0
         n = 1
@@ -205,8 +213,8 @@ class PlotInterpret2D(PlotStructure):
         for feature_set, model_name in itertools.product(features, model_names):
             # We want to lowest maximum value and the highest minimum value
             if not only_one_model:
-                max_value = np.nanmean(feature_levels[feature_set]["max"])
-                min_value = np.nanmean(feature_levels[feature_set]["min"])
+                max_value = np.nanpercentile(feature_levels[feature_set]["max"], 95)
+                min_value = np.nanpercentile(feature_levels[feature_set]["min"], 5)
                 levels = self.calculate_ticks(
                     nticks=20,
                     upperbound=max_value,
@@ -242,13 +250,6 @@ class PlotInterpret2D(PlotStructure):
                 f"{feature_set[0]}__{feature_set[1]}__{model_name}__{method}"
             ].values
 
-            # if 'ALE' in colorbar_label:
-            #    masked = zdata[0].mask
-            #    zdata = np.ma.getdata(zdata)
-            # else:
-            #    masked = np.zeros((zdata[0].shape))
-            # masked = [False, False]
-
             # can only do a contour plot with 2-d data
             x1, x2 = np.meshgrid(xdata1, xdata2, indexing="xy")
 
@@ -261,20 +262,28 @@ class PlotInterpret2D(PlotStructure):
             if to_probability:
                 zdata *= 100.0
 
-            cf = main_ax.pcolormesh(
-                x1,
-                x2,
-                zdata.T,
-                cmap=cmap,
-                alpha=0.8,
-                norm=BoundaryNorm(boundaries=levels, ncolors=cmap.N, clip=True),
-            )
+            
+            if contours:
+                cf = main_ax.contourf(x1, 
+                                      x2, 
+                                      zdata, 
+                                      cmap=cmap, 
+                                      alpha=0.8, 
+                                      levels=levels, 
+                                      extend='both'
+                                     )
+            else:
+                cf = main_ax.pcolormesh(
+                    x1,
+                    x2,
+                    zdata,
+                    cmap=cmap,
+                    alpha=0.8,
+                    norm=BoundaryNorm(boundaries=levels, ncolors=cmap.N, clip=True),
+                )
 
-            ### cf = main_ax.contourf(x1, x2, zdata, cmap=cmap, alpha=0.8, levels=levels)
-            # masked = np.ma.masked_where(zdata, zdata==np.nan)
             mark_empty = False
-
-            if mark_empty:  # and np.any(masked):
+            if mark_empty: 
                 # Do not autoscale, so that boxes at the edges (contourf only plots the bin
                 # centres, not their edges) don't enlarge the plot.
                 plt.autoscale(False)
@@ -292,16 +301,19 @@ class PlotInterpret2D(PlotStructure):
                         )
                     )
 
-            idx = np.random.choice(len(xdata1_hist), size=min(2000, len(xdata1_hist)))
-            main_ax.scatter(
-                xdata1_hist[idx], xdata2_hist[idx], alpha=0.3, color="grey", s=1
-            )
-            try:
-                # There can be very rare cases where two functions are linearly correlated (cc~1.0)
-                # which can cause the KDE calculations to fail!
-                self.plot_2d_kde(main_ax, xdata1_hist, xdata2_hist)
-            except:
-                pass
+            if scatter:
+                idx = np.random.choice(len(xdata1_hist), size=min(2000, len(xdata1_hist)))
+                main_ax.scatter(
+                    xdata1_hist[idx], xdata2_hist[idx], alpha=0.3, color="grey", s=1
+                )
+            
+            if kde_curves:
+                try:
+                    # There can be very rare cases where two functions are linearly correlated (cc~1.0)
+                    # which can cause the KDE calculations to fail!
+                    self.plot_2d_kde(main_ax, xdata1_hist, xdata2_hist)
+                except:
+                    pass
 
             self.add_histogram_axis(
                 top_ax,

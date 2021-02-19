@@ -892,7 +892,7 @@ class GlobalInterpret(Attributes):
 
                 # Replace the invalid bin values with the nearest valid ones.
                 ale[1:, 1:][missing_bin_mask] = ale[1:, 1:][nearest_indices]
-
+            
             # Compute the cumulative sums.
             ale = np.cumsum(np.cumsum(ale, axis=0), axis=1)
 
@@ -938,7 +938,7 @@ class GlobalInterpret(Attributes):
 
             # Center the ALE by subtracting its expectation value.
             ale -= np.sum(samples_grid * ale) / len(examples)
-
+            
             ale_set.append(ale)
 
         ###ale_set_ds = xarray.DataArray(ale_set).to_masked_array()
