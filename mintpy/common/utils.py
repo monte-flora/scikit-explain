@@ -7,6 +7,18 @@ from sklearn.metrics import brier_score_loss, average_precision_score
 from statsmodels.distributions.empirical_distribution import ECDF
 from scipy.stats import t
 
+def is_correlated(corr_matrix, feature_pairs, rho_threshold=0.8):
+    """
+    Returns dict where the keys are the feature pairs and the items 
+    are booleans of whether the pair is linearly correlated above the
+    given threshold. 
+    """
+    results={}
+    for pair in feature_pairs:
+        f1,f2 = pair.split('__')
+        corr = corr_matrix[f1][f2]
+        results[pair] = round(corr,3) >= rho_threshold
+    return results
 
 def is_fitted(model):
     '''

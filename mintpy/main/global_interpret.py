@@ -1214,7 +1214,6 @@ class GlobalInterpret(Attributes):
         if 'Run Date' in feature_names:
             feature_names.remove('Run Date')
 
-        
         try:
             data = self.data
         except:

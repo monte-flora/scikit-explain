@@ -1,7 +1,10 @@
 import numpy as np
 import collections
 
-from ..common.utils import find_correlated_pairs_among_top_features
+from ..common.utils import (
+                            find_correlated_pairs_among_top_features, 
+                            is_correlated
+                           )
 
 from .base_plotting import PlotStructure
 
@@ -133,9 +136,7 @@ class PlotImportance(PlotStructure):
 
         if (any(isinstance(i, list) for i in model_names)):
             model_names = model_names[0]                                
-                                     
-        #self._check_for_models(data, model_names)                            
-        
+            
         fig, axes, xlabels, ylabels, only_one_model, n_panels = self._get_axes(model_names, 
                                                                                metrics_used, **kwargs)
 
@@ -252,7 +253,17 @@ class PlotImportance(PlotStructure):
                     ha = "left"
 
                 # Put the variable names _into_ the plot
+                if method == 'ale_variance_interactions' and plot_correlated_features:
+                    results_dict = is_correlated(corr_matrix, 
+                                                 sorted_var_names, 
+                                                 rho_threshold=rho_threshold)
+                
                 for i in range(len(variable_names_to_plot)):
+                    color ='k'
+                    if method == 'ale_variance_interactions' and plot_correlated_features:
+                        correlated = results_dict.get(sorted_var_names[i], False)
+                        color = 'xkcd:medium green' if correlated else 'k'
+                    
                     ax.annotate(
                         variable_names_to_plot[i],
                         xy=(x_pos,i),
@@ -260,6 +271,7 @@ class PlotImportance(PlotStructure):
                         ha=ha,
                         size=size,
                         alpha=0.8,
+                        color=color
                     )
                 
                 if model_output == "probability" and 'ale_variance' not in method:
@@ -362,7 +374,7 @@ class PlotImportance(PlotStructure):
         else:
             pos = (0.9, 0.9)
         self.add_alphabet_label(n_panels, axes, pos=pos)
-        
+    
     def _add_correlated_brackets(self, ax, corr_matrix, top_features, rho_threshold):
         """
         Add bracket connecting features above a given correlation threshold.
@@ -396,6 +408,8 @@ class PlotImportance(PlotStructure):
             self.annotate_bars(ax, bottom_idx=bottom_idx, top_idx=top_idx, x=x)
             x+=dx 
 
+            
+            
     # You can fill this in by using a dictionary with {var_name: legible_name}
     def convert_vars_to_readable(self, variables_list, VARIABLE_NAMES_DICT):
         """Substitutes out variable names for human-readable ones
