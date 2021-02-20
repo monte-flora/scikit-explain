@@ -344,7 +344,7 @@ class PlotFeatureContributions(PlotStructure):
         examples,
         features,
         plot_type,
-        display_feature_names=None,
+        display_feature_names={},
         display_units={},
         feature_values=None,
         target_values=None,
@@ -355,20 +355,13 @@ class PlotFeatureContributions(PlotStructure):
         Plot SHAP summary or dependence plot.
 
         """
-        if feature_values is None:
-            feature_values = examples.values
-
         self.display_units = display_units
-
         self.display_feature_names = display_feature_names
 
-        if display_feature_names is not None:
-            display_feature_names_list = [
-                display_feature_names[f] for f in self.feature_names
+        display_feature_names_list = [
+                display_feature_names.get(f,f) for f in self.feature_names
             ]
-        else:
-            display_feature_names_lists = self.feature_names
-
+        
         if plot_type == "summary":
             shap.summary_plot(
                 shap_values,
@@ -403,14 +396,11 @@ class PlotFeatureContributions(PlotStructure):
             ax_iterator = self.axes_to_iterator(n_panels, axes)
 
             for ax, feature in zip(ax_iterator, features):
-                ind = self.feature_names.index(feature)
-
                 dependence_plot(
-                    ind=ind,
+                    feature=feature,
                     shap_values=shap_values,
-                    features=examples,
-                    feature_values=feature_values,
-                    display_features=display_feature_names_list,
+                    examples=examples,
+                    display_feature_names=display_feature_names_list,
                     interaction_index=interaction_index,
                     target_values=target_values,
                     color="#1E88E5",

@@ -41,12 +41,11 @@ labels = {
 
 
 def dependence_plot(
-    ind,
+    feature,
     shap_values,
-    features,
-    feature_names=None,
+    examples,
     feature_values=None,
-    display_features=None,
+    display_feature_names=None,
     interaction_index="auto",
     target_values=None,
     color="#1E88E5",
@@ -73,22 +72,18 @@ def dependence_plot(
 
     Parameters
     ----------
-    ind : int or string
-        If this is an int it is the index of the feature to plot. If this is a string it is
-        either the name of the feature to plot, or it can have the form "rank(int)" to specify
-        the feature with that rank (ordered by mean absolute SHAP value over all the samples).
-
+    feature : string
+        name of the feature to plot. 
+        
     shap_values : numpy.array
         Matrix of SHAP values (# samples x # features).
 
-    features : numpy.array or pandas.DataFrame
+    examples : pandas.DataFrame
         Matrix of feature values (# samples x # features).
 
-    feature_names : list
-        Names of the features (length # features).
-
-    display_features : numpy.array or pandas.DataFrame
-        Matrix of feature values for visual display (such as strings instead of coded values).
+    display_feature_names : list of strings
+        A list of "prettier" names corresponding the column names
+        in the examples pandas.DataFrame
 
     interaction_index : "auto", None, int, or string
         The index of the feature used to color the plot. The name of a feature can also be passed
@@ -119,49 +114,44 @@ def dependence_plot(
     """
     unnormalize = kwargs.get("unnormalize", None)
     cmap = colors.red_blue
-
-    original_feature_names = list(features.columns)
+    feature_names = list(examples.columns)
+    
     if feature_values is None:
-        original_feature_values = features.values
-    else:
-        original_feature_values = feature_values
+        feature_values = examples.values
 
-    if unnormalize is not None:
-        feature_values = unnormalize._full_inverse_transform(original_feature_values)
-
+    #if unnormalize is not None:
+    #    feature_values = unnormalize._full_inverse_transform(original_feature_values)
+   
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
         shap_values = np.reshape(shap_values, len(shap_values), 1)
-    if len(features.shape) == 1:
-        features = np.reshape(features, len(features), 1)
+    if len(examples.shape) == 1:
+        examples = np.reshape(examples, len(examples), 1)
 
-    ind = convert_name(ind, shap_values, original_feature_names)
+    feature_ind = convert_name(feature, shap_values, feature_names)
 
     # guess what other feature as the stongest interaction with the plotted feature
-    if not hasattr(ind, "__len__"):
-        if interaction_index == "auto":
-            interaction_index = approximate_interactions(
-                ind, shap_values, original_feature_values
-            )[0]
-        interaction_index = convert_name(
-            interaction_index, shap_values, original_feature_names
-        )
-
+    interaction_index = get_interaction_index(feature_ind, 
+                          interaction_index, 
+                          shap_values, 
+                          feature_values, 
+                          feature_names)
+    
     assert (
-        shap_values.shape[0] == features.shape[0]
+        shap_values.shape[0] == examples.shape[0]
     ), "'shap_values' and 'features' values must have the same number of rows!"
     assert (
-        shap_values.shape[1] == features.shape[1]
+        shap_values.shape[1] == examples.shape[1]
     ), "'shap_values' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values
-    oinds = np.arange(
-        shap_values.shape[0]
-    )  # we randomize the ordering so plotting overlaps are not related to data ordering
+    oinds = np.arange(shap_values.shape[0])  
+    
+    # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
 
-    xdata = feature_values[oinds, ind].astype(np.float64)
-    s = shap_values[oinds, ind]
+    xdata = feature_values[oinds, feature_ind].astype(np.float64)
+    s = shap_values[oinds, feature_ind]
     if target_values is not None:
         target_values = target_values[oinds]
 
@@ -226,8 +216,8 @@ def dependence_plot(
         )
     else:
         p = ax.scatter(
-            xdata,
-            s,
+            xdata[xdata_notnan],
+            s[xdata_notnan],
             s=dot_size,
             linewidth=0,
             color=color,
@@ -235,10 +225,10 @@ def dependence_plot(
             rasterized=len(xdata) > 500,
         )
 
-    if interaction_index != ind and interaction_index is not None:
+    if interaction_index != feature_ind and interaction_index is not None:
         # draw the color bar
         cb = pl.colorbar(p, ticks=MaxNLocator(5), ax=ax)
-        cb.set_label(display_features[interaction_index], size=8)
+        cb.set_label(display_feature_names[interaction_index], size=8)
         cb.ax.tick_params(labelsize=8)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
@@ -283,3 +273,23 @@ def dependence_plot(
     ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
     for spine in ax.spines.values():
         spine.set_edgecolor(axis_color)
+
+def get_interaction_index(feature_ind, 
+                          interaction_index, 
+                          shap_values, 
+                          feature_values, 
+                          feature_names):
+    """
+    """
+    # guess what other feature as the stongest interaction with the plotted feature
+    if not hasattr(feature_ind, "__len__"):
+        if interaction_index == "auto":
+            interaction_index = approximate_interactions(
+                feature_ind, shap_values, feature_values
+            )[0]
+        interaction_index = convert_name(
+            interaction_index, shap_values, feature_names
+        )
+        
+    return interaction_index  
+        

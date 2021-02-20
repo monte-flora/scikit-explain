@@ -213,8 +213,8 @@ class PlotInterpret2D(PlotStructure):
         for feature_set, model_name in itertools.product(features, model_names):
             # We want to lowest maximum value and the highest minimum value
             if not only_one_model:
-                max_value = np.nanpercentile(feature_levels[feature_set]["max"], 95)
-                min_value = np.nanpercentile(feature_levels[feature_set]["min"], 5)
+                max_value = np.nanpercentile(feature_levels[feature_set]["max"], 100)
+                min_value = np.nanpercentile(feature_levels[feature_set]["min"], 0)
                 levels = self.calculate_ticks(
                     nticks=20,
                     upperbound=max_value,
@@ -248,7 +248,7 @@ class PlotInterpret2D(PlotStructure):
 
             zdata = data[
                 f"{feature_set[0]}__{feature_set[1]}__{model_name}__{method}"
-            ].values
+            ].values.copy()
 
             # can only do a contour plot with 2-d data
             x1, x2 = np.meshgrid(xdata1, xdata2, indexing="xy")
@@ -261,8 +261,7 @@ class PlotInterpret2D(PlotStructure):
 
             if to_probability:
                 zdata *= 100.0
-
-            
+                
             if contours:
                 cf = main_ax.contourf(x1, 
                                       x2, 
@@ -270,7 +269,7 @@ class PlotInterpret2D(PlotStructure):
                                       cmap=cmap, 
                                       alpha=0.8, 
                                       levels=levels, 
-                                      extend='both'
+                                      extend='neither'
                                      )
             else:
                 cf = main_ax.pcolormesh(

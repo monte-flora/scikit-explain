@@ -811,9 +811,8 @@ class InterpretToolkit(Attributes):
                   plot_type='summary',
                   shap_values=None,
                   features=None, 
-                  display_feature_names=None,
-                  display_units =None,
-                  to_probability=False, 
+                  display_feature_names={},
+                  display_units={},
                   **kwargs):
         """
         Plot the SHapley Additive Explanations (SHAP) summary plot or dependence 
@@ -849,17 +848,18 @@ class InterpretToolkit(Attributes):
         -----------------------
         fig: matplotlib figure instance
         """
-
-        examples=self.examples
-
+        to_probability = True if self.model_output == 'probability' else False 
         if to_probability:
-            shap_values *= 100.
+            shap_values_copy = np.copy(shap_values)
+            shap_values_copy *= 100.
+        else:
+            shap_values_copy = shap_values
             
         # initialize a plotting object
         plot_obj = PlotFeatureContributions()
         plot_obj.feature_names = self.feature_names
-        plot_obj.plot_shap(shap_values=shap_values,
-                           examples=examples,
+        plot_obj.plot_shap(shap_values=shap_values_copy,
+                           examples=self.examples,
                            features=features,
                            plot_type=plot_type,
                            display_feature_names=display_feature_names,
