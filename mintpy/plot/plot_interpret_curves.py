@@ -125,7 +125,7 @@ class PlotInterpretCurves(PlotStructure):
                         )
 
                 # ydata = data[feature][model_name]["values"]
-                ydata = data[f"{feature}__{model_name}__{method}"].values
+                ydata = data[f"{feature}__{model_name}__{method}"].values.copy()
 
                 if to_probability:
                     ydata *= 100.0
