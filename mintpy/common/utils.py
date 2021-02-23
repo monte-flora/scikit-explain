@@ -8,6 +8,16 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from scipy.stats import t
 
 
+def check_is_permuted(X, X_permuted):
+    permuted_features = []
+    for f in X.columns:
+        if not np.array_equal(X.loc[:,f], X_permuted.loc[:,f]):
+            permuted_features.append(f)
+            
+    return permuted_features
+        
+
+
 def is_correlated(corr_matrix, feature_pairs, rho_threshold=0.8):
     """
     Returns dict where the keys are the feature pairs and the items

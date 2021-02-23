@@ -268,7 +268,46 @@ class InterpretToolkit(Attributes):
         
         return results_ds
 
+    
+    def calc_interaction_rankings(self, features, evaluation_fn,
+                                  model_names=None, n_jobs=1, subsample=1.0, 
+                                  n_bootstrap=1, verbose=False):
+        """
+        Compute the performance-based feature interactions from Oh (2019)
+        
 
+        References:
+            Oh, Sejong, 2019. Feature Interaction in Terms of Prediction Performance 
+            https://www.mdpi.com/2076-3417/9/23/5191
+        """
+        if model_names is None:
+            model_names=self.model_names
+        else:
+            if is_str(model_names):
+                model_names=[model_names]
+                
+        results_ds = self.global_obj.compute_interaction_rankings_performance_based(
+            model_names, 
+            features, 
+            evaluation_fn=evaluation_fn,
+            model_output=self.model_output, 
+            subsample=subsample,
+            n_bootstrap=n_bootstrap,
+            n_jobs=n_jobs,
+            verbose=verbose)
+    
+        
+    
+        self.attrs_dict['method'] = 'perm_based'
+        self.attrs_dict['models used'] = model_names
+        self.attrs_dict['model output'] = self.model_output
+    
+        results_ds = self._append_attributes(results_ds)
+        #self.ale_var_ds = results_ds
+        
+        return results_ds
+    
+    
     def calc_ice(self, features, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1):
         """
         Compute the indiviudal conditional expectations (ICE).
@@ -931,10 +970,7 @@ class InterpretToolkit(Attributes):
             
         if plot_correlated_features:
             kwargs['examples'] = self.examples
-            
-        
-            
-            
+
         return plot_obj.plot_variable_importance(data,
                                                 method=method, 
                                                 model_output=model_output,

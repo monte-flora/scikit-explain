@@ -47,7 +47,7 @@ class Attributes:
         # Check that the model objects have been fit! 
         if not model_is_none:
             if not all([is_fitted(m) for m in model_objs]):
-                raise ValueError('One or more of the models given has been fit!') 
+                raise ValueError('One or more of the models given has not been fit!') 
             
         # Create a dictionary from the model_objs and model_names.
         # Then set the attributes.

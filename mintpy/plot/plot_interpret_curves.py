@@ -91,16 +91,8 @@ class PlotInterpretCurves(PlotStructure):
         # loop over each feature and add relevant plotting stuff
         for lineplt_ax, feature in zip(ax_iterator, features):
 
-            # Pull the x-values and histogram from the first model.
-            # if isinstance(model_names, list):
-            #    choosen_model = model_names[0]
-            # else:
-            #    choosen_model=model_names
             xdata = data[f"{feature}__bin_values"].values
             hist_data = data[f"{feature}"].values
-
-            # xdata = data[feature][choosen_model]["xdata1"]
-            # hist_data = data[feature][choosen_model]["xdata1_hist"]
             if unnormalize is not None:
                 hist_data = unnormalize.inverse_transform(hist_data, feature)
                 xdata = unnormalize.inverse_transform(xdata, feature)
@@ -123,8 +115,7 @@ class PlotInterpretCurves(PlotStructure):
                         lineplt_ax.plot(
                             ice_xdata, ind_curve, color="k", alpha=0.85, linewidth=0.25
                         )
-
-                # ydata = data[feature][model_name]["values"]
+                        
                 ydata = data[f"{feature}__{model_name}__{method}"].values.copy()
 
                 if to_probability:

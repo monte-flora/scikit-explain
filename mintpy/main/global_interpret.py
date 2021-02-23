@@ -29,6 +29,7 @@ from ..common.utils import (
     to_xarray,
     order_groups,
     determine_feature_dtype,
+    check_is_permuted
 )
 
 from ..common.multiprocessing_utils import run_parallel, to_iterator
@@ -1518,3 +1519,207 @@ class GlobalInterpret(Attributes):
 
             new_predictions = model.predict_proba(examples_temp)[:, 1]
             change = np.absolute(new_predictions - original_predictions)
+   
+    
+    def compute_interaction_performance_based(self, model, 
+                                           X, y, 
+                                           X_permuted, 
+                                           features, 
+                                           evaluation_fn,
+                                           model_output, 
+                                           verbose=False):
+        """
+        Compute the performance-based feature interactions from Oh (2019).
+    
+        Err(F_i) : Error when feature F_i is permuted as compared 
+               against the original model performance.  
+               
+        Err({F_i, F_j}) : Error when features F_i & F_j are permuted as 
+                       compared against the original model performance. 
+    
+        Interaction = Err(F_i) + Err(F_j) - Err({F_i, F_j}), for classification 
+        Interaction = Err({F_i, F_j}) - (Err(F_i) + Err(F_j)), for regression
+    
+        Interaction(F_i, F_j) = 0 -> no interaction between F_i & F_j 
+        Interaction(F_i, F_j) > 0 -> positive interaction between F_i & F_j 
+        Interaction(F_i, F_j) < 0 -> negative interaction between F_i & F_j 
+    
+        Negative interaction implies that the connection between Fi and Fj reduces the prediction performance, 
+        whereas positive interaction leads to an increase in the prediction performance. 
+        In other words, positive or negative interactions decrease or increase the 
+        prediction error, respectively.
+    
+        Args:
+        ------------------------
+            model, 
+            X, pandas.DataFrame (n_examples, n_features)
+            y, 
+            features, list of 2-tuples 
+            evaluation_fn, callable 
+            random_state, 
+    
+        Returns:
+        -------------------------
+        """
+        if model_output == 'probability':
+            #Classification
+            predictions = model.predict_proba(X)[:,1]
+        else:
+            #Regression
+            predictions = model.predict(X)
+        
+        original_score = evaluation_fn(y, predictions)
+        
+        err=0
+        X_permuted_both = X.copy()
+        # Compute the change in model performance for the two features separately 
+        for feature in features:
+            X_temp = X.copy()
+            X_temp.loc[:,feature] = X_permuted.loc[:,feature]
+            X_permuted_both.loc[:,feature] = X_permuted.loc[:,feature]
+
+            # Get the predictions for the dataset with a permuted feature. 
+            if model_output == 'probability':
+                #Classification
+                predictions = model.predict_proba(X_temp)[:,1]
+            else:
+                #Regression
+                predictions = model.predict(X_temp)
+
+            # Compute the permuted score 
+            permuted_score = evaluation_fn(y, predictions)
+            
+            if model_output == 'probability':
+                #Classification
+                err_i = original_score - permuted_score
+            else:
+                #Regression
+                err_i = permuted_score - original_score
+
+            if verbose:
+                permuted_features = check_is_permuted(X, X_temp)
+                print(f'Reduced performance by {feature} : {err_i}')
+                print(f'Permuted Features: {permuted_features}')
+                
+            err+=err_i
+        
+        # Compute the change in model performance with both features permuted. 
+        if model_output == 'probability':
+            predictions_both = model.predict_proba(X_permuted_both)[:,1]
+        else:
+            predictions_both = model.predict(X_permuted_both)
+        
+        # Compute the permuted score 
+        permuted_score_both = evaluation_fn(y, predictions_both)
+        
+        if model_output == 'probability':
+            err_both = original_score - permuted_score_both
+        else:
+            err_both = permuted_score_both - original_score
+
+        if verbose:
+            permuted_features = check_is_permuted(X, X_permuted_both)
+            print(f'Reduced performance by {features} : {err_both}')    
+            print(f'Permuted Features: {permuted_features}')
+            
+        # Combine for the feature interaction between the two features 
+        if model_output == 'probability':
+            err-=err_both
+        else:
+            err = err_both - err  
+    
+        return err
+    
+    def compute_interaction_rankings_performance_based(self, model_names, 
+                                           features, 
+                                           evaluation_fn,
+                                           model_output, 
+                                           subsample=1.0,
+                                           n_bootstrap=1,
+                                           n_jobs=1,                     
+                                           verbose=False):
+        """
+        Wrapper function for performance_based_feature_interactions
+        """
+        unique_features = list(set([item for t in features for item in t]))
+        n_feature_pairs = len(features)
+        examples_permuted = self.examples.copy()
+        # Permute all features up front to save on computation cost
+        for f in unique_features:
+            examples_permuted.loc[:,f] = np.random.permutation(self.examples.loc[:,f])
+            
+        args_iterator = to_iterator(
+                model_names,
+                features,
+                [examples_permuted],
+                [evaluation_fn],
+                [model_output], 
+                [subsample],
+                [n_bootstrap],
+            )
+
+        results = run_parallel(
+                func=self._feature_interaction_worker, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs
+            )
+        
+        results = merge_dict(results)
+        
+        final_results={}
+        feature_pairs = np.array([f'{f[0]}__{f[1]}' for f in features])
+        for model_name in model_names:
+            values = np.array([results[f'{f}_interaction__{model_name}'] for f in feature_pairs])
+            idx = np.argsort(np.absolute(np.mean(values, axis=1)))[::-1]
+            feature_names_sorted = np.array(feature_pairs)[idx]
+            values_sorted = values[idx, :]
+
+            final_results[f"perm_based_interactions_rankings__{model_name}"] = (
+                [f"n_vars_perm_based_interactions"],
+                feature_names_sorted,
+            )
+            final_results[f"perm_based_interactions_scores__{model_name}"] = (
+                [f"n_vars_perm_based_interactions", "n_bootstrap"],
+                values_sorted,
+            )
+
+        results_ds = to_xarray(final_results)
+        
+        return results_ds
+    
+    def _feature_interaction_worker(self, model_name, features, 
+                                    examples_permuted, evaluation_fn, 
+                                    model_output, 
+                                    subsample=1.0, n_bootstrap=1):
+        """
+        Internal worker function for parallel computations. 
+        """
+        verbose=False
+        model = self.models[model_name]
+            
+        # get the bootstrap samples
+        if n_bootstrap > 1 or float(subsample) != 1.0:
+            bootstrap_indices = compute_bootstrap_indices(
+                        self.examples, subsample=subsample, n_bootstrap=n_bootstrap
+                    )
+        else:
+            bootstrap_indices = [np.arange(self.examples.shape[0])]
+            
+        results={}
+        err_set = np.zeros((n_bootstrap,))
+        for k, idx in enumerate(bootstrap_indices):
+            # get samples
+            examples = self.examples.iloc[idx, :].reset_index(drop=True)
+            targets= self.targets[idx]
+
+            err = self.compute_interaction_performance_based(model, 
+                                          examples, targets, examples_permuted, 
+                                          features, 
+                                          evaluation_fn,
+                                          model_output,                        
+                                         verbose=verbose)
+            err_set[k]=err
+
+        results[f'{features[0]}__{features[1]}_interaction__{model_name}'] = err_set
+
+        return results       
+
+

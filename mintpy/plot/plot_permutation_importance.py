@@ -146,7 +146,7 @@ class PlotImportance(PlotStructure):
         for g, results in enumerate(data):
             # loop over each model creating one panel per model
             for k, model_name in enumerate(model_names):
-                if len(data) == 1:
+                if np.ndim(axes) == 1:
                     ax = axes[k]
                 else:
                     ax = axes[g, k]
@@ -179,7 +179,7 @@ class PlotImportance(PlotStructure):
 
                 scores = scores[::-1]
 
-                if "ale_variance" not in method:
+                if "pass" in method:
                     # Get the original score (no permutations)
                     original_score = results[f"original_score__{model_name}"].values
 
@@ -223,7 +223,7 @@ class PlotImportance(PlotStructure):
                     ).transpose()
 
                 else:
-                    if "ale_variance" not in method:
+                    if "pass" in method:
                         scores.append(original_score_mean)
                     else:
                         scores = [score[0] for score in scores]
@@ -262,15 +262,19 @@ class PlotImportance(PlotStructure):
                     size = self.FONT_SIZES["teensie"]
 
                 # Put the variable names _into_ the plot
-                if model_output == "probability":
+                if model_output == "probability" and 'perm_based' not in method:
                     x_pos = 0.0
-                    ha = "left"
-                else:
+                    ha = ["left"] * len(variable_names_to_plot)
+                elif model_output == "raw" and 'perm_based' not in method:
                     x_pos = 0.05
-                    ha = "left"
+                    ha = ["left"] * len(variable_names_to_plot)
+                else:
+                    x_pos = 0
+                    ha = ["left" if score > 0 else "right" for score in scores_to_plot] 
 
                 # Put the variable names _into_ the plot
-                if method == "ale_variance_interactions" and plot_correlated_features:
+                if (method == "ale_variance_interactions" or method == 'perm_based_interactions') \
+                            and plot_correlated_features:
                     results_dict = is_correlated(
                         corr_matrix, sorted_var_names, rho_threshold=rho_threshold
                     )
@@ -278,23 +282,28 @@ class PlotImportance(PlotStructure):
                 for i in range(len(variable_names_to_plot)):
                     color = "k"
                     if (
-                        method == "ale_variance_interactions"
+                        (method == "ale_variance_interactions" or method == 'perm_based_interactions')
                         and plot_correlated_features
                     ):
                         correlated = results_dict.get(sorted_var_names[i], False)
                         color = "xkcd:medium green" if correlated else "k"
 
+                    if 'pass' not in method:
+                        var = variable_names_to_plot[i].replace('__', ' & ')
+                    else:
+                        var = variable_names_to_plot[i]
+                        
                     ax.annotate(
-                        variable_names_to_plot[i],
+                        var,
                         xy=(x_pos, i),
                         va="center",
-                        ha=ha,
+                        ha=ha[i],
                         size=size,
                         alpha=0.8,
                         color=color,
                     )
 
-                if model_output == "probability" and "ale_variance" not in method:
+                if model_output == "probability" and "pass" in method:
                     # Add vertical line
                     ax.axvline(
                         original_score_mean,
@@ -314,31 +323,31 @@ class PlotImportance(PlotStructure):
                         alpha=0.7,
                     )
 
-                if (
-                    model_output == "probability"
-                    and "ale_variance" not in method
-                    and xticks is None
-                ):
+                #if (
+                #    model_output == "probability"
+                #    and "ale_variance" not in method
+                #    and xticks is None
+                #):
                     # Most probability-based scores are between 0-1 (AUC, BSS, NAUPDC,etc.)
-                    xticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
-
-                if xticks is not None:
-                    ax.set_xticks(xticks)
-                else:
-                    self.set_n_ticks(ax, option="x")
+                #    xticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
 
                 ax.tick_params(axis="both", which="both", length=0)
                 ax.set_yticks([])
 
-                if xticks is not None:
-                    ax.set_xticks(xticks)
-
-                if model_output == "probability" and "ale_variance" not in method:
+                if model_output == "probability" and "pass" in method:
                     upper_limit = min(1.1 * np.amax(scores_to_plot), 1.0)
                     ax.set_xlim([0, upper_limit])
                 else:
-                    upper_limit = 1.1 * np.amax(scores_to_plot)
-                    ax.set_xlim([0, upper_limit])
+                    pass
+                    #upper_limit = 1.1 * np.amax(scores_to_plot)
+                    #ax.set_xlim([0, upper_limit])
+
+                if xticks is not None:
+                    ax.set_xticks(xticks)
+                else:
+                    self.set_n_ticks(ax, option="x")  
+                
+                #print(xticks, upper_limit) 
 
                 # make the horizontal plot go with the highest value at the top
                 # ax.invert_yaxis()
