@@ -1656,6 +1656,7 @@ class GlobalInterpret(Attributes):
                 [model_output], 
                 [subsample],
                 [n_bootstrap],
+                [verbose]
             )
 
         results = run_parallel(
@@ -1688,11 +1689,10 @@ class GlobalInterpret(Attributes):
     def _feature_interaction_worker(self, model_name, features, 
                                     examples_permuted, evaluation_fn, 
                                     model_output, 
-                                    subsample=1.0, n_bootstrap=1):
+                                    subsample=1.0, n_bootstrap=1, verbose=False):
         """
         Internal worker function for parallel computations. 
         """
-        verbose=False
         model = self.models[model_name]
             
         # get the bootstrap samples

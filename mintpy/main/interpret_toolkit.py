@@ -296,8 +296,6 @@ class InterpretToolkit(Attributes):
             n_jobs=n_jobs,
             verbose=verbose)
     
-        
-    
         self.attrs_dict['method'] = 'perm_based'
         self.attrs_dict['models used'] = model_names
         self.attrs_dict['model output'] = self.model_output

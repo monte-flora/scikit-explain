@@ -179,6 +179,9 @@ class PlotImportance(PlotStructure):
 
                 scores = scores[::-1]
 
+                # Set very small values to zero. 
+                scores = np.where(np.absolute(np.round(scores,17)) < 1e-15, 0, scores)
+                
                 if "pass" in method:
                     # Get the original score (no permutations)
                     original_score = results[f"original_score__{model_name}"].values
@@ -333,14 +336,17 @@ class PlotImportance(PlotStructure):
 
                 ax.tick_params(axis="both", which="both", length=0)
                 ax.set_yticks([])
-
+                
                 if model_output == "probability" and "pass" in method:
-                    upper_limit = min(1.1 * np.amax(scores_to_plot), 1.0)
+                    upper_limit = min(1.1 * np.nanmax(scores_to_plot), 1.0)
                     ax.set_xlim([0, upper_limit])
+                elif "perm_based" in method:
+                    upper_limit = max(1.1 * np.nanmax(scores_to_plot), 0.01)
+                    lower_limit = min(1.1 * np.nanmin(scores_to_plot), -0.01)
+                    ax.set_xlim([lower_limit, upper_limit])    
                 else:
-                    pass
-                    #upper_limit = 1.1 * np.amax(scores_to_plot)
-                    #ax.set_xlim([0, upper_limit])
+                    upper_limit = 1.1 * np.nanmax(scores_to_plot)
+                    ax.set_xlim([0, upper_limit])
 
                 if xticks is not None:
                     ax.set_xticks(xticks)
