@@ -179,9 +179,6 @@ class PlotImportance(PlotStructure):
 
                 scores = scores[::-1]
 
-                # Set very small values to zero. 
-                scores = np.where(np.absolute(np.round(scores,17)) < 1e-15, 0, scores)
-                
                 if "pass" in method:
                     # Get the original score (no permutations)
                     original_score = results[f"original_score__{model_name}"].values
@@ -196,6 +193,9 @@ class PlotImportance(PlotStructure):
                     scores.append(original_score)
                 else:
                     bootstrapped = True if np.shape(scores)[1] > 1 else False
+
+                 # Set very small values to zero. 
+                scores = np.where(np.absolute(np.round(scores,17)) < 1e-15, 0, scores)
 
                 if plot_correlated_features:
                     self._add_correlated_brackets(
