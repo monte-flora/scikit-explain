@@ -31,7 +31,7 @@ class TestInitializeInterpretToolkit(TestInterpretToolkit):
                 examples=self.examples,
                 targets=self.targets
             )
-        except_msg = "One or more of the models given has been fit!"
+        except_msg = "One or more of the models given has not been fit!"
         self.assertEqual(ex.exception.args[0], except_msg)
         
     def test_model_and_model_names(self):
