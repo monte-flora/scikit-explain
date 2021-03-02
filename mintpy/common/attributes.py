@@ -3,6 +3,7 @@ import pandas as pd
 from collections import OrderedDict
 from .utils import is_list, to_list, is_fitted
 
+import xarray as xr 
 
 class Attributes:
     """
