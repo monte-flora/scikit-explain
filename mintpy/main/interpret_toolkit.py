@@ -259,7 +259,7 @@ class InterpretToolkit(Attributes):
         self.attrs_dict['method'] = 'ale_variance'
         self.attrs_dict['models used'] = model_names
         self.attrs_dict['model output'] = 'probability'
-        self.attrs_dict['interaction'] = interaction 
+        self.attrs_dict['interaction'] = str(interaction)
         
         self.ale_var_ds = results_ds
 
