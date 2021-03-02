@@ -1,6 +1,6 @@
 <a href="url"><img src="images/mintpy_logo.png" align="right" height="400" width="400" ></a>
 
-<a href=https://travis-ci.com/github/monte-flora/mintpy><img src="https://travis-ci.com/monte-flora/mintpy.svg?branch=master"></a>
+[![Build Status](https://travis-ci.com/monte-flora/mintpy.svg?branch=master)](https://travis-ci.com/monte-flora/mintpy)
 [![codecov](https://codecov.io/gh/monte-flora/mintpy/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/mintpy)
 [![Updates](https://pyup.io/repos/github/monte-flora/mintpy/shield.svg)](https://pyup.io/repos/github/monte-flora/mintpy/)
 [![Python 3](https://pyup.io/repos/github/monte-flora/mintpy/python-3-shield.svg)](https://pyup.io/repos/github/monte-flora/mintpy/)
