@@ -22,7 +22,8 @@ make a single source for computing several machine learning interpretation metho
 
 If you employ MintPy in your research, please cite this github and the relevant packages listed above. 
 
-### Install
+## Install
+
 MintPy can be installed through pip or conda-forge. 
 ```
 pip install mintpy
@@ -30,7 +31,8 @@ or
 conda install -c conda-forge mintpy
 ```
 
-### Dependencies 
+## Dependencies 
+
 MintPy is compatible with Python 3.6 or newer.  MintPy requires the following packages:
 ```
 numpy 
@@ -62,9 +64,7 @@ myInterpreter = mintpy.InterpretToolkit(model=model_objs,
                                  targets=targets,
                                 )
 ```
-### Permutation Importance
-
-
+## Permutation Importance
 
 For predictor ranking, MintPy uses both single-pass and multiple-pass permutation importance method (Breiman 2001; Lakshmanan et al. 2015; McGovern et al. 2019).
 We can calculate the permutation importance and then plot the results. In the tutorial it discusses options to make the figure publication-quality giving the plotting method
@@ -81,7 +81,8 @@ myInterpreter.plot_importance(method='multipass')
 Sample notebook can be found here: [**Permutation Importance**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
 
 
-### Partial dependence and Accumulated Local Effects 
+## Partial dependence and Accumulated Local Effects 
+
 To compute the expected functional relationship between a feature and an ML model's prediction, you can use partial dependence or accumulated local effects. There is also an option for second-order interaction effects. For the choice of feature, you can manually select or can run the permutation importance and a built-in method will retrieve those features. It is also possible to configure the plot for readable feature names. 
 ```python 
 # Assumes the calc_permutation_importance has already been run.
@@ -105,7 +106,8 @@ Sample notebook can be found here:
 - [**Partial Dependence**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/partial_dependence_tutorial.ipynb) 
 
 
-### Feature Contributions 
+## Feature Contributions 
+
 To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. MintPy can create the summary and dependence plots from the shap python package, but is adapted for multiple predictors and an easier user interface. It is also possible to plot contributions for a single example or summarized by model performance. 
 
 ```python
@@ -176,7 +178,7 @@ Sample notebook can be found here:
 - [**SHAP-Style Plots**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/shap_style_plots.ipynb) 
 
 
-### Tutorial notebooks
+## Tutorial notebooks
 
 The notebooks provides the package documentation and demonstrate MintPy API, which was used to create the above figures. 
 
