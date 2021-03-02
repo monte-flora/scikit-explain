@@ -17,6 +17,7 @@ from .abstract_runner import abstract_variable_importance
 from .selection_strategies import (
     PermutationImportanceSelectionStrategy,
     ConditionalPermutationImportanceSelectionStrategy,
+    BackwardPermutationImportanceSelectionStrategy
 )
 from .sklearn_api import (
     score_trained_sklearn_model,
@@ -68,8 +69,11 @@ def permutation_importance(
         selection_strategy = ConditionalPermutationImportanceSelectionStrategy
     elif perm_method == "marginal":
         selection_strategy = PermutationImportanceSelectionStrategy
+    elif perm_method == 'backwards':
+        selection_strategy = BackwardPermutationImportanceSelectionStrategy
+    
     else:
-        raise ValueError(f'method must be "conditional" or "marginal"!')
+        raise ValueError(f'method must be "conditional", "marginal", or "backwards"!')
 
     # We don't need the training data, so pass empty arrays to the abstract runner
     if scoring_data is None:
@@ -86,6 +90,7 @@ def permutation_importance(
             njobs=njobs,
             verbose=verbose,
             random_state=random_state,
+            perm_method=perm_method, 
         )
 
 

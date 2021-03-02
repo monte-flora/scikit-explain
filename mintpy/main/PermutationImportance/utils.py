@@ -26,6 +26,7 @@ def add_ranks_to_dict(result, variable_names, scoring_strategy):
     while len(result) > 1:
         var_idxs = list(result.keys())
         idxs = np.argsort(var_idxs)
+
         # Sort by indices to guarantee order
         variables = list(np.array(var_idxs)[idxs])
         scores = list(np.array(list(result.values()))[idxs])

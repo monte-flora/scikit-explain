@@ -147,6 +147,7 @@ class GlobalInterpret(Attributes):
 
         if isinstance(evaluation_fn, str):
             evaluation_fn = evaluation_fn.lower()
+            is_str=True
 
         if not isinstance(evaluation_fn, str) and scoring_strategy is None:
             raise ValueError(
@@ -157,27 +158,37 @@ class GlobalInterpret(Attributes):
                 (a lower value is better), then set scoring_strategy = "argmax_of_mean"
                 """
             )
+        
+        if isinstance(evaluation_fn,str):    
+            if evaluation_fn == "auc":
+                evaluation_fn = roc_auc_score
+                scoring_strategy = "argmin_of_mean"
+            elif evaluation_fn == "auprc":
+                evaluation_fn = average_precision_score
+                scoring_strategy = "argmin_of_mean"
+            elif evaluation_fn == "norm_aupdc":
+                evaluation_fn = norm_aupdc
+                scoring_strategy = "argmin_of_mean"
+            elif evaluation_fn == "bss":
+                evaluation_fn = brier_skill_score
+                scoring_strategy = "argmin_of_mean"
+            elif evaluation_fn == "mse":
+                evaluation_fn = mean_squared_error
+                scoring_strategy = "argmax_of_mean"
+            else:
+                raise ValueError(
+                    f"evaluation_fn is not set! Available options are {available_scores}"
+                )
 
-        if evaluation_fn.lower() == "auc":
-            evaluation_fn = roc_auc_score
-            scoring_strategy = "argmin_of_mean"
-        elif evaluation_fn.lower() == "auprc":
-            evaluation_fn = average_precision_score
-            scoring_strategy = "argmin_of_mean"
-        elif evaluation_fn.lower() == "norm_aupdc":
-            evaluation_fn = norm_aupdc
-            scoring_strategy = "argmin_of_mean"
-        elif evaluation_fn.lower() == "bss":
-            evaluation_fn = brier_skill_score
-            scoring_strategy = "argmin_of_mean"
-        elif evaluation_fn.lower() == "mse":
-            evaluation_fn = mean_squared_error
-            scoring_strategy = "argmax_of_mean"
-        else:
-            raise ValueError(
-                f"evaluation_fn is not set! Available options are {available_scores}"
-            )
-
+        if is_str:
+            if perm_method == 'backwards':
+                if 'max' in scoring_strategy:
+                    scoring_strategy = scoring_strategy.replace('max', 'min') 
+                else:
+                    scoring_strategy = scoring_strategy.replace('min', 'max') 
+                    
+         
+                
         if subsample != 1.0 and n_bootstrap is None:
             n_bootstrap = 1
 

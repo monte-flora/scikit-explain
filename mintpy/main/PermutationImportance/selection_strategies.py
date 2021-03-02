@@ -253,3 +253,68 @@ class ConditionalPermutationImportanceSelectionStrategy(SelectionStrategy):
         )
 
         return self.training_data, (complete_scoring_inputs, scoring_outputs)
+    
+    
+class BackwardPermutationImportanceSelectionStrategy(SelectionStrategy):
+    """Backward Permutation Importance permutes all variables and then tests 
+       all variables which are not yet considered."""
+
+    name = "Backward Permutation Importance"
+
+    def __init__(
+        self,
+        training_data,
+        scoring_data,
+        num_vars,
+        important_vars,
+        random_state,
+        **kwargs
+    ):
+        """Initializes the object by storing the data and keeping track of other
+        important information
+        :param training_data: (training_inputs, training_outputs)
+        :param scoring_data: (scoring_inputs, scoring_outputs)
+        :param num_vars: integer for the total number of variables
+        :param important_vars: a list of the indices of variables which are
+            already considered important
+        """
+        super(BackwardPermutationImportanceSelectionStrategy, self).__init__(
+            training_data, scoring_data, num_vars, important_vars
+        )
+
+        # Also initialize the "shuffled data"
+        scoring_inputs, __ = self.scoring_data
+        indices = random_state.permutation(len(scoring_inputs))
+        self.shuffled_scoring_inputs = get_data_subset(
+            scoring_inputs, indices
+        )  # This copies
+        # keep track of the initial index (assuming this is pandas data)
+        self.original_index = (
+            scoring_inputs.index if isinstance(scoring_inputs, pd.DataFrame) else None
+        )
+        
+
+    def generate_datasets(self, important_variables):
+        """Check each of the non-important variables. Dataset has columns which
+        are non-important variables are shuffled
+        :returns: (training_data, scoring_data)
+        """
+        scoring_inputs, scoring_outputs = self.scoring_data
+        # If a feature has been deemed important it remains shuffled
+        complete_scoring_inputs = make_data_from_columns(
+            [
+                get_data_subset(
+                    scoring_inputs
+                    if i in important_variables
+                    else self.shuffled_scoring_inputs,
+                    None,
+                    [i],
+                )
+                for i in range(self.num_vars)
+            ],
+            index=self.original_index,
+        )
+
+        return self.training_data, (complete_scoring_inputs, scoring_outputs)
+
+    

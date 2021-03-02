@@ -33,6 +33,7 @@ def abstract_variable_importance(
     variable_names=None,
     nimportant_vars=None,
     method=None,
+    perm_method='forwards',
     njobs=1,
     verbose=False,
     **kwargs
