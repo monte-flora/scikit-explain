@@ -1301,7 +1301,7 @@ class GlobalInterpret(Attributes):
         ale_main_effects = {}
         for f in feature_names:
             try:
-                main_effect = data[f"{f}__{model_name}__ale"].values.squeeze()
+                main_effect = np.mean(data[f"{f}__{model_name}__ale"].values, axis=0)
             except:
                 continue
             x_values = data[f"{f}__bin_values"].values
