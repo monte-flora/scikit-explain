@@ -822,13 +822,8 @@ class InterpretToolkit(Attributes):
         elif is_str(model_names):
             model_names=[model_names]
         
-       
         model_output = data.attrs['model_output']    
-        if self.feature_names is None:
-            feature_names = data.attrs['feature_names']
-        else:
-            feature_names=self.feature_names
-        
+        feature_names = data.attrs['feature_names']
             
         # initialize a plotting object
         plot_obj = PlotFeatureContributions()
