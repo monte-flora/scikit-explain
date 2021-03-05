@@ -8,6 +8,27 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from scipy.stats import t
 
 
+def flatten_nested_list(list_of_lists):
+    """Turn a list of list into a single, flatten list"""
+    all_elements_are_lists = all([is_list(item) for item in list_of_lists])
+    if not all_elements_are_lists:
+        new_list_of_lists=[]
+        for item in list_of_lists:
+            if is_list(item):
+                new_list_of_lists.append(item)
+            else:
+                new_list_of_lists.append([item])
+        list_of_lists = new_list_of_lists
+    
+    
+    return [ item for elem in list_of_lists for item in elem]
+
+def is_dataset(data):
+    return isinstance(data, xr.Dataset)
+
+def is_dataframe(data):
+    return isinstance(data, pd.DataFrame)
+
 def check_is_permuted(X, X_permuted):
     permuted_features = []
     for f in X.columns:
@@ -16,8 +37,6 @@ def check_is_permuted(X, X_permuted):
             
     return permuted_features
         
-
-
 def is_correlated(corr_matrix, feature_pairs, rho_threshold=0.8):
     """
     Returns dict where the keys are the feature pairs and the items
@@ -151,6 +170,32 @@ def cartesian(arrays, out=None):
     return out
 
 
+def to_dataframe(results, model_names, feature_names):
+    """
+    Convert the feature contribution results to a pandas.DataFrame
+    with nested indexing. 
+    """
+    # results[0] = dict of avg. contributions per model 
+    # results[1] = dict of avg. feature values per model
+    feature_names+=['Bias']
+    
+    nested_keys = results[0][model_names[0]].keys()
+    
+    dframes = []
+    for key in nested_keys:
+        data=[]
+        for name in model_names:
+            contribs_dict = results[0][name][key]
+            vals_dict = results[1][name][key]
+            data.append([contribs_dict[f] for f in feature_names] + [vals_dict[f] for f in feature_names]) 
+        column_names = [f+'_contrib' for f in feature_names] + [f+'_val' for f in feature_names]
+        df = pd.DataFrame(data, columns=column_names, index=model_names)
+        dframes.append(df)
+    
+    result = pd.concat(dframes, keys=list(nested_keys))
+    
+    return result
+
 def to_xarray(data):
     """Converts data dict to xarray.Dataset"""
     ds = xr.Dataset(data)
@@ -248,7 +293,7 @@ def save_pickle(fname, data):
 
 def load_netcdf(fnames):
     """Load multiple netcdf files with xarray"""
-    if not isinstance(fnames, list):
+    if not is_list(fnames):
         fnames = [fnames]
 
     data = []
@@ -261,7 +306,7 @@ def load_netcdf(fnames):
     except:
         models_used = [ds.attrs["models used"] for ds in data]
         ds_set = xr.merge(data, combine_attrs="override", compat="override")
-        ds_set.attrs["models used"] = models_used
+        ds_set.attrs["models used"] = flatten_nested_list(models_used)
 
     # Check that names
     # model_names = ds_set.attrs['models used']
@@ -270,6 +315,28 @@ def load_netcdf(fnames):
 
     return ds_set
 
+def load_dataframe(fnames):
+    """Load multiple dataframes with pandas"""
+    if not is_list(fnames):
+        fnames=[fnames]
+
+    data = [pd.read_pickle(file_name) for file_name in fnames]
+    
+    attrs = [d.attrs for d in data]
+    models_used = [d.attrs['models used'] for d in data]
+    
+    attrs = dict(ChainMap(*attrs))
+    
+    # Merge dataframes
+    data_concat = pd.concat(data)
+    
+    for key in attrs.keys():
+        data_concat.attrs[key] = attrs[key]
+    
+    data_concat.attrs['models used'] = flatten_nested_list(models_used)
+    
+    return data_concat
+        
 
 def save_netcdf(fname, ds, complevel=5):
     """Save netcdf file with xarray"""
@@ -279,7 +346,12 @@ def save_netcdf(fname, ds, complevel=5):
     ds.close()
     del ds
 
-
+    
+def save_dataframe(fname, dframe, ):
+    """Save dataframe as pickle file"""
+    dframe.to_pickle(fname) 
+    del dframe
+    
 def combine_top_features(results_dict, n_vars=None):
     """Combines the list of top features from different models
     into a single list where duplicates are removed.
@@ -455,12 +527,12 @@ def get_indices_based_on_performance(
         worst_false_alarm_indices = nonevent_examples_sorted_indices[-n_examples:][
             ::-1
         ].astype(int)
-
+        
         sorted_dict = {
-            "High Confidence Forecasts Matched to an Event": best_hit_indices,
-            "Low Confidence Forecasts Matched to an Event": worst_miss_indices,
-            "High Confidence Forecasts NOT Matched to an Event": worst_false_alarm_indices,
-            "Low Confidence Forecasts NOT Matched to an Event": best_corr_neg_indices,
+            "Best Hits": best_hit_indices,
+            "Worst Misses": worst_miss_indices,
+            "Worst False Alarms": worst_false_alarm_indices,
+            "Best Corr. Negatives": best_corr_neg_indices,
         }
 
     else:

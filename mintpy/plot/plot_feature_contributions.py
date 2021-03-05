@@ -11,71 +11,61 @@ from matplotlib.lines import Line2D
 class PlotFeatureContributions(PlotStructure):
     def _contribution_plot(
         self,
-        dict_to_use,
-        feature_values,
+        data,
         key,
+        model_name,
+        feature_names, 
         ax=None,
         to_only_varname=None,
         display_feature_names={},
         display_units={},
         n_vars=12,
         other_label="Other Predictors",
+        label_fontsize=6, 
+        **kwargs
     ):
         """
         Plot the feature contributions.
         """
-        contrib = []
-        feat_values = []
-        varnames = []
+        colors = kwargs.get('color', ["xkcd:pastel red", "xkcd:powder blue"])
+        
+        
+        vars_c = [f'{var}_contrib' for var in feature_names if 'Bias' not in var]
+        vars_val = [f'{var}_val' for var in feature_names if 'Bias' not in var]
 
-        # return nothing if dictionary is empty
-        if len(dict_to_use) == 0:
-            return
+        contribs = data.loc[key].loc[model_name, vars_c]
+        feat_vals = data.loc[key].loc[model_name, vars_val]
+        
+        #    if to_only_varname is None:
+        #        varnames.append(var)
+        #    else:
+        #        varnames.append(to_only_varname(var))
 
-        for var in list(dict_to_use.keys()):
-            contrib.append(dict_to_use[var])
-            feat_values.append(feature_values[var])
+        final_pred = abs(np.sum(contribs))
 
-            if to_only_varname is None:
-                varnames.append(var)
-            else:
-                varnames.append(to_only_varname(var))
+        #if to_only_varname is not None:
+        #    contribs, varnames = combine_like_features(contribs, varnames)
+        
+        bias = data.loc[key].loc[model_name, 'Bias_contrib']
 
-        final_pred = abs(np.sum(contrib))
+        feature_names = np.array(feature_names)
+        feature_names = np.append(feature_names[:n_vars], other_label)
+        contribs = np.append(contribs[:n_vars], sum(contribs[n_vars:]))
 
-        if to_only_varname is not None:
-            contrib, varnames = combine_like_features(contrib, varnames)
-
-        bias_index = varnames.index("Bias")
-        bias = contrib[bias_index]
-
-        # Remove the bias term (neccesary for cases where
-        # the data resampled to be balanced; the bias is 50% in that cases
-        # and will much higher than separate contributions of the other predictors)
-        varnames.pop(bias_index)
-        contrib.pop(bias_index)
-
-        varnames = np.array(varnames)
-        contrib = np.array(contrib)
-        feat_values = np.array(feat_values)
-
-        varnames = np.append(varnames[:n_vars], other_label)
-        contrib = np.append(contrib[:n_vars], sum(contrib[n_vars:]))
-
-        sorted_idx = np.argsort(contrib)[::-1]
-        contrib = contrib[sorted_idx]
-        varnames = varnames[sorted_idx]
-
+        sorted_idx = np.argsort(contribs)[::-1]
+        contribs = contribs[sorted_idx]
+        feature_names = feature_names[sorted_idx]
+        
         bar_colors = [
-            "xkcd:pastel red" if c > 0 else "xkcd:powder blue" for c in contrib
+            colors[0] if c > 0 else colors[1] for c in contribs
         ]
-        y_index = range(len(contrib))
+        y_index = range(len(contribs))
 
         # Despine
         self.despine_plt(ax)
 
         ax.barh(
-            y=y_index, width=contrib, height=0.8, alpha=0.8, color=bar_colors, zorder=2
+            y=y_index, width=contribs, height=0.8, alpha=0.8, color=bar_colors, zorder=2
         )
 
         ax.tick_params(axis="both", which="both", length=0, labelsize=7)
@@ -86,22 +76,22 @@ class PlotFeatureContributions(PlotStructure):
 
         # ax.set_yticks(y_index)
         tick_labels = self.set_tick_labels(
-            ax, varnames, display_feature_names, return_labels=True
+            ax, feature_names, display_feature_names, return_labels=True
         )
 
         ax.set_yticks([])
 
-        neg_factor = 2.25 if np.max(np.abs(contrib)) > 1.0 else 0.08
-        factor = 0.25 if np.max(contrib) > 1.0 else 0.01
+        neg_factor = 2.25 if np.max(np.abs(contribs)) > 1.0 else 0.08
+        factor = 0.25 if np.max(contribs) > 1.0 else 0.01
 
-        for i, pair in enumerate(zip(np.round(contrib, 2), varnames, tick_labels)):
+        for i, pair in enumerate(zip(np.round(contribs, 2), feature_names, tick_labels)):
             c, v, label = pair
             if v == other_label:
                 text = other_label
             else:
                 units = display_units.get(v, "")
 
-                feat_val = feature_values[v]
+                feat_val = feat_vals[v+'_val']
                 if feat_val <= 1 and feat_val > 0:
                     # val bewteen 0-1 -> convert to sci. notation
                     num_and_exp = f"{feat_val:.1e}".split("e")
@@ -127,7 +117,7 @@ class PlotFeatureContributions(PlotStructure):
                     color="k",
                     fontweight="bold",
                     alpha=0.8,
-                    fontsize=6,
+                    fontsize=label_fontsize,
                     ha="left",
                 )
 
@@ -138,7 +128,7 @@ class PlotFeatureContributions(PlotStructure):
                     text,
                     color="xkcd:crimson",
                     alpha=0.8,
-                    fontsize=6,
+                    fontsize=label_fontsize,
                     ha="right",
                 )
 
@@ -151,7 +141,7 @@ class PlotFeatureContributions(PlotStructure):
                     color="k",
                     fontweight="bold",
                     alpha=0.8,
-                    fontsize=6,
+                    fontsize=label_fontsize,
                     ha="right",
                 )
                 ax.text(
@@ -160,14 +150,13 @@ class PlotFeatureContributions(PlotStructure):
                     text,
                     color="xkcd:medium blue",
                     alpha=0.8,
-                    fontsize=6,
+                    fontsize=label_fontsize,
                     ha="left",
                 )
 
-        ax.set_xlim([np.min(contrib) - neg_factor, np.max(contrib) + factor])
-
-        pos_contrib_ratio = abs(np.max(contrib)) > abs(np.min(contrib))
-
+        max_value = np.max(np.absolute(contribs))            
+        ax.set_xlim([-max_value-neg_factor, max_value+factor])
+        
         # make the horizontal plot go with the highest value at the top
         ax.invert_yaxis()
 
@@ -175,13 +164,14 @@ class PlotFeatureContributions(PlotStructure):
 
     def plot_contributions(
         self,
-        contrib_dict,
-        feature_values,
+        data,
         model_names,
+        feature_names,
         to_only_varname=None,
         display_feature_names={},
         display_units={},
-        model_output=None,
+        model_output='raw',
+        n_vars=12,
         **kwargs,
     ):
         """
@@ -193,32 +183,38 @@ class PlotFeatureContributions(PlotStructure):
                 a single row/example from the
                 result dataframe from tree_interpreter_simple
         """
-        hspace = kwargs.get("hspace", 0.2)
-
         only_one_model = True if len(model_names) == 1 else False
-
-        if "non_performance" in contrib_dict[model_names[0]].keys():
-            n_panels = 1
-            n_columns = 1
-            figsize = (3, 2.5)
-            wspace = kwargs.get("wspace", 0.5)
+        outer_indexs = list(set([f[0] for f in data.index.values]))
+        
+        if "non_performance" in outer_indexs:
+            n_panels = len(model_names) 
+            n_columns = len(model_names) 
+            if n_columns==1:
+                figsize = (3, 2.5)
+            else:
+                figsize = (8, 2.5)
+            wspace = kwargs.get("wspace", 0.1)
+            hspace = kwargs.get("hspace", 0.1)
+            
         else:
-            n_perf_keys = len(contrib_dict[model_names[0]].keys())
+            n_perf_keys = len(outer_indexs)
             n_panels = len(model_names) * n_perf_keys
-
+            wspace = kwargs.get("wspace", 0.5)
+            
             if only_one_model and model_output == "raw":
                 n_columns = 1
             elif only_one_model and model_output == "probability":
                 n_columns = 2
             else:
-                n_columns = 4
+                n_columns = 2 
 
             if n_columns == 4:
-                figsize = (14, 8)
+                figsize = (12, 4)
+            elif not only_one_model and len(outer_indexs)==4:
+                figsize = (4, 9) 
             else:
                 figsize = (5, 5)
 
-            wspace = kwargs.get("wspace", 0.5)
             hspace = kwargs.get("hspace", 0.5)
 
         # create subplots, one for each feature
@@ -231,74 +227,118 @@ class PlotFeatureContributions(PlotStructure):
             sharey=False,
             figsize=figsize,
         )
-
+        
+        if n_panels > 1:
+            ax_iterator = axes.flat
+        else:
+            ax_iterator = axes 
+        
         # try for all_data/average data
-        if "non_performance" in contrib_dict[model_names[0]].keys():
-            final_pred, bias = self._contribution_plot(
-                contrib_dict[model_names[0]]["non_performance"],
-                feature_values[model_names[0]]["non_performance"],
-                to_only_varname=to_only_varname,
-                display_feature_names=display_feature_names,
-                display_units=display_units,
-                key="",
-                ax=axes,
-            )
-
-            axes.set_title(
-                f"Prediction : {final_pred:.2f} Bias : {bias:.2f}",
-                alpha=0.8,
-                fontsize=self.FONT_SIZES["small"],
-            )
-
-            return None
-
-        ax_iterator = axes.flat
-
-        # loop over each model creating one panel per model
-        c = 0
-        for i, model_name in enumerate(model_names):
-            for perf_key in contrib_dict[model_name].keys():
-                # ax = axes[i,k]
-                ax = ax_iterator[c]
+        if "non_performance" in outer_indexs:
+            for i, model_name in enumerate(model_names):
+                if n_panels > 1:
+                    ax = ax_iterator[i]
+                else:
+                    ax = axes
+                
                 final_pred, bias = self._contribution_plot(
-                    contrib_dict[model_name][perf_key],
-                    feature_values[model_name][perf_key],
-                    ax=ax,
-                    key=perf_key,
+                    data=data,
+                    model_name=model_name,
+                    feature_names=feature_names,
                     to_only_varname=to_only_varname,
                     display_feature_names=display_feature_names,
                     display_units=display_units,
+                    key="non_performance",
+                    ax=ax,
+                    n_vars=n_vars,
+                    label_fontsize=6,
+                    **kwargs,
                 )
-                if i == 0:
 
-                    ax.text(
-                        0.5,
-                        1.2,
-                        perf_key.replace("Forecasts ", "Forecasts\n").upper(),
-                        color="xkcd:darkish blue",
-                        ha="center",
-                        transform=ax.transAxes,
-                        fontsize=8,
+                ax.set_title(
+                    f"{model_name}\nPrediction : {final_pred:.2f} Bias : {bias:.2f}",
+                    alpha=0.8,
+                    fontsize=self.FONT_SIZES["small"],
+                )
+        else:
+            # loop over each model creating one panel per model
+            c = 0
+            for i, model_name in enumerate(model_names):
+                # Hard coded in to maintain correct ordering
+                if model_output=='probability':
+                    outer_indexs = ["Best Hits",
+                                "Worst False Alarms", 
+                                "Worst Misses",
+                                "Best Corr. Negatives", 
+                            ]
+                else:
+                    outer_indexs = ["Least Error Predictions",
+                                "Most Error Predictions"
+                               ]
+            
+                for k, perf_key in enumerate(outer_indexs):
+                    if not only_one_model:
+                        ax = axes[k,i]
+                    else:
+                        ax = ax_iterator[c]
+                    final_pred, bias = self._contribution_plot(
+                        data=data,
+                        ax=ax,
+                        key=perf_key,
+                        model_name=model_name,
+                        feature_names=feature_names,
+                        to_only_varname=to_only_varname,
+                        display_feature_names=display_feature_names,
+                        display_units=display_units,
+                        label_fontsize=4,
+                        **kwargs,
                     )
+                    # Add Final prediction and Bias 
                     ax.text(
-                        -0.05,
-                        1.12,
-                        f"Avg. Prediction : {final_pred:.2f}",
-                        ha="left",
-                        color="xkcd:bluish grey",
-                        transform=ax.transAxes,
-                        fontsize=7,
-                    )
+                            -0.05,
+                            1.12,
+                            f"Avg. Prediction : {final_pred:.2f}",
+                            ha="left",
+                            color="xkcd:bluish grey",
+                            transform=ax.transAxes,
+                            fontsize=6,
+                        )
                     ax.text(
-                        -0.05,
-                        1.05,
-                        f"Avg. Bias : {bias:.2f}",
-                        ha="left",
-                        color="xkcd:bluish grey",
-                        fontsize=7,
-                        transform=ax.transAxes,
-                    )
-                c += 1
+                            -0.05,
+                            1.05,
+                            f"Avg. Bias : {bias:.2f}",
+                            ha="left",
+                            color="xkcd:bluish grey",
+                            fontsize=6,
+                            transform=ax.transAxes,
+                        )
+                    
+                    # Add outer indexs as titles if only one model
+                    if i == 0 and only_one_model:
+                        ax.text(
+                            0.5,
+                            1.2,
+                            perf_key,
+                            color="xkcd:darkish blue",
+                            ha="center",
+                            transform=ax.transAxes,
+                            fontsize=8,
+                        )
+                   
+                    # Else add the model names as titles. 
+                    elif k==0:
+                        ax.text(
+                            0.5,
+                            1.2,
+                            model_name,
+                            color="xkcd:darkish blue",
+                            ha="center",
+                            transform=ax.transAxes,
+                            fontsize=8,
+                        )
+                        
+                    
+                    c += 1
 
         xlabel = (
             "Feature Contributions (%)"
@@ -306,37 +346,34 @@ class PlotFeatureContributions(PlotStructure):
             else "Feature Contributions"
         )
 
+        labelpad = 2.5 if "non_performance" in outer_indexs else 5 
+        
         major_ax = self.set_major_axis_labels(
             fig,
-            xlabel="Feature Contributions (%)",
+            xlabel=xlabel,
             ylabel_left="",
-            labelpad=5,
+            labelpad=labelpad,
             fontsize=self.FONT_SIZES["normal"],
         )
 
-        if not only_one_model:
+        if "non_performance" not in outer_indexs and not only_one_model:
             self.set_row_labels(
-                labels=model_names,
+                labels=outer_indexs,
                 axes=axes,
                 pos=-1,
                 rotation=270,
                 pad=1.5,
-                fontsize=12,
-            )
+                fontsize=self.FONT_SIZES["small"],
+                )
+            
+        if 'non_performance' in outer_indexs:
+            pos = (0.95, 0.05)
+        else:
+            pos=(1.15, -0.025)
+        
+        self.add_alphabet_label(n_panels, axes, pos=pos, fontsize=10)
 
-        # additional_handles = [
-        #                        Line2D([0], [0], color="xkcd:pastel red", alpha=0.8),
-        #                         Line2D([0], [0], color='xkcd:powder blue', alpha=0.8),
-        #                          ]
-
-        # additional_labels = ['Positive Contributions', 'Negative Contributions']
-        # self.set_legend(n_panels, fig, axes[0,0],
-        #                major_ax, additional_handles,
-        #                additional_labels, bbox_to_anchor=(0.5, -0.25))
-
-        self.add_alphabet_label(n_panels, axes, pos=(1.15, 0.0), fontsize=12)
-
-        return fig
+        return fig, axes
 
     def plot_shap(
         self,

@@ -9,6 +9,7 @@ from ..common.utils import (
     avg_and_sort_contributions,
     retrieve_important_vars,
     brier_skill_score,
+    to_dataframe
 )
 
 list_of_acceptable_tree_models = [
@@ -164,7 +165,11 @@ class LocalInterpret(Attributes):
             contributions_dict[model_name] = avg_contrib_dict
             feature_values_dict[model_name] = avg_feature_val_dict
 
-        return contributions_dict, feature_values_dict
+        results=(contributions_dict, feature_values_dict)
+        
+        results_df = to_dataframe(results, self.model_names, self.feature_names)
+            
+        return results_df
 
     def _get_shap_values(
         self,

@@ -19,10 +19,15 @@ from ..common.utils import (
     get_indices_based_on_performance,
     retrieve_important_vars,
     load_netcdf,
+    load_dataframe,
     save_netcdf,
+    save_dataframe,
     combine_top_features,
     determine_feature_dtype,
-    is_str
+    is_str,
+    is_list,
+    is_dataset,
+    is_dataframe,
     )
 
 class InterpretToolkit(Attributes):
@@ -104,7 +109,7 @@ class InterpretToolkit(Attributes):
 
     def _append_attributes(self,ds):
         """
-        Append attributes to a xarray.Dataset.
+        Append attributes to a xarray.Dataset or pandas.DataFrame
         Internal function
         """
 
@@ -763,28 +768,40 @@ class InterpretToolkit(Attributes):
         results : nested dictionary for plotting purposes
         """
 
-        results = self.local_obj._get_local_prediction(method=method,
+        results_df = self.local_obj._get_local_prediction(method=method,
                                             background_dataset=background_dataset,
                                             performance_based=performance_based,
                                             n_examples=n_examples,)
 
-        self.contrib_ds = results
+        # Add metadata
+        self.attrs_dict['method'] = method
+        self.attrs_dict['n_examples'] = n_examples
+        self.attrs_dict['performance_based'] = str(performance_based)
+        self.attrs_dict['feature_names'] = self.feature_names
+        results_df = self._append_attributes(results_df)
+       
+        self.contrib_ds = results_df
 
-        return results
+        return results_df
 
-    def plot_contributions(self, to_only_varname=None,
-                              display_feature_names={}, **kwargs):
+    def plot_contributions(self, 
+                           data=None, 
+                           model_names=None,
+                           to_only_varname=None,
+                           display_feature_names={}, **kwargs):
         """
         Plots the feature contributions.
         
         Args:
         ------------------
+        data : Nested pandas.DataFrame
+        
         to_only_varname : callable
         
         display_feature_names : dict 
             For plotting purposes. Dictionary that maps the feature names 
             in the pandas.DataFrame to display-friendly versions.
-            E.g., display_feature_names = { 'dwpt2m' : '$T_{d}$', }
+            E.g., display_feature_names = { 'dwpt2m' : 'T$_{d}$', }
             The plotting code can handle latex-style formatting.
 
         Keyword arguments include arguments typically used for matplotlib
@@ -795,18 +812,33 @@ class InterpretToolkit(Attributes):
         """
 
         # Check if calc_pd has been ran
-        if not hasattr(self, 'contrib_ds'):
+        if not hasattr(self, 'contrib_ds') and data is None:
             raise AttributeError('No results! Run calc_contributions first!')
-
+        elif data is None:
+            data=self.contrib_ds 
+            
+        if model_names is None:
+            model_names = data.attrs['models used']
+        elif is_str(model_names):
+            model_names=[model_names]
+        
+       
+        model_output = data.attrs['model_output']    
+        if self.feature_names is None:
+            feature_names = data.attrs['feature_names']
+        else:
+            feature_names=self.feature_names
+        
+            
         # initialize a plotting object
         plot_obj = PlotFeatureContributions()
 
-        return plot_obj.plot_contributions(contrib_dict = self.contrib_ds[0],
-                                           feature_values = self.contrib_ds[1],
-                                           model_names = self.model_names,
+        return plot_obj.plot_contributions(data=data,
+                                           model_names = model_names,
+                                           feature_names=feature_names,
                                            to_only_varname=to_only_varname,
                                            display_feature_names=display_feature_names,
-                                           model_output=self.model_output,
+                                           model_output=model_output,
                                            **kwargs)
 
     def calc_shap(self, background_dataset=None):
@@ -1012,7 +1044,7 @@ class InterpretToolkit(Attributes):
         else:
             return combine_top_features(results, n_vars=n_vars)
 
-    def load_results(self, fnames,):
+    def load_results(self, fnames, dtype='dataset'):
         """
         Load results of a computation (permutation importance, calc_ale, calc_pd, etc)
             and sets the data as class attribute, which is used for plotting.
@@ -1021,22 +1053,31 @@ class InterpretToolkit(Attributes):
         ----------------
         fnames : str
             File names for loading
+            
+        dtype : 'dataset' or 'dataframe'
+            Indicate whether you are loading a set of xarray.Datasets 
+            or pandas.DataFrames
+           
 
         Return:
         -------------------
-        results : xarray.DataSet
-            results xarray dataset for plotting purposes
+        results : xarray.DataSet or pandas.DataFrame
+            data for plotting purposes
         """
-
-        results = load_netcdf(fnames=fnames)
+        if dtype == 'dataset':
+            results = load_netcdf(fnames=fnames)
+        elif dtype == 'dataframe':
+            results = load_dataframe(fnames=fnames) 
+        else:
+            raise ValueError('dtype must be "dataset" or "dataframe"!')
         
         for s in [self, self.global_obj, self.local_obj]:
             setattr(s, 'model_output', results.attrs['model_output'])
             model_names = [results.attrs['models used']]
-            if not isinstance(model_names, list):
+            if not is_list(model_names):
                 model_names = [model_names]
 
-            if (any(isinstance(i, list) for i in model_names)):
+            if (any(is_list(i) for i in model_names)):
                 model_names = model_names[0] 
             
             setattr(s, 'model_names', model_names)
@@ -1061,8 +1102,13 @@ class InterpretToolkit(Attributes):
         data : InterpretToolkit results
             the results of a InterpretToolkit calculation
         """
-
-        save_netcdf(fname=fname,ds=data)
+        if is_dataset(data):
+            save_netcdf(fname=fname,ds=data)
+        elif is_dataframe(data):
+            print('Correctly identified as dataframe')
+            save_dataframe(fname=fname, dframe=data)
+        else:
+            print('ERROR')
 
     def set_results(self, results, option):
         """
@@ -1079,7 +1125,8 @@ class InterpretToolkit(Attributes):
         available_options = {'permutation_importance' : 'perm_imp_ds',
                              'pd' : 'pd_ds',
                              'ale' : 'ale_ds',
-                             'contributions' : 'contrib_ds',
+                             'tree_interpreter' : 'contrib_ds',
+                             'shap' : 'contrib_ds',
                              'ice' : 'ice_ds',
                              'ale_variance' : 'ale_var_ds'
                              }
