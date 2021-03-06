@@ -29,13 +29,14 @@ class PlotFeatureContributions(PlotStructure):
         """
         colors = kwargs.get('color', ["xkcd:pastel red", "xkcd:powder blue"])
         
-        
         vars_c = [f'{var}_contrib' for var in feature_names if 'Bias' not in var]
         vars_val = [f'{var}_val' for var in feature_names if 'Bias' not in var]
 
         contribs = data.loc[key].loc[model_name, vars_c]
         feat_vals = data.loc[key].loc[model_name, vars_val]
-        
+       
+        print('max contrib: ', np.max(contribs))
+
         #    if to_only_varname is None:
         #        varnames.append(var)
         #    else:
@@ -49,23 +50,24 @@ class PlotFeatureContributions(PlotStructure):
         bias = data.loc[key].loc[model_name, 'Bias_contrib']
 
         feature_names = np.array(feature_names)
-        feature_names = np.append(feature_names[:n_vars], other_label)
-        contribs = np.append(contribs[:n_vars], sum(contribs[n_vars:]))
 
         sorted_idx = np.argsort(contribs)[::-1]
-        contribs = contribs[sorted_idx]
-        feature_names = feature_names[sorted_idx]
+        contribs_sorted = contribs[sorted_idx]
+        feature_names_sorted = feature_names[sorted_idx]
+
+        feature_names_trunc = np.append(feature_names_sorted[:n_vars], other_label)
+        contribs_trunc = np.append(contribs_sorted[:n_vars], sum(contribs_sorted[n_vars:]))
         
         bar_colors = [
-            colors[0] if c > 0 else colors[1] for c in contribs
+            colors[0] if c > 0 else colors[1] for c in contribs_trunc
         ]
-        y_index = range(len(contribs))
+        y_index = range(len(contribs_trunc))
 
         # Despine
         self.despine_plt(ax)
 
         ax.barh(
-            y=y_index, width=contribs, height=0.8, alpha=0.8, color=bar_colors, zorder=2
+            y=y_index, width=contribs_trunc, height=0.8, alpha=0.8, color=bar_colors, zorder=2
         )
 
         ax.tick_params(axis="both", which="both", length=0, labelsize=7)
@@ -76,15 +78,15 @@ class PlotFeatureContributions(PlotStructure):
 
         # ax.set_yticks(y_index)
         tick_labels = self.set_tick_labels(
-            ax, feature_names, display_feature_names, return_labels=True
+            ax, feature_names_trunc, display_feature_names, return_labels=True
         )
 
         ax.set_yticks([])
 
-        neg_factor = 2.25 if np.max(np.abs(contribs)) > 1.0 else 0.08
-        factor = 0.25 if np.max(contribs) > 1.0 else 0.01
+        neg_factor = 2.25 if np.max(np.abs(contribs_trunc)) > 1.0 else 0.08
+        factor = 0.25 if np.max(contribs_trunc) > 1.0 else 0.01
 
-        for i, pair in enumerate(zip(np.round(contribs, 2), feature_names, tick_labels)):
+        for i, pair in enumerate(zip(np.round(contribs_trunc, 2), feature_names_trunc, tick_labels)):
             c, v, label = pair
             if v == other_label:
                 text = other_label
@@ -154,7 +156,7 @@ class PlotFeatureContributions(PlotStructure):
                     ha="left",
                 )
 
-        max_value = np.max(np.absolute(contribs))            
+        max_value = np.max(np.absolute(contribs_trunc))            
         ax.set_xlim([-max_value-neg_factor, max_value+factor])
         
         # make the horizontal plot go with the highest value at the top
