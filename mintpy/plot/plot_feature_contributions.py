@@ -35,8 +35,6 @@ class PlotFeatureContributions(PlotStructure):
         contribs = data.loc[key].loc[model_name, vars_c]
         feat_vals = data.loc[key].loc[model_name, vars_val]
        
-        print('max contrib: ', np.max(contribs))
-
         #    if to_only_varname is None:
         #        varnames.append(var)
         #    else:
@@ -208,12 +206,12 @@ class PlotFeatureContributions(PlotStructure):
             elif only_one_model and model_output == "probability":
                 n_columns = 2
             else:
-                n_columns = 2 
+                n_columns = max(2, len(model_names)) 
 
             if n_columns == 4:
                 figsize = (12, 4)
             elif not only_one_model and len(outer_indexs)==4:
-                figsize = (4, 9) 
+                figsize = (4+(0.65*len(model_names)), 9) 
             else:
                 figsize = (5, 5)
 
@@ -264,6 +262,7 @@ class PlotFeatureContributions(PlotStructure):
                 )
         else:
             # loop over each model creating one panel per model
+            
             c = 0
             for i, model_name in enumerate(model_names):
                 # Hard coded in to maintain correct ordering
