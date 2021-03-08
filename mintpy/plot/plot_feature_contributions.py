@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import shap
 
 from .base_plotting import PlotStructure
@@ -14,7 +15,7 @@ class PlotFeatureContributions(PlotStructure):
         data,
         key,
         model_name,
-        feature_names, 
+        features, 
         ax=None,
         to_only_varname=None,
         display_feature_names={},
@@ -27,10 +28,12 @@ class PlotFeatureContributions(PlotStructure):
         """
         Plot the feature contributions.
         """
+        all_features = data.attrs['feature_names']
+        
         colors = kwargs.get('color', ["xkcd:pastel red", "xkcd:powder blue"])
         
-        vars_c = [f'{var}_contrib' for var in feature_names if 'Bias' not in var]
-        vars_val = [f'{var}_val' for var in feature_names if 'Bias' not in var]
+        vars_c = [f'{var}_contrib' for var in features if 'Bias' not in var]
+        vars_val = [f'{var}_val' for var in features if 'Bias' not in var]
 
         contribs = data.loc[key].loc[model_name, vars_c]
         feat_vals = data.loc[key].loc[model_name, vars_val]
@@ -40,22 +43,27 @@ class PlotFeatureContributions(PlotStructure):
         #    else:
         #        varnames.append(to_only_varname(var))
 
-        final_pred = abs(np.sum(contribs))
-
         #if to_only_varname is not None:
         #    contribs, varnames = combine_like_features(contribs, varnames)
         
         bias = data.loc[key].loc[model_name, 'Bias_contrib']
+        final_pred = np.sum(data.loc[key].loc[model_name, [f'{var}_contrib' for var in all_features] + ['Bias_contrib']])
+        
+        feature_names = np.array(features)
 
-        feature_names = np.array(feature_names)
-
+        # Rank contributions with highest on first. 
         sorted_idx = np.argsort(contribs)[::-1]
         contribs_sorted = contribs[sorted_idx]
         feature_names_sorted = feature_names[sorted_idx]
 
-        feature_names_trunc = np.append(feature_names_sorted[:n_vars], other_label)
-        contribs_trunc = np.append(contribs_sorted[:n_vars], sum(contribs_sorted[n_vars:]))
-        
+        if other_label != None:
+            feature_names_trunc = np.append(feature_names_sorted[:n_vars], other_label)
+            contribs_trunc = np.append(contribs_sorted[:n_vars], sum(contribs_sorted[n_vars:]))
+        else:
+            feature_names_trunc = feature_names_sorted[:n_vars]
+            contribs_trunc = contribs_sorted[:n_vars]
+            sum_remaining_predictions = sum(contribs_sorted[n_vars:])
+            
         bar_colors = [
             colors[0] if c > 0 else colors[1] for c in contribs_trunc
         ]
@@ -92,12 +100,14 @@ class PlotFeatureContributions(PlotStructure):
                 units = display_units.get(v, "")
 
                 feat_val = feat_vals[v+'_val']
-                if feat_val <= 1 and feat_val > 0:
-                    # val bewteen 0-1 -> convert to sci. notation
-                    num_and_exp = f"{feat_val:.1e}".split("e")
-                    base = float(num_and_exp[0])
-                    exp = int(num_and_exp[1])
-                    feat_val = fr"{base} $\times$ 10$^{{{exp}}}$"
+
+                if feat_val <= 1 and feat_val > -1 and not math.isclose(feat_val, 0, abs_tol = 0.00001):
+                        # If the value is not reasonably zero 
+                        # and bewteen -1 to 1 -> convert to sci. notation
+                        num_and_exp = f"{feat_val:.1e}".split("e")
+                        base = float(num_and_exp[0])
+                        exp = int(num_and_exp[1])
+                        feat_val = fr"{base} $\times$ 10$^{{{exp}}}$"
                 else:
                     feat_val = round(feat_val)
 
@@ -166,12 +176,13 @@ class PlotFeatureContributions(PlotStructure):
         self,
         data,
         model_names,
-        feature_names,
+        features,
         to_only_varname=None,
         display_feature_names={},
         display_units={},
         model_output='raw',
         n_vars=12,
+        other_label="Other Predictors",
         **kwargs,
     ):
         """
@@ -186,6 +197,20 @@ class PlotFeatureContributions(PlotStructure):
         only_one_model = True if len(model_names) == 1 else False
         outer_indexs = list(set([f[0] for f in data.index.values]))
         
+        if model_output=='probability' and "non_performance" not in outer_indexs:
+            outer_indexs = ["Best Hits",
+                                "Worst False Alarms", 
+                                "Worst Misses",
+                                "Best Corr. Negatives", 
+                            ]
+        elif model_output=='raw' and "non_performance" not in outer_indexs:
+            outer_indexs = ["Least Error Predictions",
+                                "Most Error Predictions"
+                               ]
+        perf_keys = kwargs.get('perf_keys', outer_indexs)
+        
+        
+        
         if "non_performance" in outer_indexs:
             n_panels = len(model_names) 
             n_columns = len(model_names) 
@@ -197,7 +222,7 @@ class PlotFeatureContributions(PlotStructure):
             hspace = kwargs.get("hspace", 0.1)
             
         else:
-            n_perf_keys = len(outer_indexs)
+            n_perf_keys = len(perf_keys)
             n_panels = len(model_names) * n_perf_keys
             wspace = kwargs.get("wspace", 0.5)
             
@@ -213,7 +238,7 @@ class PlotFeatureContributions(PlotStructure):
             elif not only_one_model and len(outer_indexs)==4:
                 figsize = (4+(0.65*len(model_names)), 9) 
             else:
-                figsize = (5, 5)
+                figsize = (8, 4)
 
             hspace = kwargs.get("hspace", 0.5)
 
@@ -243,8 +268,8 @@ class PlotFeatureContributions(PlotStructure):
                 
                 final_pred, bias = self._contribution_plot(
                     data=data,
+                    features=features,
                     model_name=model_name,
-                    feature_names=feature_names,
                     to_only_varname=to_only_varname,
                     display_feature_names=display_feature_names,
                     display_units=display_units,
@@ -252,6 +277,7 @@ class PlotFeatureContributions(PlotStructure):
                     ax=ax,
                     n_vars=n_vars,
                     label_fontsize=6,
+                    other_label=other_label,
                     **kwargs,
                 )
 
@@ -276,8 +302,10 @@ class PlotFeatureContributions(PlotStructure):
                     outer_indexs = ["Least Error Predictions",
                                 "Most Error Predictions"
                                ]
+                perf_keys = kwargs.get('perf_keys', outer_indexs)    
+                    
             
-                for k, perf_key in enumerate(outer_indexs):
+                for k, perf_key in enumerate(perf_keys):
                     if not only_one_model:
                         ax = axes[k,i]
                     else:
@@ -287,11 +315,12 @@ class PlotFeatureContributions(PlotStructure):
                         ax=ax,
                         key=perf_key,
                         model_name=model_name,
-                        feature_names=feature_names,
+                        features=features,
                         to_only_varname=to_only_varname,
                         display_feature_names=display_feature_names,
                         display_units=display_units,
                         label_fontsize=4,
+                        other_label=other_label,
                         **kwargs,
                     )
                     # Add Final prediction and Bias 

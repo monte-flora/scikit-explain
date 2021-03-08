@@ -486,7 +486,6 @@ def get_indices_based_on_performance(
           a dictionary containing the indices of each of the 4 categories
           listed above
     """
-
     # default is to use all examples
     if n_examples is None:
         n_examples = examples.shape[0]
@@ -497,9 +496,9 @@ def get_indices_based_on_performance(
         n_examples = examples.shape[0]
 
     if model_output == "probability":
-        predictions = model.predict_proba(examples.values)[:, 1]
+        predictions = model.predict_proba(examples)[:, 1]
     elif model_output == "raw":
-        predictions = model.predict(examples.values)
+        predictions = model.predict(examples)
 
     diff = targets - predictions
     data = {"targets": targets, "predictions": predictions, "diff": diff}
@@ -512,6 +511,7 @@ def get_indices_based_on_performance(
         event_examples_sorted_indices = event_examples.sort_values(
             by="diff", ascending=True
         ).index.values
+        
         nonevent_examples_sorted_indices = nonevent_examples.sort_values(
             by="diff", ascending=False
         ).index.values

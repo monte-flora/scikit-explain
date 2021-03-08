@@ -785,7 +785,8 @@ class InterpretToolkit(Attributes):
         return results_df
 
     def plot_contributions(self, 
-                           data=None, 
+                           data=None,
+                           features=None, 
                            model_names=None,
                            to_only_varname=None,
                            display_feature_names={}, **kwargs):
@@ -822,15 +823,16 @@ class InterpretToolkit(Attributes):
         elif is_str(model_names):
             model_names=[model_names]
         
-        model_output = data.attrs['model_output']    
-        feature_names = data.attrs['feature_names']
+        model_output = data.attrs['model_output']
+        if features is None:
+            features = data.attrs['feature_names']
             
         # initialize a plotting object
         plot_obj = PlotFeatureContributions()
 
         return plot_obj.plot_contributions(data=data,
                                            model_names = model_names,
-                                           feature_names=feature_names,
+                                           features=features,
                                            to_only_varname=to_only_varname,
                                            display_feature_names=display_feature_names,
                                            model_output=model_output,
