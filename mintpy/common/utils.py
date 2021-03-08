@@ -321,7 +321,7 @@ def load_dataframe(fnames):
         fnames=[fnames]
 
     data = [pd.read_pickle(file_name) for file_name in fnames]
-    
+   
     attrs = [d.attrs for d in data]
     models_used = [d.attrs['models used'] for d in data]
     
