@@ -37,15 +37,14 @@ class PlotFeatureContributions(PlotStructure):
 
         contribs = data.loc[key].loc[model_name, vars_c]
         feat_vals = data.loc[key].loc[model_name, vars_val]
-       
-        #    if to_only_varname is None:
-        #        varnames.append(var)
-        #    else:
-        #        varnames.append(to_only_varname(var))
 
+        # Convert names 
         #if to_only_varname is not None:
-        #    contribs, varnames = combine_like_features(contribs, varnames)
+        #    features = [to_only_varname(f) for f in features]
         
+        #if to_only_varname is not None:
+        #    contribs, features = combine_like_features(contribs, features)
+       
         bias = data.loc[key].loc[model_name, 'Bias_contrib']
         final_pred = np.sum(data.loc[key].loc[model_name, [f'{var}_contrib' for var in all_features] + ['Bias_contrib']])
         
@@ -108,8 +107,10 @@ class PlotFeatureContributions(PlotStructure):
                         base = float(num_and_exp[0])
                         exp = int(num_and_exp[1])
                         feat_val = fr"{base} $\times$ 10$^{{{exp}}}$"
+                elif feat_val > 0.01 and feat_val <= 10:
+                    feat_val = round(feat_val, 1)
                 else:
-                    feat_val = round(feat_val)
+                    feat_val = round(feat_val) if feat_val < 100 else int(round(feat_val))
 
                 special_label = label.replace(" ", " \ ").replace("$", "")
                 if units == "":
