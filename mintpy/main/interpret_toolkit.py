@@ -313,7 +313,7 @@ class InterpretToolkit(Attributes):
             
             mec_dict[model_name] = mec
         
-        return mec
+        return mec_dict
     
     def calc_interaction_rankings(self, features, evaluation_fn,
                                   model_names=None, n_jobs=1, subsample=1.0, 

@@ -1299,17 +1299,11 @@ class GlobalInterpret(Attributes):
                 subsample=ale_subsample,
                 n_bootstrap=1,
             )
-
-        print(feature_names)    
-            
         # Get the interpolated ALE curves
         ale_main_effects = {}
         for f in feature_names:
             ale_y = np.mean(data[f"{f}__{model_name}__ale"].values, axis=0)
             ale_x = data[f"{f}__bin_values"].values
-
-            print(f, ale_y.shape, ale_x.shape)
-            
             
             ale_main_effects[f] = interp1d(
                 ale_x, ale_y, fill_value="extrapolate", kind="linear"
