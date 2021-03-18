@@ -7,12 +7,15 @@ import itertools
 from functools import reduce
 from operator import add
 import traceback
+from copy import copy
 
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
     average_precision_score,
     mean_squared_error,
+    r2_score
 )
 
 from ..common.utils import (
@@ -1297,17 +1300,19 @@ class GlobalInterpret(Attributes):
                 n_bootstrap=1,
             )
 
+        print(feature_names)    
+            
         # Get the interpolated ALE curves
         ale_main_effects = {}
         for f in feature_names:
-            try:
-                main_effect = np.mean(data[f"{f}__{model_name}__ale"].values, axis=0)
-            except:
-                continue
-            x_values = data[f"{f}__bin_values"].values
+            ale_y = np.mean(data[f"{f}__{model_name}__ale"].values, axis=0)
+            ale_x = data[f"{f}__bin_values"].values
 
+            print(f, ale_y.shape, ale_x.shape)
+            
+            
             ale_main_effects[f] = interp1d(
-                x_values, main_effect, fill_value="extrapolate", kind="linear"
+                ale_x, ale_y, fill_value="extrapolate", kind="linear"
             )
 
         # get the bootstrap samples
@@ -1332,10 +1337,12 @@ class GlobalInterpret(Attributes):
             # Get the ALE value for each feature per example
             main_effects = np.array(
                 [
-                    ale_main_effects[f](examples[:, i])
+                    ale_main_effects[f](np.array(examples[:,i], dtype=np.float64))
                     for i, f in enumerate(feature_names)
                 ]
             )
+
+            
             # Sum the ALE values per example and add on the average value
             main_effects = np.sum(main_effects.T, axis=1) + avg_prediction
 
@@ -1734,3 +1741,93 @@ class GlobalInterpret(Attributes):
         return results       
 
 
+    def compute_main_effect_complexity(self, model_name, ale_ds,  
+                            features, max_segments=10, approx_error=0.05):
+        """
+        Compute the Main Effect Complexity (MEC) from Molnar et al. (2019)
+    
+        Args:
+            model_name,
+            ale_ds,
+            features, 
+            max_segements, default=10
+            approx_error, default=0.05
+    
+        Returns:
+            mec_avg, float
+                Average Main Effect Complexity 
+            best_break_dict, dict
+                For each feature, the list of "optimal" breakpoints
+                Used to plot and verify the code is running correctly. 
+        """
+        mec = np.zeros((len(features)))
+        var = np.zeros((len(features)))
+    
+        best_breaks_dict = {}
+    
+        for j, f in enumerate(features):
+            ale_y = np.mean(ale_ds[f'{f}__{model_name}__ale'].values,axis=0)
+            ale_x = ale_ds[f'{f}__bin_values'].values
+    
+            b_max=len(ale_x)
+            # Approximate ALE with linear model
+            lr = LinearRegression()
+            lr.fit(ale_x.reshape(-1, 1), ale_y)
+            g = lr.predict(ale_x.reshape(-1, 1))
+    
+            coef = lr.coef_[0]
+            best_score = r2_score(g, ale_y)
+    
+            # Increase num. of segements until approximation is good enough. 
+            k = 1
+            best_breaks=[]
+            while k < max_segments and (r2_score(g, ale_y) < (1-approx_error)):
+                #print('k: ', k)
+                # Find intervals Z_k through exhaustive search along ALE curve breakpoints
+                for b in range(1, b_max-1):
+                    if b not in best_breaks:
+                        temp_breaks=copy(best_breaks)
+                        temp_breaks.append(b)
+                        temp_breaks.sort()
+
+                        idxs_set = [range(0,temp_breaks[0]+1)] + \
+                               [range(temp_breaks[i]+1, temp_breaks[i+1]+1) for i in range(len(temp_breaks)-1)] +\
+                               [range(temp_breaks[-1]+1, b_max)]
+
+                        model_set = [LinearRegression() for _ in range(len(idxs_set))]
+                        model_fit_set = [model_set[i].fit(ale_x[idxs].reshape(-1, 1), ale_y[idxs])
+                                             for i, idxs in enumerate(idxs_set)
+                            ]
+                        predict_set = [
+                            model_fit_set[i].predict(ale_x[idxs].reshape(-1, 1))
+                                for i, idxs in enumerate(idxs_set)
+                        ]
+                        for i, idxs in enumerate(idxs_set):
+                            g[idxs] = predict_set[i]
+             
+                        #coef = [model_fit_set[i].coef_[0] for i in range(len(idxs_set))]
+            
+                        current_score = r2_score(g, ale_y)
+                        if current_score > best_score:
+                            best_score = current_score
+                            best_break = b 
+            
+                        #coef = [model_fit_set[i].coef_[0] for i in range(len(idxs_set))]
+                        # Greedily set slopes to zero while R^2 > 1 - error
+                        # Basically, the ALE curve is approximated quite well 
+                        # by a linear model
+                        #if r2_score(g, ale_y) < (1 - approx_error): 
+                        #    coef = [model_fit_set[i].coef_[0] for i in range(len(idxs_set))]
+                        #else:
+                        #    coef = [0]
+                best_breaks.append(best_break)
+                k+=1
+    
+            # Sum of non-zero coefficients minus first intercept 
+            best_breaks_dict[f] = best_breaks
+            mec[j] = k #- 1
+            var[j] = np.mean(ale_y**2)
+    
+        mec_avg = (1/np.sum(var)) * np.sum(var*mec)
+    
+        return mec_avg, best_breaks_dict

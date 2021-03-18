@@ -274,6 +274,47 @@ class InterpretToolkit(Attributes):
         return results_ds
 
     
+    def calc_main_effect_complexity(self, model_names=None, ale_ds=None, 
+                                    max_segments=10, approx_error=0.05):
+        """
+        Compute the Main Effect Complexity (MEC; Molnar et al. 2019). MEC 
+        is the number of linear segements required to approximate 
+        the first-order ALE curves; averaged over all features. 
+        The MEC is weighted-averged by the variance. 
+        
+        Args:
+        ----------------
+            
+        Returns:
+        ----------------
+        
+        """
+        if model_names is None:
+            model_names=self.model_names
+        else:
+            if is_str(model_names):
+                model_names=[model_names]
+        
+         # Check if calc_pd has been ran
+        if not hasattr(self, 'ale_ds') and ale_ds is None:
+            raise AttributeError('No results! Run calc_ale first or provide ale_ds')
+        else:
+            ale_ds = self.ale_ds
+        
+        mec_dict = {}
+        for model_name in model_names:
+            mec, _ = self.global_obj.compute_main_effect_complexity( 
+                        model_name=model_name, 
+                        ale_ds=ale_ds,  
+                        features=self.feature_names, 
+                        max_segments=max_segments, 
+                        approx_error=approx_error
+            )
+            
+            mec_dict[model_name] = mec
+        
+        return mec
+    
     def calc_interaction_rankings(self, features, evaluation_fn,
                                   model_names=None, n_jobs=1, subsample=1.0, 
                                   n_bootstrap=1, verbose=False):
