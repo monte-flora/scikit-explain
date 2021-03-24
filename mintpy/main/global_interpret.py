@@ -570,10 +570,10 @@ class GlobalInterpret(Attributes):
 
             pd_values.append(averaged_predictions)
 
-        # Reshape the pd_values for second-order effects
+        # Reshape the pd_values for higher-order effects
         pd_values = np.array(pd_values)
         if len(features) > 1:
-            pd_values = pd_values.reshape(n_bootstrap, n_bins, n_bins)
+            pd_values = pd_values.reshape([n_bootstrap] + [n_bins]*len(features))
         else:
             features = features[0]
 
@@ -1174,7 +1174,43 @@ class GlobalInterpret(Attributes):
 
         return results
 
-    def friedman_h_statistic(self, model_name, feature_tuple, n_bins=30, subsample=1.0):
+    def compute_scalar_interaction_stats(
+        self,
+        method,
+        data,
+        model_names,
+        n_bins=30,
+        subsample=1.0,
+        n_bootstrap=1,
+        n_jobs=1,
+        data_2d=None, 
+        features=None,
+        **kwargs,
+    ):
+        """
+        Wrapper function for computing the interaction strength statistic (see below).
+        Will perform calculation in parallel for multiple models.
+        """
+        if method == "ias":
+            func = self.compute_interaction_strength
+            args_iterator = to_iterator(model_names, [n_bins], [subsample], [n_bootstrap])
+        elif method == "hstat":
+            func = self.friedman_h_statistic
+            args_iterator = to_iterator(model_names, features, [n_bins], [subsample], [n_bootstrap])
+
+        self.data = data
+        self.data_2d = data_2d
+        kwargs["n_jobs"] = n_jobs
+        results = run_parallel(
+            func=func, args_iterator=args_iterator, kwargs=kwargs, nprocs_to_use=n_jobs
+        )
+        
+        results = merge_dict(results)
+
+        return results
+    
+    def friedman_h_statistic(self, model_name, features, n_bins=30, 
+                             subsample=1.0, n_bootstrap=1, **kwargs):
         """
         Compute the H-statistic for two-way interactions between two features.
 
@@ -1185,71 +1221,23 @@ class GlobalInterpret(Attributes):
 
         Returns:
         """
-        self.model_names = [model_name]
-        feature1, feature2 = feature_tuple
-        features = [feature1, feature2]
+        feature1, feature2 = features
+        feature1_pd = self.data[f"{feature1}__{model_name}__pd"].values
+        feature2_pd = self.data[f"{feature2}__{model_name}__pd"].values
 
-        # Compute the first-order effects for the two features.
-        results = self._run_interpret_curves(
-            method="pd",
-            features=features,
-            n_bins=n_bins,
-            n_jobs=2,
-            subsample=subsample,
-            n_bootstrap=1,
-        )
-
-        feature1_pd = results[f"{feature1}__{model_name}__pd"].values.squeeze()
-        feature2_pd = results[f"{feature2}__{model_name}__pd"].values.squeeze()
-
-        # Compute the second-order effects between the two features
-        combined_results = self.compute_partial_dependence(
-            model_name, feature_tuple, n_bins, subsample=subsample
-        )
-
-        combined_results = to_xarray(combined_results)
-
-        combined_pd = combined_results[
+        combined_pd = self.data_2d[
             f"{feature1}__{feature2}__{model_name}__pd"
-        ].values.squeeze()
+        ].values
 
         # Calculate the H-statistics
-        pd_decomposed = feature1_pd[:, np.newaxis] + feature2_pd[np.newaxis, :]
+        pd_decomposed = feature1_pd[:, :, np.newaxis] + feature2_pd[:, np.newaxis, :]
+
         numer = (combined_pd - pd_decomposed) ** 2
         denom = (combined_pd) ** 2
-        H_squared = np.sum(numer) / np.sum(denom)
+        H_squared = np.sum(np.sum(numer, axis=2), axis=1) / np.sum(np.sum(denom, axis=2), axis=1)
 
-        return sqrt(H_squared)
-
-    def compute_scalar_interaction_stats(
-        self,
-        method,
-        data,
-        model_names,
-        n_bins=30,
-        subsample=1.0,
-        n_bootstrap=1,
-        n_jobs=1,
-        **kwargs,
-    ):
-        """
-        Wrapper function for computing the interaction strength statistic (see below).
-        Will perform calculation in parallel for multiple models.
-        """
-        if method == "ias":
-            func = self.compute_interaction_strength
-        elif method == "h_stat":
-            func = self.friedman_h_statistic
-
-        self.data = data
-        args_iterator = to_iterator(model_names, [n_bins], [subsample], [n_bootstrap])
-        kwargs["n_jobs"] = n_jobs
-        results = run_parallel(
-            func=func, args_iterator=args_iterator, kwargs=kwargs, nprocs_to_use=n_jobs
-        )
-
-        results = merge_dict(results)
-
+        results = {f"{feature1}__{feature2}__{model_name}_hstat" : np.sqrt(H_squared)}
+        
         return results
 
     def compute_interaction_strength(

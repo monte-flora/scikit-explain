@@ -510,7 +510,9 @@ class InterpretToolkit(Attributes):
 
         return results_ds
 
-    def calc_friedman_h_stat(self, model_name, features, n_bins=30, subsample=1.0):
+    def calc_friedman_h_stat(self, features, pd_1d, pd_2d, model_names=None, n_bins=30, 
+                              n_jobs=1, subsample=1.0, n_bootstrap=1, 
+                              **kwargs):
         """
         Runs the Friedman's H-statistic for computing feature interactions. 
         See https://christophm.github.io/interpretable-ml-book/interaction.html 
@@ -543,13 +545,25 @@ class InterpretToolkit(Attributes):
         --------------------------------------------------------
         The second-order Friedman H-statistic (float)  
         """
+        if model_names is None:
+            model_names = self.model_names
+        else:
+            if is_str(model_names):
+                model_names = [model_names]
+   
+        return self.global_obj.compute_scalar_interaction_stats(
+                                                    method = 'hstat',
+                                                    data=pd_1d,
+                                                    data_2d = pd_2d,
+                                                    features=features,
+                                                    model_names=model_names, 
+                                                    n_bins=n_bins, 
+                                                    subsample=subsample, 
+                                                    n_jobs=n_jobs, 
+                                                    n_bootstrap=n_bootstrap, 
+                                                    **kwargs
+                                                   ) 
 
-        return self.global_obj.friedman_h_statistic(model_name,
-                                                 feature_tuple=features,
-                                                 n_bins=n_bins,
-                                                 subsample=subsample
-                                                )
-    
     def calc_interaction_strength(self, ale_data=None, model_names=None, n_bins=30, 
                                   n_jobs=1, subsample=1.0, n_bootstrap=1, 
                                   **kwargs):
