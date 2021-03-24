@@ -276,18 +276,14 @@ class PlotImportance(PlotStructure):
                     ha = ["left" if score > 0 else "right" for score in scores_to_plot] 
 
                 # Put the variable names _into_ the plot
-                if (method == "ale_variance_interactions" or method == 'perm_based_interactions') \
-                            and plot_correlated_features:
+                if ('pass' not in method and plot_correlated_features):
                     results_dict = is_correlated(
                         corr_matrix, sorted_var_names, rho_threshold=rho_threshold
                     )
 
                 for i in range(len(variable_names_to_plot)):
                     color = "k"
-                    if (
-                        (method == "ale_variance_interactions" or method == 'perm_based_interactions')
-                        and plot_correlated_features
-                    ):
+                    if ('pass' not in method and plot_correlated_features):
                         correlated = results_dict.get(sorted_var_names[i], False)
                         color = "xkcd:medium green" if correlated else "k"
 
@@ -414,6 +410,8 @@ class PlotImportance(PlotStructure):
             pos = (0.9, 0.9)
         self.add_alphabet_label(n_panels, axes, pos=pos)
 
+        return fig, axes
+        
     def _add_correlated_brackets(self, ax, corr_matrix, top_features, rho_threshold):
         """
         Add bracket connecting features above a given correlation threshold.

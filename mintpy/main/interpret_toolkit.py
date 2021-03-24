@@ -551,7 +551,7 @@ class InterpretToolkit(Attributes):
             if is_str(model_names):
                 model_names = [model_names]
    
-        return self.global_obj.compute_scalar_interaction_stats(
+        results_ds =  self.global_obj.compute_scalar_interaction_stats(
                                                     method = 'hstat',
                                                     data=pd_1d,
                                                     data_2d = pd_2d,
@@ -563,7 +563,12 @@ class InterpretToolkit(Attributes):
                                                     n_bootstrap=n_bootstrap, 
                                                     **kwargs
                                                    ) 
-
+    
+        
+        results_ds = self._append_attributes(results_ds)
+    
+        return results_ds
+    
     def calc_interaction_strength(self, ale_data=None, model_names=None, n_bins=30, 
                                   n_jobs=1, subsample=1.0, n_bootstrap=1, 
                                   **kwargs):

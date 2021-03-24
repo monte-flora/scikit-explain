@@ -1207,6 +1207,25 @@ class GlobalInterpret(Attributes):
         
         results = merge_dict(results)
 
+        if method == 'hstat':
+            final_results={}
+            feature_pairs = np.array([f'{f[0]}__{f[1]}' for f in features])
+            for model_name in model_names:
+                values = np.array([results[f'{f}__{model_name}_hstat'] for f in feature_pairs])
+                idx = np.argsort(np.mean(values, axis=1))[::-1]
+                feature_names_sorted = np.array(feature_pairs)[idx]
+                values_sorted = values[idx, :]
+
+                final_results[f"hstat_rankings__{model_name}"] = (
+                    [f"n_vars_perm_based_interactions"],
+                    feature_names_sorted,
+                    )
+                final_results[f"hstat_scores__{model_name}"] = (
+                    [f"n_vars_perm_based_interactions", "n_bootstrap"],
+                    values_sorted,
+                )
+            results = to_xarray(final_results)
+        
         return results
     
     def friedman_h_statistic(self, model_name, features, n_bins=30, 
