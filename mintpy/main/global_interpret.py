@@ -1396,11 +1396,11 @@ class GlobalInterpret(Attributes):
                     n_bootstrap=n_bootstrap,
                 )
             else:
-                feature_names = list(
-                    set([f.split("__")[0] for f in data.data_vars if "ale" in f])
-                )
+                feature_names = list([f for f in data.data_vars if "__" not in f])
+                feature_names.sort()
 
-            # Compute the std over the bin axis
+            # Compute the std over the bin axis [shape = (n_features, n_bootstrap)]
+            # Input shape : (n_bootstrap, n_bins) 
             ale_std = np.array(
                 [
                     np.std(data[f"{f}__{model_name}__ale"].values, ddof=1, axis=1)
@@ -1408,11 +1408,11 @@ class GlobalInterpret(Attributes):
                 ]
             )
 
-            # Average over the bootstrap indices
+            # Average over the bootstrap indices 
             idx = np.argsort(np.mean(ale_std, axis=1))[::-1]
-
+    
             feature_names_sorted = np.array(feature_names)[idx]
-            ale_std_sorted = ale_std[idx, :]
+            ale_std_sorted = ale_std[idx,:]
 
             results[f"ale_variance_rankings__{model_name}"] = (
                 [f"n_vars_ale_variance"],

@@ -260,9 +260,9 @@ class PlotImportance(PlotStructure):
                     )
 
                 if num_vars_to_plot > 10:
-                    size = self.FONT_SIZES["teensie"] - 1
+                    size = kwargs.get('fontsize', self.FONT_SIZES["teensie"] - 1)
                 else:
-                    size = self.FONT_SIZES["teensie"]
+                    size = kwargs.get('fontsize', self.FONT_SIZES["teensie"]) 
 
                 # Put the variable names _into_ the plot
                 if model_output == "probability" and 'perm_based' not in method:
