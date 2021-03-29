@@ -1185,7 +1185,8 @@ class InterpretToolkit(Attributes):
                              'tree_interpreter' : 'contrib_ds',
                              'shap' : 'contrib_ds',
                              'ice' : 'ice_ds',
-                             'ale_variance' : 'ale_var_ds'
+                             'ale_variance' : 'ale_var_ds', 
+                             'perm_based' : 'perm_based_ds', 
                              }
         
         if option not in list(available_options.keys()):
