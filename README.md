@@ -1,7 +1,7 @@
 <a href="url"><img src="images/mintpy_logo.png" align="right" height="400" width="400" ></a>
 
 
-<a href="hhttps://travis-ci.com/monte-flora/py-mint"><img src="https://travis-ci.com/monte-flora/py-mint.svg?branch=master"></a>
+<a href="https://travis-ci.com/monte-flora/py-mint"><img src="https://travis-ci.com/monte-flora/py-mint.svg?branch=master"></a>
 [![codecov](https://codecov.io/gh/monte-flora/py-mint/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/py-mint)
 [![Updates](https://pyup.io/repos/github/monte-flora/py-mint/shield.svg)](https://pyup.io/repos/github/monte-flora/py-mint/)
 [![Python 3](https://pyup.io/repos/github/monte-flora/py-mint/python-3-shield.svg)](https://pyup.io/repos/github/monte-flora/pymint/)
