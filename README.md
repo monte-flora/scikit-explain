@@ -77,7 +77,7 @@ myInterpreter.plot_importance(method='multipass')
 ```
 
 <p align="center">
-  <img width="811" src="images/multi_pass_perm_imp.png"  />
+  <img width="811" src="https://github.com/monte-flora/py-mint/blob/master/images/multi_pass_perm_imp.png?raw=true"  />
 </p>
 
 Sample notebook can be found here: [**Permutation Importance**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
@@ -94,13 +94,13 @@ myInterpreter.calc_ale(features=important_vars, n_bins=20)
 myInterpreter.plot_ale()
 ```
 <p align="center">
-  <img width="811" src="images/ale_1d.png"  />
+  <img width="811" src="https://github.com/monte-flora/py-mint/blob/master/images/ale_1d.png?raw=true"  />
 </p>
 
 Additionally, you can use the same code snippet to compute the second-order ALE (see the notebook for more details). 
 
 <p align="center">
-  <img width="811" src="images/ale_2d.png"  />
+  <img width="811" src="https://github.com/monte-flora/py-mint/blob/master/images/ale_2d.png?raw=true"  />
 </p>
 
 Sample notebook can be found here: 
@@ -125,7 +125,7 @@ results = myInterpreter.calc_contributions(method='shap', background_dataset=bac
 fig = myInterpreter.plot_contributions()
 ```
 <p align="center">
-  <img width="811" src="images/feature_contribution_single.png" />
+  <img width="811" src="https://github.com/monte-flora/py-mint/blob/master/images/feature_contribution_single.png?raw=true" />
 </p>
 
 ```python
@@ -141,7 +141,7 @@ fig = myInterpreter.plot_contributions()
 ```
 
 <p align="center">
-  <img width="811" src="images/feature_contributions_perform.png"  />
+  <img width="811" src="https://github.com/monte-flora/py-mint/blob/master/images/feature_contributions_perform.png?raw=true"  />
 </p>
 
 ```python
@@ -158,7 +158,7 @@ myInterpreter.plot_shap(plot_type = 'summary', shap_values=shap_values,)
 ```
 
 <p align="center">
-  <img width="811" src="images/shap_summary.png"  />
+  <img width="811" src="https://github.com/monte-flora/py-mint/blob/master/images/shap_dependence.png?raw=true"  />
 </p>
 
 ```python
@@ -172,7 +172,7 @@ myInterpreter.plot_shap(features=features,
 ```
 
 <p align="center">
-  <img width="811" src="images/shap_dependence.png" />
+  <img width="811" src="https://github.com/monte-flora/py-mint/blob/master/images/shap_summary.png?raw=true" />
 </p>
 
 Sample notebook can be found here: 
