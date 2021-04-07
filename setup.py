@@ -17,16 +17,16 @@ from distutils.version import LooseVersion
 
 
 # Package meta-data.
-NAME = "mintpy"
+NAME = "py-mint"
 DESCRIPTION = (
-    "MintPy (Model INTerpretability in Python) is a user-friendly python package"
+    "PyMint (Python-based Model INTerpretations) is a user-friendly python package"
     + "for computing and plotting machine learning interpretation output."
 )
-URL = "https://github.com/monte-flora/mintpy/"
+URL = "https://github.com/monte-flora/py-mint/"
 EMAIL = "monte.flora@noaa.gov"
 AUTHOR = "Montgomery Flora"
 REQUIRES_PYTHON = ">=3.6.0"
-VERSION = "0.0.8"
+VERSION = "0.0.0"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -126,14 +126,14 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=[	
-				"mintpy",
-				"mintpy.common", 
-				"mintpy.main", 
-				"mintpy.main.PermutationImportance",	
-				"mintpy.plot", 
-				],
-	package_data = {'mintpy' : ['common/data/*', 'common/models/*']},
+    packages=[
+                "pymint",
+                "pymint.common", 
+                "pymint.main", 
+                "pymint.main.PermutationImportance",
+                "pymint.plot", 
+                ],
+    package_data = {'pymint' : ['common/data/*', 'common/models/*']},
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     setup_requires=["flake8"],

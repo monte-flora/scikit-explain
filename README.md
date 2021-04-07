@@ -1,12 +1,12 @@
 <a href="url"><img src="images/mintpy_logo.png" align="right" height="400" width="400" ></a>
 
 
-<a href="hhttps://travis-ci.com/monte-flora/mintpy"><img src="https://travis-ci.com/monte-flora/mintpy.svg?branch=master"></a>
-[![codecov](https://codecov.io/gh/monte-flora/mintpy/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/mintpy)
-[![Updates](https://pyup.io/repos/github/monte-flora/mintpy/shield.svg)](https://pyup.io/repos/github/monte-flora/mintpy/)
-[![Python 3](https://pyup.io/repos/github/monte-flora/mintpy/python-3-shield.svg)](https://pyup.io/repos/github/monte-flora/mintpy/)
+<a href="hhttps://travis-ci.com/monte-flora/py-mint"><img src="https://travis-ci.com/monte-flora/py-mint.svg?branch=master"></a>
+[![codecov](https://codecov.io/gh/monte-flora/py-mint/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/py-mint)
+[![Updates](https://pyup.io/repos/github/monte-flora/py-mint/shield.svg)](https://pyup.io/repos/github/monte-flora/py-mint/)
+[![Python 3](https://pyup.io/repos/github/monte-flora/py-mint/python-3-shield.svg)](https://pyup.io/repos/github/monte-flora/pymint/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-![PyPI](https://img.shields.io/pypi/v/mintpy)
+![PyPI](https://img.shields.io/pypi/v/pymint)
 
 __PyMint__ (__Python-based Model INTerpretations__) is designed to be a user-friendly package for computing and plotting machine learning interpretation output in Python. Current computation includes partial dependence (PD), accumulated local effects (ALE), random forest-based feature contributions (treeinterpreter), single- and multiple-pass permutation importance, and Shapley Additive Explanations (SHAP). All of these methods are discussed at length in [Christoph Molnar's interpretable ML book](https://christophm.github.io/interpretable-ml-book/). Most calculations can be performed in parallel when multi-core processing is available. The primary feature of this package is the accompanying built-in plotting methods, which are desgined to be easy to use while producing publication-level quality figures. 
 
@@ -45,7 +45,7 @@ tqdm
 statsmodels
 ```
 
-### Initializing MintPy
+### Initializing PyMint
 The interface of PyMint is the ```InterpretToolkit```, which houses the computations and plotting methods
 for all the interpretability methods contained within. Once initialized ```InterpretToolkit``` can 
 compute a variety of interpretability methods and plot them. See the tutorial notebooks for examples. 
@@ -78,7 +78,7 @@ myInterpreter.plot_importance(method='multipass')
   <img width="811" src="images/multi_pass_perm_imp.png"  />
 </p>
 
-Sample notebook can be found here: [**Permutation Importance**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
+Sample notebook can be found here: [**Permutation Importance**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
 
 
 ## Partial dependence and Accumulated Local Effects 
@@ -102,13 +102,13 @@ Additionally, you can use the same code snippet to compute the second-order ALE 
 </p>
 
 Sample notebook can be found here: 
-- [**Accumulated Local effects**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/accumulated_local_effect_tutorial.ipynb) 
-- [**Partial Dependence**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/partial_dependence_tutorial.ipynb) 
+- [**Accumulated Local effects**](https://github.com/monte-flora/pymint/blob/master/tutorial_notebooks/accumulated_local_effect_tutorial.ipynb) 
+- [**Partial Dependence**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/partial_dependence_tutorial.ipynb) 
 
 
 ## Feature Contributions 
 
-To explain specific examples, you can use SHAP values. MintPy employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, MintPy will also include DeepSHAP for convolution neural network-based models. MintPy can create the summary and dependence plots from the shap python package, but is adapted for multiple predictors and an easier user interface. It is also possible to plot contributions for a single example or summarized by model performance. 
+To explain specific examples, you can use SHAP values. PyMint employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, PyMint will also include DeepSHAP for convolution neural network-based models. PyMint can create the summary and dependence plots from the shap python package, but is adapted for multiple predictors and an easier user interface. It is also possible to plot contributions for a single example or summarized by model performance. 
 
 ```python
 single_example = examples.iloc[[0]]
@@ -174,18 +174,18 @@ myInterpreter.plot_shap(features=features,
 </p>
 
 Sample notebook can be found here: 
-- [**Feature Contributions**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/feature_contributions.ipynb) 
-- [**SHAP-Style Plots**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/shap_style_plots.ipynb) 
+- [**Feature Contributions**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/feature_contributions.ipynb) 
+- [**SHAP-Style Plots**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/shap_style_plots.ipynb) 
 
 
 ## Tutorial notebooks
 
 The notebooks provides the package documentation and demonstrate PyMint API, which was used to create the above figures. 
 
-- [**Permutation Importance**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
-- [**Accumulated Local effects**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/accumulated_local_effect_tutorial.ipynb) 
-- [**Partial Dependence**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/partial_dependence_tutorial.ipynb) 
-- [**Feature Contributions**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/feature_contributions.ipynb) 
-- [**SHAP-Style Plots**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/shap_style_plots.ipynb) 
+- [**Permutation Importance**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
+- [**Accumulated Local effects**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/accumulated_local_effect_tutorial.ipynb) 
+- [**Partial Dependence**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/partial_dependence_tutorial.ipynb) 
+- [**Feature Contributions**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/feature_contributions.ipynb) 
+- [**SHAP-Style Plots**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/shap_style_plots.ipynb) 
 
 

@@ -10,12 +10,12 @@ current_dir = os.getcwd()
 path = os.path.dirname(current_dir)
 sys.path.append(path)
 
-import mintpy
+import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        model_objs, model_names = mintpy.load_models()
-        examples, targets = mintpy.load_data()
+        model_objs, model_names = pymint.load_models()
+        examples, targets = pymint.load_data()
         examples = examples.astype({'urban': 'category', 'rural':'category'})
         
         self.examples = examples
@@ -48,7 +48,7 @@ class Test1DPlotting(TestInterpretToolkit):
     def test_1d_plot(self):
         # Make sure the plot data is correct. 
         feature='X_1'
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,

@@ -11,12 +11,12 @@ current_dir = os.getcwd()
 path = os.path.dirname(current_dir)
 sys.path.append(path)
 
-import mintpy
+import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        model_objs, model_names = mintpy.load_models()
-        examples, targets = mintpy.load_data()
+        model_objs, model_names = pymint.load_models()
+        examples, targets = pymint.load_data()
         examples = examples.astype({'urban': 'category', 'rural':'category'})
         
         self.examples = examples
@@ -47,7 +47,7 @@ class TestInterpretToolkit(unittest.TestCase):
 class TestRankings(TestInterpretToolkit):
     def test_bad_evaluation_fn(self):
         # Make sure the metrics are correct
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,
@@ -64,7 +64,7 @@ class TestRankings(TestInterpretToolkit):
      
     def test_custom_evaluation_fn(self):
         # scoring_strategy exception for custom evaluation funcs 
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,
@@ -85,7 +85,7 @@ class TestRankings(TestInterpretToolkit):
         
     def test_shape(self):
         # Shape is correct (with bootstrapping) 
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,
@@ -107,7 +107,7 @@ class TestRankings(TestInterpretToolkit):
         
     def test_correct_rankings(self):
         # rankings are correct for simple case (for multi-pass, single-pass, and ale_variance)
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,
@@ -133,7 +133,7 @@ class TestRankings(TestInterpretToolkit):
                         )
 
     def test_ale_variance(self):
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,

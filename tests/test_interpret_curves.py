@@ -10,12 +10,12 @@ current_dir = os.getcwd()
 path = os.path.dirname(current_dir)
 sys.path.append(path)
 
-import mintpy
+import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        model_objs, model_names = mintpy.load_models()
-        examples, targets = mintpy.load_data()
+        model_objs, model_names = pymint.load_models()
+        examples, targets = pymint.load_data()
         examples = examples.astype({'urban': 'category', 'rural':'category'})
         
         self.examples = examples
@@ -46,7 +46,7 @@ class TestInterpretToolkit(unittest.TestCase):
 class TestInterpretCurves(TestInterpretToolkit):
     def test_bad_feature_names_exception(self):
         feature='bad_feature'
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.models[0],
                 model_names=self.model_names[0],
                 examples=self.examples,
@@ -60,7 +60,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         
     
     def test_too_many_bins(self):
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.models[0],
                 model_names=self.model_names[0],
                 examples=self.examples,
@@ -82,7 +82,7 @@ class TestInterpretCurves(TestInterpretToolkit):
     def test_results_shape(self):
         # Bootstrap has correct shape
         feature='X_1'
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,
@@ -95,7 +95,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         
     def test_xdata(self):
         # Bin values are correct. 
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,
@@ -116,7 +116,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         # ALE is correct for a simple case 
         # The coefficient of the ALE curves must 
         # match that of the actual coefficient. 
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,
@@ -134,7 +134,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         # PD is correct for a simple case 
         # The coefficient of the PD curves must 
         # match that of the actual coefficient. 
-        myInterpreter = mintpy.InterpretToolkit(
+        myInterpreter = pymint.InterpretToolkit(
                 models=self.lr,
                 model_names=self.lr_model_name,
                 examples=self.X,
