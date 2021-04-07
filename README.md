@@ -1,5 +1,5 @@
 <p>
-  <img src="https:///raw.githubusercontent.com/monte-flora/py-mint/raw/master/images/mintpy_logo.png" align="right" width="400" height="400" />
+  <img src="https://github.com/monte-flora/py-mint/blob/master/images/mintpy_logo.png?raw=true" align="right" width="400" height="400" />
 </p>
 
 
