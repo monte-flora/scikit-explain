@@ -1,4 +1,7 @@
-<a href="url"><img src="https:///raw.githubusercontent.com/monte-flora/py-mint/master/images/mintpy_logo.png" align="right" height="400" width="400" ></a>
+<p align="right">
+  <img src="https:///raw.githubusercontent.com/monte-flora/py-mint/master/images/mintpy_logo.png" width="400" height="400" />
+</p>
+
 
 <a href="https://travis-ci.com/monte-flora/mintpy"><img src="https://travis-ci.com/monte-flora/mintpy.svg?branch=master"></a>
 [![codecov](https://codecov.io/gh/monte-flora/mintpy/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/mintpy)
