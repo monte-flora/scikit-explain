@@ -26,7 +26,7 @@ URL = "https://github.com/monte-flora/py-mint/"
 EMAIL = "monte.flora@noaa.gov"
 AUTHOR = "Montgomery Flora"
 REQUIRES_PYTHON = ">=3.6.0"
-VERSION = "0.0.0"
+VERSION = "0.0.2"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -106,7 +106,7 @@ class UploadCommand(Command):
         os.system("{0} setup.py sdist bdist_wheel --universal".format(sys.executable))
 
         self.status("Uploading the package to PyPI via Twine…")
-        os.system("twine upload --repository testpypi dist/*")
+        os.system("twine upload --repository pypi dist/*")
 
         self.status("Pushing git tags…")
         os.system("git tag v{0}".format(about["__version__"]))
@@ -136,7 +136,7 @@ setup(
     package_data = {'pymint' : ['common/data/*', 'common/models/*']},
     install_requires=REQUIRED,
     extras_require=EXTRAS,
-    setup_requires=["flake8"],
+    setup_requires=["wheel"],
     include_package_data=True,
     license="MIT",
     classifiers=[
