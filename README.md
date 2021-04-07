@@ -8,32 +8,32 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ![PyPI](https://img.shields.io/pypi/v/mintpy)
 
-__MintPy__ (__Model INTerpretability in Python__) is designed to be a user-friendly package for computing and plotting machine learning interpretation output in Python. Current computation includes partial dependence (PD), accumulated local effects (ALE), random forest-based feature contributions (treeinterpreter), single- and multiple-pass permutation importance, and Shapley Additive Explanations (SHAP). All of these methods are discussed at length in [Christoph Molnar's interpretable ML book](https://christophm.github.io/interpretable-ml-book/). Most calculations can be performed in parallel when multi-core processing is available. The primary feature of this package is the accompanying built-in plotting methods, which are desgined to be easy to use while producing publication-level quality figures. 
+__PyMint__ (__Python-based Model INTerpretations__) is designed to be a user-friendly package for computing and plotting machine learning interpretation output in Python. Current computation includes partial dependence (PD), accumulated local effects (ALE), random forest-based feature contributions (treeinterpreter), single- and multiple-pass permutation importance, and Shapley Additive Explanations (SHAP). All of these methods are discussed at length in [Christoph Molnar's interpretable ML book](https://christophm.github.io/interpretable-ml-book/). Most calculations can be performed in parallel when multi-core processing is available. The primary feature of this package is the accompanying built-in plotting methods, which are desgined to be easy to use while producing publication-level quality figures. 
 
 The package is under active development and will likely contain bugs or errors. Feel free to raise issues!
 
 This package is largely original code, but also includes snippets from preexisting packages. Our goal is not take credit from other code authors, but to
-make a single source for computing several machine learning interpretation methods. Here is a list of packages used in MintPy: 
+make a single source for computing several machine learning interpretation methods. Here is a list of packages used in PyMint: 
 [**PyALE**](https://github.com/DanaJomar/PyALE),
 [**PermutationImportance**](https://github.com/gelijergensen/PermutationImportance),
 [**ALEPython**](https://github.com/blent-ai/ALEPython),
 [**SHAP**](https://github.com/slundberg/shap/), 
 [**Scikit-Learn**](https://github.com/scikit-learn/scikit-learn)
 
-If you employ MintPy in your research, please cite this github and the relevant packages listed above. 
+If you employ PyMint in your research, please cite this github and the relevant packages listed above. 
 
 ## Install
 
-MintPy can be installed through pip or conda-forge. 
+PyMint can be installed through pip or conda-forge. 
 ```
-pip install mintpy
+pip install py-mint
 or 
-conda install -c conda-forge mintpy
+conda install -c conda-forge py-mint
 ```
 
 ## Dependencies 
 
-MintPy is compatible with Python 3.6 or newer.  MintPy requires the following packages:
+PyMint is compatible with Python 3.6 or newer.  PyMint requires the following packages:
 ```
 numpy 
 pandas
@@ -46,19 +46,19 @@ statsmodels
 ```
 
 ### Initializing MintPy
-The interface of MintPy is the ```InterpretToolkit```, which houses the computations and plotting methods
+The interface of PyMint is the ```InterpretToolkit```, which houses the computations and plotting methods
 for all the interpretability methods contained within. Once initialized ```InterpretToolkit``` can 
 compute a variety of interpretability methods and plot them. See the tutorial notebooks for examples. 
 
 ```python
-import mintpy
+import pymint
 
 # Loads three ML models (random forest, gradient-boosted tree, and logistic regression)
 # trained on a subset of the road surface temperature data from Handler et al. (2020).
-model_objs, model_names = mintpy.load_models()
-examples, targets = mintpy.load_data()
+model_objs, model_names = pymint.load_models()
+examples, targets = pymint.load_data()
 
-myInterpreter = mintpy.InterpretToolkit(model=model_objs,
+myInterpreter = pymint.InterpretToolkit(model=model_objs,
                                  model_names=model_names,
                                  examples=examples,
                                  targets=targets,
@@ -66,7 +66,7 @@ myInterpreter = mintpy.InterpretToolkit(model=model_objs,
 ```
 ## Permutation Importance
 
-For predictor ranking, MintPy uses both single-pass and multiple-pass permutation importance method (Breiman 2001; Lakshmanan et al. 2015; McGovern et al. 2019).
+For predictor ranking, PyMint uses both single-pass and multiple-pass permutation importance method (Breiman 2001; Lakshmanan et al. 2015; McGovern et al. 2019).
 We can calculate the permutation importance and then plot the results. In the tutorial it discusses options to make the figure publication-quality giving the plotting method
 additional argument to convert the feature names to a more readable format or color coding by feature type. 
 ```python
@@ -112,7 +112,7 @@ To explain specific examples, you can use SHAP values. MintPy employs both Kerne
 
 ```python
 single_example = examples.iloc[[0]]
-myInterpreter = mintpy.InterpretToolkit(models=model_objs[0],
+myInterpreter = pymint.InterpretToolkit(models=model_objs[0],
                                  model_names=model_names[0],
                                  examples=single_example,
                                  targets=targets,
@@ -127,7 +127,7 @@ fig = myInterpreter.plot_contributions()
 </p>
 
 ```python
-myInterpreter = mintpy.InterpretToolkit(models=model_objs[0],
+myInterpreter = pymint.InterpretToolkit(models=model_objs[0],
                                  model_names=model_names[0],
                                  examples=examples,
                                  targets=targets,
@@ -143,7 +143,7 @@ fig = myInterpreter.plot_contributions()
 </p>
 
 ```python
-myInterpreter = mintpy.InterpretToolkit(models=model_objs[0],
+myInterpreter = pymint.InterpretToolkit(models=model_objs[0],
                                  model_names=model_names[0],
                                  examples=examples,
                                  targets=targets,
@@ -180,7 +180,7 @@ Sample notebook can be found here:
 
 ## Tutorial notebooks
 
-The notebooks provides the package documentation and demonstrate MintPy API, which was used to create the above figures. 
+The notebooks provides the package documentation and demonstrate PyMint API, which was used to create the above figures. 
 
 - [**Permutation Importance**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
 - [**Accumulated Local effects**](https://github.com/monte-flora/mintpy/blob/master/tutorial_notebooks/accumulated_local_effect_tutorial.ipynb) 
