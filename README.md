@@ -1,4 +1,4 @@
-<a href="url"><img src="images/mintpy_logo.png" align="right" height="400" width="400" ></a>
+<a href="url"><img src="https://github.com/monte-flora/py-mint/tree/master/images/mintpy_logo.png" align="right" height="400" width="400" ></a>
 
 
 <a href="https://travis-ci.com/monte-flora/py-mint"><img src="https://travis-ci.com/monte-flora/py-mint.svg?branch=master"></a>
