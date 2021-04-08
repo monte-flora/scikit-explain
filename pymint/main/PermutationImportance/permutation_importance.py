@@ -17,7 +17,7 @@ from .abstract_runner import abstract_variable_importance
 from .selection_strategies import (
     PermutationImportanceSelectionStrategy,
     ConditionalPermutationImportanceSelectionStrategy,
-    BackwardPermutationImportanceSelectionStrategy
+    ForwardPermutationImportanceSelectionStrategy
 )
 from .sklearn_api import (
     score_trained_sklearn_model,
@@ -39,7 +39,7 @@ def permutation_importance(
     variable_names=None,
     nimportant_vars=None,
     njobs=1,
-    perm_method="marginal",
+    direction='backward',
     verbose=False,
     random_state=None,
     **kwargs,
@@ -60,20 +60,20 @@ def permutation_importance(
         for. Defaults to all variables
     :param njobs: an integer for the number of threads to use. If negative, will
         use ``num_cpus + njobs``. Defaults to 1
-    :param perm_method: 'conditional' or 'marginal': whether to use conditional- or
-        marginal-based permutations.
+    :param direction: 'forward' or 'backward': Whether the top feature is left permuted (backward) 
+        or all features are permuted and the top features are progressively left unpermuted (forward). 
     :returns: :class:`PermutationImportance.result.ImportanceResult` object
         which contains the results for each run
     """
-    if perm_method == "conditional":
+    if direction == "conditional":
         selection_strategy = ConditionalPermutationImportanceSelectionStrategy
-    elif perm_method == "marginal":
+    elif direction == "backward":
         selection_strategy = PermutationImportanceSelectionStrategy
-    elif perm_method == 'backwards':
-        selection_strategy = BackwardPermutationImportanceSelectionStrategy
+    elif direction == 'forward':
+        selection_strategy = ForwardPermutationImportanceSelectionStrategy
     
     else:
-        raise ValueError(f'method must be "conditional", "marginal", or "backwards"!')
+        raise ValueError(f'method must be "conditional", "forward", or "backward"!')
 
     # We don't need the training data, so pass empty arrays to the abstract runner
     if scoring_data is None:
@@ -90,9 +90,8 @@ def permutation_importance(
             njobs=njobs,
             verbose=verbose,
             random_state=random_state,
-            perm_method=perm_method, 
+            direction=direction, 
         )
-
 
 def sklearn_permutation_importance(
     model,
@@ -101,7 +100,7 @@ def sklearn_permutation_importance(
     scoring_strategy,
     variable_names=None,
     nimportant_vars=None,
-    perm_method="marginal",
+    direction="backward",
     njobs=1,
     nbootstrap=1,
     subsample=1,
@@ -163,7 +162,7 @@ def sklearn_permutation_importance(
         nimportant_vars=nimportant_vars,
         njobs=njobs,
         verbose=verbose,
-        perm_method=perm_method,
+        direction=direction,
         random_state=random_state,
         **kwargs,
     )
