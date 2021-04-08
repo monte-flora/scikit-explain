@@ -255,11 +255,11 @@ class ConditionalPermutationImportanceSelectionStrategy(SelectionStrategy):
         return self.training_data, (complete_scoring_inputs, scoring_outputs)
     
     
-class BackwardPermutationImportanceSelectionStrategy(SelectionStrategy):
-    """Backward Permutation Importance permutes all variables and then tests 
+class ForwardPermutationImportanceSelectionStrategy(SelectionStrategy):
+    """Forward Permutation Importance permutes all variables and then tests 
        all variables which are not yet considered."""
 
-    name = "Backward Permutation Importance"
+    name = "Forward Permutation Importance"
 
     def __init__(
         self,
@@ -278,7 +278,7 @@ class BackwardPermutationImportanceSelectionStrategy(SelectionStrategy):
         :param important_vars: a list of the indices of variables which are
             already considered important
         """
-        super(BackwardPermutationImportanceSelectionStrategy, self).__init__(
+        super(ForwardPermutationImportanceSelectionStrategy, self).__init__(
             training_data, scoring_data, num_vars, important_vars
         )
 
