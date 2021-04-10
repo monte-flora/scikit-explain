@@ -20,13 +20,13 @@ from distutils.version import LooseVersion
 NAME = "py-mint"
 DESCRIPTION = (
     "PyMint (Python-based Model INTerpretations) is a user-friendly python package"
-    + "for computing and plotting machine learning interpretation output."
+    + " for computing and plotting machine learning interpretation output."
 )
 URL = "https://github.com/monte-flora/py-mint/"
 EMAIL = "monte.flora@noaa.gov"
 AUTHOR = "Montgomery Flora"
 REQUIRES_PYTHON = ">=3.6.0"
-VERSION = "0.0.2"
+VERSION = "0.0.3"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -37,7 +37,8 @@ REQUIRED = [
     "shap>=0.30.0",
     "xarray>=0.16.0",
     "tqdm", 
-    "statsmodels"
+    "statsmodels",
+    "stanford_theme"
 ]
 
 # What packages are optional?

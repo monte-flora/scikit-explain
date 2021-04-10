@@ -75,8 +75,8 @@ class InterpretToolkit(Attributes):
     -----------
     
     estimators : model object, list of model objects
-        A fitted estimator object or list thereof implementing `predict` or 
-        `predict_proba`.
+        A fitted estimator object or list thereof implementing ``predict`` or 
+        ``predict_proba``.
         Multioutput-multiclass classifiers are not supported.
         
     estimator_names : string, list
@@ -84,22 +84,21 @@ class InterpretToolkit(Attributes):
 
     X : {array-like or dataframe} of shape (n_samples, n_features)
         Training or validation data used to compute the IML methods.
-        If ndnumpy.array, must specify `feature_names`
+        If ndnumpy.array, must specify `feature_names`.
 
     y : {list or numpy.array} of shape (n_samples,)
-        The target values (class labels in classification, real numbers in
-            regression).
+        The target values (class labels in classification, real numbers in regression).
 
-    estimator_output : "raw" or "probability"
+    estimator_output : ``"raw"`` or ``"probability"``
         What output of the estimator should be explained. Determined internally by
         InterpretToolkit. However, if using a classification model, the user
         can set to "raw" for non-probabilistic output. 
 
     feature_names : array-like of shape (n_features,), dtype=str, default=None
-        Name of each feature; `feature_names[i]` holds the name of the feature
-        with index `i`. By default, the name of the feature corresponds to their numerical
+        Name of each feature; ``feature_names[i]`` holds the name of the feature
+        with index ``i``. By default, the name of the feature corresponds to their numerical
         index for NumPy array and their column name for pandas dataframe. 
-        Feature names are only required if X is an ndnumpy.array, a it will be 
+        Feature names are only required if ``X`` is an ndnumpy.array, a it will be 
         converted to a pandas.DataFrame internally. 
     
     Raises
@@ -946,7 +945,7 @@ class InterpretToolkit(Attributes):
         """
         Compute the second-order Friedman's H-statistic for computing feature interactions [11]_ [12]_. 
         Based on equation (44) from Friedman and Popescu (2008) [12]_. Only computes the interaction strength 
-        between two features. In future versions of PyMint he hope to include the first-order H-statistics
+        between two features. In future versions of PyMint we hope to include the first-order H-statistics
         that measure the interaction between a single feature and the 
         remaining set of features.
         

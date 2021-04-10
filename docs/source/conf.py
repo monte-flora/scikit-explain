@@ -13,6 +13,7 @@
 from os.path import dirname
 import os
 import sys
+import stanford_theme
 
 current_dir = os.getcwd()
 path = dirname(dirname(current_dir))
@@ -20,7 +21,6 @@ sys.path.append(path)
 sys.path.append(os.path.join(path, 'pymint'))
 sys.path.insert(0, os.path.abspath('../../'))
 sys.path.insert(0, os.path.abspath('sphinxext'))
-print(sys.path)
     
 # -- Project information -----------------------------------------------------
 
@@ -69,7 +69,8 @@ exclude_patterns = []
 
 html_tile=project
 
-html_theme = 'sphinx_audeering_theme'
+html_theme = "stanford_theme"
+html_theme_path = [stanford_theme.get_html_theme_path()]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
