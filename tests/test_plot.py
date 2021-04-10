@@ -14,22 +14,22 @@ import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        model_objs, model_names = pymint.load_models()
-        examples, targets = pymint.load_data()
-        examples = examples.astype({'urban': 'category', 'rural':'category'})
+        estimator_objs, estimator_names = pymint.load_models()
+        X_clf, y_clf = pymint.load_data()
+        X_clf = X_clf.astype({'urban': 'category', 'rural':'category'})
         
-        self.examples = examples
-        self.targets = targets
-        self.models = model_objs
-        self.model_names = model_names
+        self.X_clf = X_clf
+        self.y_clf = y_clf
+        self.estimators = estimator_objs
+        self.estimator_names = estimator_names
         
         random_state=np.random.RandomState(42)
         
-        # Fit a simple 5-variable linear regression model. 
-        n_examples = 1000
+        # Fit a simple 5-variable linear regression estimator. 
+        n_X = 1000
         n_vars = 5 
         weights = [2.0, 1.5, 1.2, 0.5, 0.2]
-        X = np.stack([random_state.uniform(0,1, size=n_examples) for _ in range(n_vars)], axis=-1)
+        X = np.stack([random_state.uniform(0,1, size=n_X) for _ in range(n_vars)], axis=-1)
         feature_names = [f'X_{i+1}' for i in range(n_vars)]
         X = pd.DataFrame(X, columns=feature_names)
         y = X.dot(weights)
@@ -40,7 +40,7 @@ class TestInterpretToolkit(unittest.TestCase):
         self.X=X
         self.y=y
         self.lr = lr 
-        self.lr_model_name = 'Linear Regression'
+        self.lr_estimator_name = 'Linear Regression'
         self.weights=weights
         
 class Test1DPlotting(TestInterpretToolkit):
@@ -48,17 +48,17 @@ class Test1DPlotting(TestInterpretToolkit):
     def test_1d_plot(self):
         # Make sure the plot data is correct. 
         feature='X_1'
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             )
-        results = myInterpreter.calc_ale(features=feature, n_bins=30, n_bootstrap=1)
-        ydata = results[f'{feature}__{self.lr_model_name}__ale'].values[0,:]
+        results = explainer.ale(features=feature, n_bins=30, n_bootstrap=1)
+        ydata = results[f'{feature}__{self.lr_estimator_name}__ale'].values[0,:]
         xdata = results[f'{feature}__bin_values'].values
         
-        fig, ax = myInterpreter.plot_ale(features=feature)
+        fig, ax = explainer.plot_ale(ale=results, features=feature)
         
         ## effect line
         eff_plt_data = ax.lines[0].get_xydata()

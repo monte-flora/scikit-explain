@@ -14,22 +14,22 @@ import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        model_objs, model_names = pymint.load_models()
-        examples, targets = pymint.load_data()
-        examples = examples.astype({'urban': 'category', 'rural':'category'})
+        estimator_objs, estimator_names = pymint.load_models()
+        X_clf, y_clf = pymint.load_data()
+        X_clf = X_clf.astype({'urban': 'category', 'rural':'category'})
         
-        self.examples = examples
-        self.targets = targets
-        self.models = model_objs
-        self.model_names = model_names
+        self.X_clf = X_clf
+        self.y_clf = y_clf
+        self.estimators = estimator_objs
+        self.estimator_names = estimator_names
         
         random_state=np.random.RandomState(42)
         
-        # Fit a simple 5-variable linear regression model. 
-        n_examples = 1000
+        # Fit a simple 5-variable linear regression estimator. 
+        n_X = 1000
         n_vars = 5 
         weights = [2.0, 1.5, 1.2, 0.5, 0.2]
-        X = np.stack([random_state.uniform(0,1, size=n_examples) for _ in range(n_vars)], axis=-1)
+        X = np.stack([random_state.uniform(0,1, size=n_X) for _ in range(n_vars)], axis=-1)
         feature_names = [f'X_{i+1}' for i in range(n_vars)]
         X = pd.DataFrame(X, columns=feature_names)
         y = X.dot(weights)
@@ -40,38 +40,39 @@ class TestInterpretToolkit(unittest.TestCase):
         self.X=X
         self.y=y
         self.lr = lr 
-        self.lr_model_name = 'Linear Regression'
+        self.lr_estimator_name = 'Linear Regression'
         self.weights=weights
         
 class TestInterpretCurves(TestInterpretToolkit):
     def test_bad_feature_names_exception(self):
         feature='bad_feature'
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.models[0],
-                model_names=self.model_names[0],
-                examples=self.examples,
-                targets=self.targets
+        explainer = pymint.InterpretToolkit(
+                estimators=self.estimators[0],
+                estimator_names=self.estimator_names[0],
+                X=self.X_clf,
+                y=self.y_clf
             )
         with self.assertRaises(KeyError) as ex:
-            myInterpreter.calc_ale(features=feature)
+            explainer.ale(features=feature)
 
         except_msg = f"'{feature}' is not a valid feature."
         self.assertEqual(ex.exception.args[0], except_msg)
         
     
     def test_too_many_bins(self):
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.models[0],
-                model_names=self.model_names[0],
-                examples=self.examples,
-                targets=self.targets
+        explainer = pymint.InterpretToolkit(
+                estimators=self.estimators[0],
+                estimator_names=self.estimator_names[0],
+                X=self.X_clf,
+                y=self.y_clf
             )
+        
         n_bins=100
         with self.assertRaises(ValueError) as ex:
-            myInterpreter.calc_ale(features=['temp2m'],
-                                             subsample=100,
-                                             n_bins=n_bins,
-                                            )
+            explainer.ale(features=['temp2m'],
+                           subsample=100,
+                           n_bins=n_bins,
+                           )
         except_msg = f"""
                                  The value of n_bins ({n_bins}) is likely too 
                                  high relative to the sample size of the data. Either increase
@@ -82,27 +83,27 @@ class TestInterpretCurves(TestInterpretToolkit):
     def test_results_shape(self):
         # Bootstrap has correct shape
         feature='X_1'
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             )
-        results = myInterpreter.calc_ale(features=feature, n_bins=10, n_bootstrap=5)
-        ydata = results[f'{feature}__{self.lr_model_name}__ale'].values
+        results = explainer.ale(features=feature, n_bins=10, n_bootstrap=5)
+        ydata = results[f'{feature}__{self.lr_estimator_name}__ale'].values
     
         self.assertEqual(ydata.shape, (5,10))
         
     def test_xdata(self):
         # Bin values are correct. 
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             ) 
         feature='X_1'
-        results = myInterpreter.calc_ale(features=feature, n_bins=5)
+        results = explainer.ale(features=feature, n_bins=5)
         xdata = results[f'{feature}__bin_values'].values
 
         self.assertCountEqual(np.round(xdata,8), 
@@ -116,17 +117,17 @@ class TestInterpretCurves(TestInterpretToolkit):
         # ALE is correct for a simple case 
         # The coefficient of the ALE curves must 
         # match that of the actual coefficient. 
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             ) 
         feature='X_1'
-        results = myInterpreter.calc_ale(features=feature, n_bins=5)
+        results = explainer.ale(features=feature, n_bins=5)
         lr = LinearRegression()
         lr.fit(results[f'{feature}__bin_values'].values.reshape(-1, 1), 
-               results[f'{feature}__{self.lr_model_name}__ale'].values[0,:])
+               results[f'{feature}__{self.lr_estimator_name}__ale'].values[0,:])
 
         self.assertAlmostEqual(lr.coef_[0], self.weights[0]) 
 
@@ -134,17 +135,17 @@ class TestInterpretCurves(TestInterpretToolkit):
         # PD is correct for a simple case 
         # The coefficient of the PD curves must 
         # match that of the actual coefficient. 
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             ) 
         feature='X_1'
-        results = myInterpreter.calc_pd(features=feature, n_bins=5)
+        results = explainer.pd(features=feature, n_bins=5)
         lr = LinearRegression()
         lr.fit(results[f'{feature}__bin_values'].values.reshape(-1, 1), 
-               results[f'{feature}__{self.lr_model_name}__pd'].values[0,:])
+               results[f'{feature}__{self.lr_estimator_name}__pd'].values[0,:])
 
         self.assertAlmostEqual(lr.coef_[0], self.weights[0])     
     

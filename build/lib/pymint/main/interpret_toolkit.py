@@ -118,7 +118,7 @@ class InterpretToolkit(Attributes):
             
         return ds
     
-    def calc_permutation_importance(self, n_vars, evaluation_fn="auprc", perm_method='marginal',
+    def calc_permutation_importance(self, n_vars, evaluation_fn="auprc", direction='backward',
             subsample=1.0, n_jobs=1, n_bootstrap=None, scoring_strategy=None, verbose=False, random_state=None ):
         """
         Performs single-pass and/or multi-pass permutation importance using the PermutationImportance 
@@ -170,8 +170,9 @@ class InterpretToolkit(Attributes):
             feature.
             Pass an int to get reproducible results across function calls.
         
-        perm_method : 'marginal' or 'conditional'
-            Whether to use marginal- or conditional-based permutations. 
+        direction : 'forward' or 'backward'
+            Whether the top feature is left permuted (backward) or all features are permuted and 
+            the top features are progressively left unpermuted (forward). 
         
         verbose : boolean
             True for print statements on the progress
@@ -191,13 +192,13 @@ class InterpretToolkit(Attributes):
                                                     n_bootstrap=n_bootstrap,
                                                     scoring_strategy=scoring_strategy,
                                                     verbose=verbose,
-                                                    perm_method=perm_method,
+                                                    direction=direction,
                                                     random_state=random_state
                                                    )
         
         self.attrs_dict['n_multipass_vars'] = n_vars
         self.attrs_dict['method'] = 'permutation_importance'
-        self.attrs_dict['perm_method'] = perm_method 
+        self.attrs_dict['direction'] = direction
         self.attrs_dict['evaluation_fn'] = evaluation_fn
         results_ds = self._append_attributes(results_ds)
     

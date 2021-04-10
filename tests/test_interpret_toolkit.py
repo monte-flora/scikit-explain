@@ -12,69 +12,69 @@ import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        model_objs, model_names = pymint.load_models()
-        examples, targets = pymint.load_data()
-        examples = examples.astype({'urban': 'category', 'rural':'category'})
+        estimator_objs, estimator_names = pymint.load_models()
+        X, y = pymint.load_data()
+        X = X.astype({'urban': 'category', 'rural':'category'})
         
-        self.examples = examples
-        self.targets = targets
-        self.models = model_objs
-        self.model_names = model_names
+        self.X = X
+        self.y = y
+        self.estimators = estimator_objs
+        self.estimator_names = estimator_names
         
 class TestInitializeInterpretToolkit(TestInterpretToolkit):
     """Test for proper initialization of InterpretToolkit"""
-    def test_model_has_been_fit(self):
-        # Models must be fit! 
+    def test_estimator_has_been_fit(self):
+        # estimators must be fit! 
         with self.assertRaises(Exception) as ex:
             pymint.InterpretToolkit(
-                models=RandomForestRegressor(),
-                model_names='Random Forest',
-                examples=self.examples,
-                targets=self.targets
+                estimators=RandomForestRegressor(),
+                estimator_names='Random Forest',
+                X=self.X,
+                y=self.y
             )
-        except_msg = "One or more of the models given has NOT been fit!"
+        except_msg = "One or more of the estimators given has NOT been fit!"
         print(ex.exception.args[0], except_msg)
         self.assertEqual(ex.exception.args[0], except_msg)
         
-    def test_model_and_model_names(self):
-        # List of model names != list of model_objs 
+    def test_estimator_and_estimator_names(self):
+        # List of estimator names != list of estimator_objs 
         with self.assertRaises(Exception) as ex:
             pymint.InterpretToolkit(
-                models=self.models[0],
-                model_names=self.model_names[:2],
-                examples=self.examples,
-                targets=self.targets
+                estimators=self.estimators[0],
+                estimator_names=self.estimator_names[:2],
+                X=self.X,
+                y=self.y
             )
-        except_msg = "Number of model objects is not equal to the number of model names given!"
+        except_msg = "Number of estimator objects is not equal to the number of estimator names given!"
         self.assertEqual(ex.exception.args[0], except_msg)
         
-    def test_examples_and_feature_names(self):
-        # Feature names must be provided if examples is an numpy.array. 
+    def test_X_and_feature_names(self):
+        # Feature names must be provided if X is an numpy.array. 
         with self.assertRaises(Exception) as ex:
             pymint.InterpretToolkit(
-                models=self.models[0],
-                model_names=self.model_names[0],
-                examples=self.examples.values,
-                targets=self.targets,
+                estimators=self.estimators[0],
+                estimator_names=self.estimator_names[0],
+                X=self.X.values,
+                y=self.y,
                 feature_names=None, 
             )
         except_msg = "Feature names must be specified if using NumPy array."
         self.assertEqual(ex.exception.args[0], except_msg)
         
-    def test_model_output(self):
-        model_output='regression'
+    def test_estimator_output(self):
+        estimator_output='regression'
         available_options = ["raw", "probability"]
         with self.assertRaises(Exception) as ex:
             pymint.InterpretToolkit(
-                models=self.models[0],
-                model_names=self.model_names[0],
-                examples=self.examples,
-                targets=self.targets,
-                model_output=model_output,
+                estimators=self.estimators[0],
+                estimator_names=self.estimator_names[0],
+                X=self.X,
+                y=self.y,
+                estimator_output=estimator_output,
 
             )
         except_msg = f"""
-                                {model_output} is not an accepted options. 
+                                {estimator_output} is not an accepted options. 
                                  The available options are {available_options}.
                                  Check for syntax errors!
                                  """
