@@ -10,7 +10,7 @@ source:
   sha256: 9c3ee7752f950b76ba931abf7438f9b302eef9f369395fed951396569a587d4a
 
 build:
-  noarch: python >=3.6
+  noarch: python
   number: 0
   script: "{{ PYTHON }} -m pip install . -vv"
 
@@ -50,8 +50,8 @@ about:
   license: MIT
   license_family: MIT
   license_file: LICENSE.txt 
-  summary: "PyMint (Python-based Model INTerpretations) is a user-friendly python packagefor computing and plotting machine learning interpretation output."
-  doc_url: "https://github.com/monte-flora/py-mint/" 
+  summary: "PyMint (Python-based Model INTerpretations) is a user-friendly python package for computing and plotting machine learning interpretation output."
+  doc_url: "https://py-mint.readthedocs.io/en/master/
   dev_url: "https://github.com/monte-flora/py-mint/"
 
 extra:
