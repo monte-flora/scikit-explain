@@ -6,7 +6,7 @@
 <a href="https://travis-ci.com/monte-flora/mintpy"><img src="https://travis-ci.com/monte-flora/mintpy.svg?branch=master"></a>
 [![codecov](https://codecov.io/gh/monte-flora/mintpy/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/mintpy)
 [![Updates](https://pyup.io/repos/github/monte-flora/py-mint/shield.svg)](https://pyup.io/repos/github/monte-flora/py-mint/)
-[![Python 3](https://pyup.io/repos/github/monte-flora/mintpy/python-3-shield.svg)](https://pyup.io/repos/github/monte-flora/mintpy/)
+[![Python 3](https://pyup.io/repos/github/monte-flora/py-mint/python-3-shield.svg)](https://pyup.io/repos/github/monte-flora/py-mint/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ![PyPI](https://img.shields.io/pypi/v/py-mint)
 [![Documentation Status](https://readthedocs.org/projects/py-mint/badge/?version=latest)](https://py-mint.readthedocs.io/en/latest/?badge=latest)
