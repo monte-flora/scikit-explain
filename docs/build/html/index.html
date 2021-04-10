@@ -1,8 +1,8 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="" > <!--<![endif]-->
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
   <meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
@@ -14,10 +14,6 @@
 
   
   
-    <link rel="shortcut icon" href="_static/favicon.png"/>
-  
-  
-  
 
   
 
@@ -28,20 +24,24 @@
   
 
   
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/audeering.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    
   
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="PyMint v0.0.1 documentation" href="#"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav">
+<body class="wy-body-for-nav" role="document">
 
    
   <div class="wy-grid-for-nav">
@@ -52,12 +52,10 @@
         <div class="wy-side-nav-search">
           
 
-          <a href="#">
           
-            <img src="_static/images/audeering.svg" class="logo" alt="audEERING"/>
+            <a href="#" class="icon icon-home"> PyMint
           
-          
-            <span> PyMint</span>
+
           
           </a>
 
@@ -82,11 +80,8 @@
           
             
             
-              
-            
-            
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
+                <!-- Local TOC -->
+                <div class="local-toc"><ul>
 <li><a class="reference internal" href="#">PyMint Documentation</a></li>
 <li><a class="reference internal" href="#installation">Installation</a></li>
 <li><a class="reference internal" href="#module-pymint.main.interpret_toolkit">Documentation</a><ul>
@@ -107,7 +102,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" aria-label="top navigation">
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="#">PyMint</a>
@@ -115,10 +110,9 @@
       </nav>
 
 
+      
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
           
 
 
@@ -147,9 +141,7 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            
-              <a href="https://gitlab.audeering.com/monte-flora/py-mint/blob/master/docs/index.rst" class="fa fa-gitlab"> Edit on GitLab</a>
-            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -220,24 +212,20 @@ In future versions of PyMint, we hope to be compatiable with multi-class classif
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>estimators</strong> (<em>model object</em><em>, </em><em>list of model objects</em>) – A fitted estimator object or list thereof implementing <cite>predict</cite> or
-<cite>predict_proba</cite>.
+<li><p><strong>estimators</strong> (<em>model object</em><em>, </em><em>list of model objects</em>) – A fitted estimator object or list thereof implementing <code class="docutils literal notranslate"><span class="pre">predict</span></code> or
+<code class="docutils literal notranslate"><span class="pre">predict_proba</span></code>.
 Multioutput-multiclass classifiers are not supported.</p></li>
 <li><p><strong>estimator_names</strong> (<em>string</em><em>, </em><em>list</em>) – Names of the estimators (for internal and plotting purposes)</p></li>
 <li><p><strong>X</strong> (<em>{array-like</em><em> or </em><em>dataframe} of shape</em><em> (</em><em>n_samples</em><em>, </em><em>n_features</em><em>)</em>) – Training or validation data used to compute the IML methods.
-If ndnumpy.array, must specify <cite>feature_names</cite></p></li>
-<li><p><strong>y</strong> (<em>{list</em><em> or </em><em>numpy.array} of shape</em><em> (</em><em>n_samples</em><em>,</em><em>)</em>) – <dl class="simple">
-<dt>The target values (class labels in classification, real numbers in</dt><dd><p>regression).</p>
-</dd>
-</dl>
-</p></li>
-<li><p><strong>estimator_output</strong> (<em>&quot;raw&quot;</em><em> or </em><em>&quot;probability&quot;</em>) – What output of the estimator should be explained. Determined internally by
+If ndnumpy.array, must specify <cite>feature_names</cite>.</p></li>
+<li><p><strong>y</strong> (<em>{list</em><em> or </em><em>numpy.array} of shape</em><em> (</em><em>n_samples</em><em>,</em><em>)</em>) – The target values (class labels in classification, real numbers in regression).</p></li>
+<li><p><strong>estimator_output</strong> (<code class="docutils literal notranslate"><span class="pre">&quot;raw&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;probability&quot;</span></code>) – What output of the estimator should be explained. Determined internally by
 InterpretToolkit. However, if using a classification model, the user
 can set to “raw” for non-probabilistic output.</p></li>
-<li><p><strong>feature_names</strong> (<em>array-like of shape</em><em> (</em><em>n_features</em><em>,</em><em>)</em><em>, </em><em>dtype=str</em><em>, </em><em>default=None</em>) – Name of each feature; <cite>feature_names[i]</cite> holds the name of the feature
-with index <cite>i</cite>. By default, the name of the feature corresponds to their numerical
+<li><p><strong>feature_names</strong> (<em>array-like of shape</em><em> (</em><em>n_features</em><em>,</em><em>)</em><em>, </em><em>dtype=str</em><em>, </em><em>default=None</em>) – Name of each feature; <code class="docutils literal notranslate"><span class="pre">feature_names[i]</span></code> holds the name of the feature
+with index <code class="docutils literal notranslate"><span class="pre">i</span></code>. By default, the name of the feature corresponds to their numerical
 index for NumPy array and their column name for pandas dataframe.
-Feature names are only required if X is an ndnumpy.array, a it will be
+Feature names are only required if <code class="docutils literal notranslate"><span class="pre">X</span></code> is an ndnumpy.array, a it will be
 converted to a pandas.DataFrame internally.</p></li>
 </ul>
 </dd>
@@ -438,7 +426,7 @@ A Simple and Effective estimator-Based Variable Importance Measure. Arxiv,.</p>
 <code class="sig-name descname"><span class="pre">friedman_h_stat</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pd_1d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pd_2d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pymint/main/interpret_toolkit.html#InterpretToolkit.friedman_h_stat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pymint.main.interpret_toolkit.InterpretToolkit.friedman_h_stat" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the second-order Friedman’s H-statistic for computing feature interactions <a class="footnote-reference brackets" href="#id10" id="id7">11</a> <a class="footnote-reference brackets" href="#id11" id="id8">12</a>.
 Based on equation (44) from Friedman and Popescu (2008) <a class="footnote-reference brackets" href="#id11" id="id9">12</a>. Only computes the interaction strength
-between two features. In future versions of PyMint he hope to include the first-order H-statistics
+between two features. In future versions of PyMint we hope to include the first-order H-statistics
 that measure the interaction between a single feature and the
 remaining set of features.</p>
 <p class="rubric">References</p>
@@ -1449,47 +1437,22 @@ We have a mailing list located at: <a class="reference external" href="mailto:mo
 
 
            </div>
-           
           </div>
           <footer>
   
 
   <hr/>
 
-  <div>
-      
-      
-      
-      
-      
-      
-      
-        <ul>
-          <li><a href="http://data.pp.audeering.com">Data</a></li>
-          <li><a href="http://devops.pp.audeering.com/sphinx/">Documentation</a></li>
-          <li><a href="http://devops.pp.audeering.com">Infrastructure</a></li>
-          <li><a href="http://models.pp.audeering.com">Models</a></li>
-          <li><a href="http://devops.pp.audeering.com/python/">Python</a></li>
-          <li><a href="http://tools.pp.audeering.com">Tools</a></li>
-        </ul>
-      
-    <p>
-        
-        
-        
-          Built with <a href="https://www.sphinx-doc.org/en/master/">Sphinx</a> on 2021/04/10 using the <a href="https://github.com/audeering/sphinx-audeering-theme/">audEERING theme</a>
-        
-    </p>
-  </div>
-
   <div role="contentinfo">
     <p>
-        
-      &copy; 2021, Montgomery Flora; Shawn Handler
+        &copy; Copyright 2021, Montgomery Flora; Shawn Handler.
+
     </p>
-  </div> 
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> and ❤️  using a custom <a href="https://github.com/LinxiFan/Stanford-theme">theme</a> based on <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
+
         </div>
       </div>
 
@@ -1499,30 +1462,37 @@ We have a mailing list located at: <a class="reference external" href="mailto:mo
   
 
 
-
-  
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
   
 
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
-    
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'v0.0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
 
   
 
-  <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
 
+  
+  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
+          SphinxRtdTheme.StickyNav.enable();
       });
-  </script> 
+  </script>
+   
 
 </body>
 </html>

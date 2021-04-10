@@ -13,7 +13,6 @@
 from os.path import dirname
 import os
 import sys
-import stanford_theme
 
 current_dir = os.getcwd()
 path = dirname(dirname(current_dir))
@@ -43,6 +42,7 @@ extensions = ['sphinx.ext.autodoc',
                "sphinx.ext.intersphinx",
                 "sphinx.ext.mathjax",
                 "sphinx.ext.viewcode",
+               "stanford_theme"
              ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,8 +69,16 @@ exclude_patterns = []
 
 html_tile=project
 
-html_theme = "stanford_theme"
-html_theme_path = [stanford_theme.get_html_theme_path()]
+# on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+
+if not on_rtd:  # only import and set the theme if we're building docs locally
+    import stanford_theme
+    html_theme = 'stanford_theme'
+    html_theme_path = [stanford_theme.get_html_theme_path()]
+
+# otherwise, readthedocs.org uses their theme by default, so no need to specify it
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

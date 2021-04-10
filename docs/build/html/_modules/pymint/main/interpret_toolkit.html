@@ -1,8 +1,8 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="" > <!--<![endif]-->
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
   
@@ -13,10 +13,6 @@
 
   
   
-    <link rel="shortcut icon" href="../../../_static/favicon.png"/>
-  
-  
-  
 
   
 
@@ -27,20 +23,25 @@
   
 
   
-  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../../../_static/css/audeering.css" type="text/css" />
-  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-    <link rel="index" title="Index" href="../../../genindex.html" />
-    <link rel="search" title="Search" href="../../../search.html" />
-    
   
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+        <link rel="search" title="Search" href="../../../search.html"/>
+    <link rel="top" title="PyMint v0.0.1 documentation" href="../../../index.html"/>
+        <link rel="up" title="Module code" href="../../index.html"/> 
 
   
   <script src="../../../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav">
+<body class="wy-body-for-nav" role="document">
 
    
   <div class="wy-grid-for-nav">
@@ -51,12 +52,10 @@
         <div class="wy-side-nav-search">
           
 
-          <a href="../../../index.html">
           
-            <img src="../../../_static/images/audeering.svg" class="logo" alt="audEERING"/>
+            <a href="../../../index.html" class="icon icon-home"> PyMint
           
-          
-            <span> PyMint</span>
+
           
           </a>
 
@@ -81,11 +80,8 @@
           
             
             
-              
-            
-            
-              <!-- Local TOC -->
-              <div class="local-toc"></div>
+                <!-- Local TOC -->
+                <div class="local-toc"></div>
             
           
         </div>
@@ -95,7 +91,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" aria-label="top navigation">
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../../../index.html">PyMint</a>
@@ -103,10 +99,9 @@
       </nav>
 
 
+      
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
           
 
 
@@ -135,6 +130,8 @@
     
     
       <li class="wy-breadcrumbs-aside">
+        
+            
         
       </li>
     
@@ -224,8 +221,8 @@
 <span class="sd">    -----------</span>
 <span class="sd">    </span>
 <span class="sd">    estimators : model object, list of model objects</span>
-<span class="sd">        A fitted estimator object or list thereof implementing `predict` or </span>
-<span class="sd">        `predict_proba`.</span>
+<span class="sd">        A fitted estimator object or list thereof implementing ``predict`` or </span>
+<span class="sd">        ``predict_proba``.</span>
 <span class="sd">        Multioutput-multiclass classifiers are not supported.</span>
 <span class="sd">        </span>
 <span class="sd">    estimator_names : string, list</span>
@@ -233,22 +230,21 @@
 
 <span class="sd">    X : {array-like or dataframe} of shape (n_samples, n_features)</span>
 <span class="sd">        Training or validation data used to compute the IML methods.</span>
-<span class="sd">        If ndnumpy.array, must specify `feature_names`</span>
+<span class="sd">        If ndnumpy.array, must specify `feature_names`.</span>
 
 <span class="sd">    y : {list or numpy.array} of shape (n_samples,)</span>
-<span class="sd">        The target values (class labels in classification, real numbers in</span>
-<span class="sd">            regression).</span>
+<span class="sd">        The target values (class labels in classification, real numbers in regression).</span>
 
-<span class="sd">    estimator_output : &quot;raw&quot; or &quot;probability&quot;</span>
+<span class="sd">    estimator_output : ``&quot;raw&quot;`` or ``&quot;probability&quot;``</span>
 <span class="sd">        What output of the estimator should be explained. Determined internally by</span>
 <span class="sd">        InterpretToolkit. However, if using a classification model, the user</span>
 <span class="sd">        can set to &quot;raw&quot; for non-probabilistic output. </span>
 
 <span class="sd">    feature_names : array-like of shape (n_features,), dtype=str, default=None</span>
-<span class="sd">        Name of each feature; `feature_names[i]` holds the name of the feature</span>
-<span class="sd">        with index `i`. By default, the name of the feature corresponds to their numerical</span>
+<span class="sd">        Name of each feature; ``feature_names[i]`` holds the name of the feature</span>
+<span class="sd">        with index ``i``. By default, the name of the feature corresponds to their numerical</span>
 <span class="sd">        index for NumPy array and their column name for pandas dataframe. </span>
-<span class="sd">        Feature names are only required if X is an ndnumpy.array, a it will be </span>
+<span class="sd">        Feature names are only required if ``X`` is an ndnumpy.array, a it will be </span>
 <span class="sd">        converted to a pandas.DataFrame internally. </span>
 <span class="sd">    </span>
 <span class="sd">    Raises</span>
@@ -1095,7 +1091,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the second-order Friedman&#39;s H-statistic for computing feature interactions [11]_ [12]_. </span>
 <span class="sd">        Based on equation (44) from Friedman and Popescu (2008) [12]_. Only computes the interaction strength </span>
-<span class="sd">        between two features. In future versions of PyMint he hope to include the first-order H-statistics</span>
+<span class="sd">        between two features. In future versions of PyMint we hope to include the first-order H-statistics</span>
 <span class="sd">        that measure the interaction between a single feature and the </span>
 <span class="sd">        remaining set of features.</span>
 <span class="sd">        </span>
@@ -2050,47 +2046,22 @@
 </pre></div>
 
            </div>
-           
           </div>
           <footer>
   
 
   <hr/>
 
-  <div>
-      
-      
-      
-      
-      
-      
-      
-        <ul>
-          <li><a href="http://data.pp.audeering.com">Data</a></li>
-          <li><a href="http://devops.pp.audeering.com/sphinx/">Documentation</a></li>
-          <li><a href="http://devops.pp.audeering.com">Infrastructure</a></li>
-          <li><a href="http://models.pp.audeering.com">Models</a></li>
-          <li><a href="http://devops.pp.audeering.com/python/">Python</a></li>
-          <li><a href="http://tools.pp.audeering.com">Tools</a></li>
-        </ul>
-      
-    <p>
-        
-        
-        
-          Built with <a href="https://www.sphinx-doc.org/en/master/">Sphinx</a> on 2021/04/10 using the <a href="https://github.com/audeering/sphinx-audeering-theme/">audEERING theme</a>
-        
-    </p>
-  </div>
-
   <div role="contentinfo">
     <p>
-        
-      &copy; 2021, Montgomery Flora; Shawn Handler
+        &copy; Copyright 2021, Montgomery Flora; Shawn Handler.
+
     </p>
-  </div> 
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> and ❤️  using a custom <a href="https://github.com/LinxiFan/Stanford-theme">theme</a> based on <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
+
         </div>
       </div>
 
@@ -2100,30 +2071,37 @@
   
 
 
-
-  
-  <!--[if lt IE 9]>
-    <script src="../../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
   
 
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-        <script src="../../../_static/jquery.js"></script>
-        <script src="../../../_static/underscore.js"></script>
-        <script src="../../../_static/doctools.js"></script>
-    
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'v0.0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
 
   
 
-  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
 
+  
+  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
+          SphinxRtdTheme.StickyNav.enable();
       });
-  </script> 
+  </script>
+   
 
 </body>
 </html>
