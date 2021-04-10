@@ -15,22 +15,22 @@ import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        model_objs, model_names = pymint.load_models()
-        examples, targets = pymint.load_data()
-        examples = examples.astype({'urban': 'category', 'rural':'category'})
+        estimator_objs, estimator_names = pymint.load_models()
+        X, y = pymint.load_data()
+        X = X.astype({'urban': 'category', 'rural':'category'})
         
-        self.examples = examples
-        self.targets = targets
-        self.models = model_objs
-        self.model_names = model_names
+        self.X = X
+        self.y = y
+        self.estimators = estimator_objs
+        self.estimator_names = estimator_names
         
         random_state=np.random.RandomState(42)
         
-        # Fit a simple 5-variable linear regression model. 
-        n_examples = 2000
+        # Fit a simple 5-variable linear regression estimator. 
+        n_X = 2000
         n_vars = 5 
         weights = [2.0, 1.5, 1.2, 0.7, 0.2]
-        X = np.stack([random_state.uniform(-1,1, size=n_examples) for _ in range(n_vars)], axis=-1)
+        X = np.stack([random_state.uniform(-1,1, size=n_X) for _ in range(n_vars)], axis=-1)
         feature_names = [f'X_{i+1}' for i in range(n_vars)]
         X = pd.DataFrame(X, columns=feature_names)
         y = X.dot(weights)
@@ -41,21 +41,21 @@ class TestInterpretToolkit(unittest.TestCase):
         self.X=X
         self.y=y
         self.lr = lr 
-        self.lr_model_name = 'Linear Regression'
+        self.lr_estimator_name = 'Linear Regression'
         self.weights=weights
         
 class TestRankings(TestInterpretToolkit):
     def test_bad_evaluation_fn(self):
         # Make sure the metrics are correct
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             )
         available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
         with self.assertRaises(Exception) as ex:
-            myInterpreter.calc_permutation_importance(n_vars=len(self.X.columns), 
+            explainer.permutation_importance(n_vars=len(self.X.columns), 
                                                   evaluation_fn='bad')
         
         
@@ -64,94 +64,99 @@ class TestRankings(TestInterpretToolkit):
      
     def test_custom_evaluation_fn(self):
         # scoring_strategy exception for custom evaluation funcs 
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             )
         available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
         with self.assertRaises(Exception) as ex:
-            myInterpreter.calc_permutation_importance(n_vars=len(self.X.columns), 
+            explainer.permutation_importance(n_vars=len(self.X.columns), 
                                                   evaluation_fn=roc_auc_score,)
         
         except_msg = """ 
-                The scoring_strategy argument is None! If you are using a user-define evaluation_fn 
-                then scoring_strategy must be set! If a metric is positively-oriented (a higher value is better), 
-                then set scoring_strategy = "argmin_of_mean" and if is negatively-oriented-
+                The scoring_strategy argument is None! If you are using a non-default evaluation_fn 
+                then scoring_strategy must be set! If the metric is positively-oriented (a higher value is better), 
+                then set scoring_strategy = "argmin_of_mean" and if it is negatively-oriented-
                 (a lower value is better), then set scoring_strategy = "argmax_of_mean"
                 """
         self.assertEqual(ex.exception.args[0], except_msg)
         
     def test_shape(self):
         # Shape is correct (with bootstrapping) 
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             )
         n_vars=3
         n_bootstrap=8
-        results = myInterpreter.calc_permutation_importance(n_vars=n_vars, 
+        results = explainer.permutation_importance(n_vars=n_vars, 
                                                   evaluation_fn='mse',
                                                  n_bootstrap=n_bootstrap)
         # shape should be (n_vars_multipass, n_bootstrap)
-        self.assertEqual( results[f'multipass_scores__{self.lr_model_name}'].values.shape,
+        self.assertEqual( results[f'multipass_scores__{self.lr_estimator_name}'].values.shape,
                           (n_vars, n_bootstrap) 
                         )
         # shape should be (n_vars_singlepass, n_bootstrap)
-        self.assertEqual( results[f'singlepass_scores__{self.lr_model_name}'].values.shape,
+        self.assertEqual( results[f'singlepass_scores__{self.lr_estimator_name}'].values.shape,
                           (len(self.X.columns), n_bootstrap) 
                         )
         
     def test_correct_rankings(self):
         # rankings are correct for simple case (for multi-pass, single-pass, and ale_variance)
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             )
-        results = myInterpreter.calc_permutation_importance(n_vars=len(self.X.columns), 
+        results = explainer.permutation_importance(n_vars=len(self.X.columns), 
                                                   evaluation_fn='mse',
                                                  n_bootstrap=10)
         
-        myInterpreter.calc_ale(features=self.X.columns, n_bins=40)
-        ale_var_results = myInterpreter.calc_ale_variance(model_name=self.lr_model_name)
+        ale = explainer.ale(features=self.X.columns, n_bins=10)
+        ale_var_results = explainer.ale_variance(ale, estimator_names=self.lr_estimator_name)
 
         true_rankings = np.array( ['X_1', 'X_2', 'X_3', 'X_4', 'X_5'])
 
-        np.testing.assert_array_equal( results[f'multipass_rankings__{self.lr_model_name}'].values,
+        np.testing.assert_array_equal( results[f'multipass_rankings__{self.lr_estimator_name}'].values,
                           true_rankings
                         )
-        np.testing.assert_array_equal( results[f'singlepass_rankings__{self.lr_model_name}'].values,
+        np.testing.assert_array_equal( results[f'singlepass_rankings__{self.lr_estimator_name}'].values,
                           true_rankings
                         )
-        np.testing.assert_array_equal( ale_var_results[f'ale_variance_rankings__{self.lr_model_name}'].values,
+        np.testing.assert_array_equal( ale_var_results[f'ale_variance_rankings__{self.lr_estimator_name}'].values,
                          true_rankings
                         )
 
     def test_ale_variance(self):
-        myInterpreter = pymint.InterpretToolkit(
-                models=self.lr,
-                model_names=self.lr_model_name,
-                examples=self.X,
-                targets=self.y
+        explainer = pymint.InterpretToolkit(
+                estimators=self.lr,
+                estimator_names=self.lr_estimator_name,
+                X=self.X,
+                y=self.y
             )
+        
+        ale = explainer.ale(features=self.X.columns, n_bins=10)
+        ale_var_results = explainer.ale_variance(ale)
+        
         with self.assertRaises(Exception) as ex_1:
-            ale_var_results = myInterpreter.calc_ale_variance(ale_data=np.array([]))
+            ale_var_results = explainer.ale_variance(ale=np.array([0,0]))
             
         except_msg_1 = """
-                                 ale_data must be an xarray.Dataset, 
-                                 perferably generated by mintpy.InterpretToolkit.calc_ale to be formatted correctly
+                                 ale must be an xarray.Dataset, 
+                                 perferably generated by InterpretToolkit.ale 
+                                 to be formatted correctly
                                  """
         self.assertEqual(ex_1.exception.args[0], except_msg_1)
         
         with self.assertRaises(Exception) as ex_2:
-            ale_var_results = myInterpreter.calc_ale_variance()
+            ale_var_results = explainer.ale_variance(ale, estimator_names=[self.lr_estimator_name, 'Fake'])
         
-        except_msg_2 = 'Must provide ale_data or compute ale for each feature using mintpy.InterpretToolkit.calc_ale'
+        except_msg_2 = 'ale does not contain values for all the estimator names given!'
         
         self.assertEqual(ex_2.exception.args[0], except_msg_2)
 

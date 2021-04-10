@@ -39,7 +39,7 @@ def check_is_permuted(X, X_permuted):
         
 def is_correlated(corr_matrix, feature_pairs, rho_threshold=0.8):
     """
-    Returns dict where the keys are the feature pairs and the items
+    Returns dict where the key are the feature pairs and the items
     are booleans of whether the pair is linearly correlated above the
     given threshold.
     """
@@ -51,39 +51,39 @@ def is_correlated(corr_matrix, feature_pairs, rho_threshold=0.8):
     return results
 
 
-def is_fitted(model):
+def is_fitted(estimator):
     """
     Checks if a scikit-learn estimator/transformer has already been fit.
 
 
     Parameters
     ----------
-    model: scikit-learn estimator (e.g. RandomForestClassifier)
+    estimator: scikit-learn estimator (e.g. RandomForestClassifier)
         or transformer (e.g. MinMaxScaler) object
 
 
     Returns
     -------
-    Boolean that indicates if ``model`` has already been fit (True) or not (False).
+    Boolean that indicates if ``estimator`` has already been fit (True) or not (False).
     """
 
-    attrs = [v for v in vars(model) if v.endswith("_") and not v.startswith("__")]
+    attrs = [v for v in vars(estimator) if v.endswith("_") and not v.startswith("__")]
 
     return len(attrs) != 0
 
 
-def determine_feature_dtype(examples, features):
+def determine_feature_dtype(X, features):
     """
     Determine if any features are categorical.
     """
-    feature_names = list(examples.columns)
+    feature_names = list(X.columns)
     non_cat_features = []
     cat_features = []
     for f in features:
         if f not in feature_names:
             raise KeyError(f"'{f}' is not a valid feature.")
 
-        if str(examples.dtypes[f]) == "category":
+        if str(X.dtypes[f]) == "category":
             cat_features.append(f)
         else:
             non_cat_features.append(f)
@@ -91,54 +91,54 @@ def determine_feature_dtype(examples, features):
     return non_cat_features, cat_features
 
 
-def brier_skill_score(target_values, forecast_probabilities):
+def brier_skill_score(y_values, forecast_probabilities):
     """Computes the brier skill score"""
-    climo = np.mean((target_values - np.mean(target_values)) ** 2)
-    return 1.0 - brier_score_loss(target_values, forecast_probabilities) / climo
+    climo = np.mean((y_values - np.mean(y_values)) ** 2)
+    return 1.0 - brier_score_loss(y_values, forecast_probabilities) / climo
 
 
-def norm_aupdc(targets, predictions, **kwargs):
+def norm_aupdc(y, predictions, **kwargs):
     """
     Compute the normalized average precision.
     Equations come from Boyd et al. (2012)
 
     Unachievable Region in Precision-Recall Space and Its Effect on Empirical Evaluation
     """
-    skew = np.mean(targets)
+    skew = np.mean(y)
 
-    # Number of positive examples
-    pos = np.count_nonzero(targets)
+    # Number of positive X
+    pos = np.count_nonzero(y)
     if pos == 0:
-        print("No positive examples for the NAUPDC calculation! Returning a NAN value.")
+        print("No positive X for the NAUPDC calculation! Returning a NAN value.")
         return np.nan
 
-    # Number of negative examples
-    neg = len(targets) - pos
+    # Number of negative X
+    neg = len(y) - pos
 
     ap_min = (1.0 / pos) * np.sum([i / (i + neg) for i in range(pos)])
 
-    ap = average_precision_score(targets, predictions)
+    ap = average_precision_score(y, predictions)
     norm_aupdc = (ap - ap_min) / (1.0 - ap_min)
 
     return norm_aupdc
 
 
-def cartesian(arrays, out=None):
-    """Generate a cartesian product of input arrays.
+def cartesian(array, out=None):
+    """Generate a cartesian product of input array.
     Parameters
 
     Codes comes directly from sklearn/utils/extmath.py
     ----------
-    arrays : list of array-like
-        1-D arrays to form the cartesian product of.
+    array : list of array-like
+        1-D array to form the cartesian product of.
     out : ndarray
         Array to place the cartesian product in.
     Returns
     -------
     out : ndarray
-        2-D array of shape (M, len(arrays)) containing cartesian products
-        formed of input arrays.
-    Examples
+        2-D array of shape (M, len(array)) containing cartesian products
+        formed of input array.
+    X
     --------
     >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
     array([[1, 4, 6],
@@ -154,45 +154,45 @@ def cartesian(arrays, out=None):
            [3, 5, 6],
            [3, 5, 7]])
     """
-    arrays = [np.asarray(x) for x in arrays]
-    shape = (len(x) for x in arrays)
-    dtype = arrays[0].dtype
+    array = [np.asarray(x) for x in array]
+    shape = (len(x) for x in array)
+    dtype = array[0].dtype
 
     ix = np.indices(shape)
-    ix = ix.reshape(len(arrays), -1).T
+    ix = ix.reshape(len(array), -1).T
 
     if out is None:
         out = np.empty_like(ix, dtype=dtype)
 
-    for n, arr in enumerate(arrays):
-        out[:, n] = arrays[n][ix[:, n]]
+    for n, arr in enumerate(array):
+        out[:, n] = array[n][ix[:, n]]
 
     return out
 
 
-def to_dataframe(results, model_names, feature_names):
+def to_dataframe(results, estimator_names, feature_names):
     """
     Convert the feature contribution results to a pandas.DataFrame
     with nested indexing. 
     """
-    # results[0] = dict of avg. contributions per model 
-    # results[1] = dict of avg. feature values per model
+    # results[0] = dict of avg. contributions per estimator 
+    # results[1] = dict of avg. feature values per estimator
     feature_names+=['Bias']
     
-    nested_keys = results[0][model_names[0]].keys()
+    nested_key = results[0][estimator_names[0]].keys()
     
     dframes = []
-    for key in nested_keys:
+    for key in nested_key:
         data=[]
-        for name in model_names:
+        for name in estimator_names:
             contribs_dict = results[0][name][key]
             vals_dict = results[1][name][key]
             data.append([contribs_dict[f] for f in feature_names] + [vals_dict[f] for f in feature_names]) 
         column_names = [f+'_contrib' for f in feature_names] + [f+'_val' for f in feature_names]
-        df = pd.DataFrame(data, columns=column_names, index=model_names)
+        df = pd.DataFrame(data, columns=column_names, index=estimator_names)
         dframes.append(df)
     
-    result = pd.concat(dframes, keys=list(nested_keys))
+    result = pd.concat(dframes, keys=list(nested_key))
     
     return result
 
@@ -269,7 +269,7 @@ def is_all_dict(alist):
 def load_pickle(fnames):
     """
     Load data from a list of pickle files as dict
-    where the keys are provided by the user
+    where the key are provided by the user
     """
     if not isinstance(fnames, list):
         fnames = [fnames]
@@ -304,12 +304,12 @@ def load_netcdf(fnames):
     try:
         ds_set = xr.merge(data, combine_attrs="no_conflicts", compat="override")
     except:
-        models_used = [ds.attrs["models used"] for ds in data]
+        estimators_used = [ds.attrs["estimators used"] for ds in data]
         ds_set = xr.merge(data, combine_attrs="override", compat="override")
-        ds_set.attrs["models used"] = flatten_nested_list(models_used)
+        ds_set.attrs["estimators used"] = flatten_nested_list(estimators_used)
 
     # Check that names
-    # model_names = ds_set.attrs['models used']
+    # estimator_names = ds_set.attrs['estimators used']
     # if len(list(set(alist))) != len(alist):
     #        alist = [x+f'_{i}' for i,x in enumerate(alist)]
 
@@ -323,7 +323,7 @@ def load_dataframe(fnames):
     data = [pd.read_pickle(file_name) for file_name in fnames]
    
     attrs = [d.attrs for d in data]
-    models_used = [d.attrs['models used'] for d in data]
+    estimators_used = [d.attrs['estimators used'] for d in data]
     
     attrs = dict(ChainMap(*attrs))
     
@@ -333,7 +333,7 @@ def load_dataframe(fnames):
     for key in attrs.keys():
         data_concat.attrs[key] = attrs[key]
     
-    data_concat.attrs['models used'] = flatten_nested_list(models_used)
+    data_concat.attrs['estimators used'] = flatten_nested_list(estimators_used)
     
     return data_concat
         
@@ -353,7 +353,7 @@ def save_dataframe(fname, dframe, ):
     del dframe
     
 def combine_top_features(results_dict, n_vars=None):
-    """Combines the list of top features from different models
+    """Combines the list of top features from different estimators
     into a single list where duplicates are removed.
 
     Args:
@@ -364,33 +364,33 @@ def combine_top_features(results_dict, n_vars=None):
     if n_vars is None:
         n_vars = 1000
     combined_features = []
-    for model_name in results_dict.keys():
-        features = results_dict[model_name]
+    for estimator_name in results_dict.keys():
+        features = results_dict[estimator_name]
         combined_features.append(features)
     unique_features = list(set.intersection(*map(set, combined_features)))[:n_vars]
 
     return unique_features
 
 
-def compute_bootstrap_indices(examples, subsample=1.0, n_bootstrap=1):
+def compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=1):
     """
-    Routine to generate the indices for bootstrapped examples.
+    Routine to generate the indices for bootstrapped X.
 
     Args:
     ----------------
-        examples : pandas.DataFrame, numpy.array
+        X : pandas.DataFrame, numpy.array
         subsample : float or integer
         n_bootstrap : integer
 
     Return:
     ----------------
         bootstrap_indices : list
-            list of indices of the size of subsample or subsample*len(examples)
+            list of indices of the size of subsample or subsample*len(X)
     """
-    n_examples = len(examples)
-    size = int(n_examples * subsample) if subsample <= 1.0 else subsample
+    n_samples = len(X)
+    size = int(n_samples * subsample) if subsample <= 1.0 else subsample
     bootstrap_indices = [
-        np.random.choice(range(n_examples), size=size).tolist()
+        np.random.choice(range(n_samples), size=size).tolist()
         for _ in range(n_bootstrap)
     ]
     return bootstrap_indices
@@ -470,7 +470,7 @@ def is_outlier(points, thresh=3.5):
 
 
 def get_indices_based_on_performance(
-    model, examples, targets, model_output, n_examples=None
+    estimator, X, y, estimator_output, n_samples=None
 ):
     """
      Determines the best hits, worst false alarms, worst misses, and best
@@ -478,53 +478,53 @@ def get_indices_based_on_performance(
 
      Args:
      ------------------
-          model : The model to process
-          n_examples: number of "best/worst" examples to return. If None,
+          estimator : The estimator to process
+          n_samples: number of "best/worst" X to return. If None,
               the routine uses the whole dataset
 
     Return:
           a dictionary containing the indices of each of the 4 categories
           listed above
     """
-    # default is to use all examples
-    if n_examples is None:
-        n_examples = examples.shape[0]
+    # default is to use all X
+    if n_samples is None:
+        n_samples = X.shape[0]
 
     # make sure user didn't goof the input
-    if n_examples <= 0:
-        print("n_examples less than or equals 0. Defaulting back to all")
-        n_examples = examples.shape[0]
+    if n_samples <= 0:
+        print("n_samples less than or equals 0. Defaulting back to all")
+        n_samples = X.shape[0]
 
-    if model_output == "probability":
-        predictions = model.predict_proba(examples)[:, 1]
-    elif model_output == "raw":
-        predictions = model.predict(examples)
+    if estimator_output == "probability":
+        predictions = estimator.predict_proba(X)[:, 1]
+    elif estimator_output == "raw":
+        predictions = estimator.predict(X)
 
-    diff = targets - predictions
-    data = {"targets": targets, "predictions": predictions, "diff": diff}
+    diff = y - predictions
+    data = {"y": y, "predictions": predictions, "diff": diff}
     df = pd.DataFrame(data)
 
-    if model_output == "probability":
-        nonevent_examples = df[targets == 0]
-        event_examples = df[targets == 1]
+    if estimator_output == "probability":
+        nonevent_X = df[y == 0]
+        event_X = df[y == 1]
 
-        event_examples_sorted_indices = event_examples.sort_values(
+        event_X_sorted_indices = event_X.sort_values(
             by="diff", ascending=True
         ).index.values
         
-        nonevent_examples_sorted_indices = nonevent_examples.sort_values(
+        nonevent_X_sorted_indices = nonevent_X.sort_values(
             by="diff", ascending=False
         ).index.values
 
-        best_hit_indices = event_examples_sorted_indices[:n_examples].astype(int)
-        worst_miss_indices = event_examples_sorted_indices[-n_examples:][::-1].astype(
+        best_hit_indices = event_X_sorted_indices[:n_samples].astype(int)
+        worst_miss_indices = event_X_sorted_indices[-n_samples:][::-1].astype(
             int
         )
 
-        best_corr_neg_indices = nonevent_examples_sorted_indices[:n_examples].astype(
+        best_corr_neg_indices = nonevent_X_sorted_indices[:n_samples].astype(
             int
         )
-        worst_false_alarm_indices = nonevent_examples_sorted_indices[-n_examples:][
+        worst_false_alarm_indices = nonevent_X_sorted_indices[-n_samples:][
             ::-1
         ].astype(int)
         
@@ -536,10 +536,10 @@ def get_indices_based_on_performance(
         }
 
     else:
-        examples_sorted_indices = df.sort_values(by="diff", ascending=True).index.values
+        X_sorted_indices = df.sort_values(by="diff", ascending=True).index.values
 
-        least_error_indices = examples_sorted_indices[:n_examples].astype(int)
-        most_error_indices = examples_sorted_indices[-n_examples:].astype(int)
+        least_error_indices = X_sorted_indices[:n_samples].astype(int)
+        most_error_indices = X_sorted_indices[-n_samples:].astype(int)
 
         sorted_dict = {
             "Least Error Predictions": least_error_indices,
@@ -594,7 +594,7 @@ def avg_and_sort_contributions(contrib_dict, feature_val_dict):
     return avg_contrib_dict, avg_feature_val_dict
 
 
-def retrieve_important_vars(results, model_names, multipass=True):
+def retrieve_important_vars(results, estimator_names, multipass=True):
     """
     Return a list of the important features stored in the
      ImportanceObject
@@ -615,9 +615,9 @@ def retrieve_important_vars(results, model_names, multipass=True):
     perm_method = "multipass" if multipass else "singlepass"
 
     important_vars_dict = {}
-    for model_name in model_names:
-        top_features = list(results[f"{perm_method}_rankings__{model_name}"].values)
-        important_vars_dict[model_name] = top_features
+    for estimator_name in estimator_names:
+        top_features = list(results[f"{perm_method}_rankings__{estimator_name}"].values)
+        important_vars_dict[estimator_name] = top_features
 
     return important_vars_dict
 

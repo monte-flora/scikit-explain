@@ -12,110 +12,112 @@ class Attributes:
     should never be instantiated
     """
 
-    def set_model_attribute(self, model_objs, model_names):
+    def set_estimator_attribute(self, estimator_objs, estimator_names):
         """
-        Checks the type of the models and model_names attributes.
-        If a list or not a dict, then the model argument
+        Checks the type of the estimators and estimator_names attributes.
+        If a list or not a dict, then the estimator argument
         is converted to a dict for processing.
 
-        Args:
+        Parameters
         ----------
-            model_objs : object or list of objects
-                pre-fitted scikit-learn model object or list thereof.
-            model_names : string or list of strings
-                List of names of the models in model_objs
-                (for plotting purposes)
-        """
-        model_is_none = model_objs == None
-        
-        # Convert the model_objs to a list, if it is not already.
-        if not is_list(model_objs):
-            model_objs = to_list(model_objs)
-
-        # Convert the name of the model_objs to a list,
-        # if is not already.
-        if not is_list(model_names):
-            model_names = to_list(model_names)
-
-        # Check that the model_objs and model_names are the same size.
-        if not model_is_none:
-            assert len(model_objs) == len(
-                model_names
-            ), "Number of model objects is not equal to the number of model names given!"
-
-        # Check that the model objects have been fit! 
-        if not model_is_none:
-            if not all([is_fitted(m) for m in model_objs]):
-                raise ValueError('One or more of the models given has NOT been fit!') 
+        estimators : object, list of objects
+            A fitted estimator object or list thereof implementing `predict` or 
+            `predict_proba`.
+            Multioutput-multiclass classifiers are not supported.
             
-        # Create a dictionary from the model_objs and model_names.
-        # Then set the attributes.
-        self.models = OrderedDict(
-            [(name, obj) for name, obj in zip(model_names, model_objs)]
-        )
-        self.model_names = model_names
+        estimator_names : string, list
+            Names of the estimators (for internal and plotting purposes)    
+        """
+        estimator_is_none = estimator_objs == None
+        
+        # Convert the estimator_objs to a list, if it is not already.
+        if not is_list(estimator_objs):
+            estimator_objs = to_list(estimator_objs)
 
-    def set_target_attribute(self, targets):
+        # Convert the name of the estimator_objs to a list,
+        # if is not already.
+        if not is_list(estimator_names):
+            estimator_names = to_list(estimator_names)
+
+        # Check that the estimator_objs and estimator_names are the same size.
+        if not estimator_is_none:
+            assert len(estimator_objs) == len(
+                estimator_names
+            ), "Number of estimator objects is not equal to the number of estimator names given!"
+
+        # Check that the estimator objects have been fit! 
+        if not estimator_is_none:
+            if not all([is_fitted(m) for m in estimator_objs]):
+                raise ValueError('One or more of the estimators given has NOT been fit!') 
+            
+        # Create a dictionary from the estimator_objs and estimator_names.
+        # Then set the attributes.
+        self.estimators = OrderedDict(
+            [(name, obj) for name, obj in zip(estimator_names, estimator_objs)]
+        )
+        self.estimator_names = estimator_names
+
+    def set_y_attribute(self, y):
         """
-        Checks the type of the targets attribute.
+        Checks the type of the y attribute.
         """
-        # check that targets are assigned correctly
-        if type(targets) == type(None):
-            raise ValueError("targets are required!")
-        if is_list(targets):
-            self.targets = np.array(targets)
-        elif isinstance(targets, np.ndarray):
-            self.targets = targets
-        elif isinstance(targets, (pd.DataFrame, pd.Series)):
-            self.targets = targets.values
+        # check that y are assigned correctly
+        if type(y) == type(None):
+            raise ValueError("y is required!")
+        if is_list(y):
+            self.y = np.array(y)
+        elif isinstance(y, np.ndarray):
+            self.y = y
+        elif isinstance(y, (pd.DataFrame, pd.Series)):
+            self.y = y.values
         else:
-            if targets is not None:
+            if y is not None:
                 raise TypeError(
-                    "Target variable must be numpy array or pandas.DataFrame."
+                    "y must be an numpy array or pandas.DataFrame."
                 )
             else:
-                self.targets = None
+                self.y = None
 
-    def set_examples_attribute(self, examples, feature_names=None):
+    def set_X_attribute(self, X, feature_names=None):
         """
-        Check the type of the examples attribute.
+        Check the type of the X attribute.
         """
         # make sure data is the form of a pandas dataframe regardless of input type
-        if type(examples) == type(None):
-            raise ValueError("examples are required!")
-        if isinstance(examples, np.ndarray):
+        if type(X) == type(None):
+            raise ValueError("X are required!")
+        if isinstance(X, np.ndarray):
             if feature_names is None:
                 raise Exception("Feature names must be specified if using NumPy array.")
             else:
-                self.examples = pd.DataFrame(data=examples, columns=feature_names)
+                self.X = pd.DataFrame(data=X, columns=feature_names)
         else:
-            self.examples = examples
+            self.X = X
 
-        if examples is not None:
-            self.feature_names = self.examples.columns.to_list()
+        if X is not None:
+            self.feature_names = self.X.columns.to_list()
 
-    def set_model_output(self, model_output, model):
+    def set_estimator_output(self, estimator_output, estimator):
         """
-        Check the model output is given and if not try to
-        assume the correct model output.
+        Check the estimator output is given and if not try to
+        assume the correct estimator output.
         """
         
-        model_obj = model[0] if is_list(model) else model
+        estimator_obj = estimator[0] if is_list(estimator) else estimator
         available_options = ["raw", "probability"]
 
-        if model_output is None:
-            if hasattr(model_obj, "predict_proba"):
-                self.model_output = "probability"
+        if estimator_output is None:
+            if hasattr(estimator_obj, "predict_proba"):
+                self.estimator_output = "probability"
             else:
-                self.model_output = "raw"
+                self.estimator_output = "raw"
 
         else:
-            if model_output in available_options:
-                self.model_output = model_output
+            if estimator_output in available_options:
+                self.estimator_output = estimator_output
             else:
                 raise ValueError(
                     f"""
-                                {model_output} is not an accepted options. 
+                                {estimator_output} is not an accepted options. 
                                  The available options are {available_options}.
                                  Check for syntax errors!
                                  """

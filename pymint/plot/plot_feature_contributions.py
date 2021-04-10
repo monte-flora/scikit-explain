@@ -176,7 +176,7 @@ class PlotFeatureContributions(PlotStructure):
     def plot_contributions(
         self,
         data,
-        model_names,
+        estimator_names,
         features,
         to_only_varname=None,
         display_feature_names={},
@@ -195,7 +195,7 @@ class PlotFeatureContributions(PlotStructure):
                 a single row/example from the
                 result dataframe from tree_interpreter_simple
         """
-        only_one_model = True if len(model_names) == 1 else False
+        only_one_model = True if len(estimator_names) == 1 else False
         outer_indexs = list(set([f[0] for f in data.index.values]))
         
         if model_output=='probability' and "non_performance" not in outer_indexs:
@@ -213,8 +213,8 @@ class PlotFeatureContributions(PlotStructure):
         
         
         if "non_performance" in outer_indexs:
-            n_panels = len(model_names) 
-            n_columns = len(model_names) 
+            n_panels = len(estimator_names) 
+            n_columns = len(estimator_names) 
             if n_columns==1:
                 figsize = (3, 2.5)
             else:
@@ -224,7 +224,7 @@ class PlotFeatureContributions(PlotStructure):
             
         else:
             n_perf_keys = len(perf_keys)
-            n_panels = len(model_names) * n_perf_keys
+            n_panels = len(estimator_names) * n_perf_keys
             wspace = kwargs.get("wspace", 0.5)
             
             if only_one_model and model_output == "raw":
@@ -232,12 +232,12 @@ class PlotFeatureContributions(PlotStructure):
             elif only_one_model and model_output == "probability":
                 n_columns = 2
             else:
-                n_columns = max(2, len(model_names)) 
+                n_columns = max(2, len(estimator_names)) 
 
             if n_columns == 4:
                 figsize = (12, 4)
             elif not only_one_model and len(outer_indexs)==4:
-                figsize = (4+(0.65*len(model_names)), 9) 
+                figsize = (4+(0.65*len(estimator_names)), 9) 
             else:
                 figsize = (8, 4)
 
@@ -261,7 +261,7 @@ class PlotFeatureContributions(PlotStructure):
         
         # try for all_data/average data
         if "non_performance" in outer_indexs:
-            for i, model_name in enumerate(model_names):
+            for i, model_name in enumerate(estimator_names):
                 if n_panels > 1:
                     ax = ax_iterator[i]
                 else:
@@ -291,7 +291,7 @@ class PlotFeatureContributions(PlotStructure):
             # loop over each model creating one panel per model
             
             c = 0
-            for i, model_name in enumerate(model_names):
+            for i, model_name in enumerate(estimator_names):
                 # Hard coded in to maintain correct ordering
                 if model_output=='probability':
                     outer_indexs = ["Best Hits",
@@ -409,7 +409,7 @@ class PlotFeatureContributions(PlotStructure):
     def plot_shap(
         self,
         shap_values,
-        examples,
+        X,
         features,
         plot_type,
         display_feature_names={},
@@ -433,7 +433,7 @@ class PlotFeatureContributions(PlotStructure):
         if plot_type == "summary":
             shap.summary_plot(
                 shap_values,
-                features=examples,
+                features=X,
                 feature_names=display_feature_names_list,
                 max_display=15,
                 plot_type="dot",
@@ -467,7 +467,7 @@ class PlotFeatureContributions(PlotStructure):
                 dependence_plot(
                     feature=feature,
                     shap_values=shap_values,
-                    examples=examples,
+                    X=X,
                     display_feature_names=display_feature_names_list,
                     interaction_index=interaction_index,
                     target_values=target_values,

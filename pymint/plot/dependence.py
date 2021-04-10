@@ -43,7 +43,7 @@ labels = {
 def dependence_plot(
     feature,
     shap_values,
-    examples,
+    X,
     feature_values=None,
     display_feature_names=None,
     interaction_index="auto",
@@ -78,12 +78,12 @@ def dependence_plot(
     shap_values : numpy.array
         Matrix of SHAP values (# samples x # features).
 
-    examples : pandas.DataFrame
+    X : pandas.DataFrame
         Matrix of feature values (# samples x # features).
 
     display_feature_names : list of strings
         A list of "prettier" names corresponding the column names
-        in the examples pandas.DataFrame
+        in the X pandas.DataFrame
 
     interaction_index : "auto", None, int, or string
         The index of the feature used to color the plot. The name of a feature can also be passed
@@ -114,10 +114,10 @@ def dependence_plot(
     """
     unnormalize = kwargs.get("unnormalize", None)
     cmap = colors.red_blue
-    feature_names = list(examples.columns)
+    feature_names = list(X.columns)
     
     if feature_values is None:
-        feature_values = examples.values
+        feature_values = X.values
 
     #if unnormalize is not None:
     #    feature_values = unnormalize._full_inverse_transform(original_feature_values)
@@ -125,8 +125,8 @@ def dependence_plot(
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
         shap_values = np.reshape(shap_values, len(shap_values), 1)
-    if len(examples.shape) == 1:
-        examples = np.reshape(examples, len(examples), 1)
+    if len(X.shape) == 1:
+        X = np.reshape(X, len(X), 1)
 
     feature_ind = convert_name(feature, shap_values, feature_names)
 
@@ -138,10 +138,10 @@ def dependence_plot(
                           feature_names)
     
     assert (
-        shap_values.shape[0] == examples.shape[0]
+        shap_values.shape[0] == X.shape[0]
     ), "'shap_values' and 'features' values must have the same number of rows!"
     assert (
-        shap_values.shape[1] == examples.shape[1]
+        shap_values.shape[1] == X.shape[1]
     ), "'shap_values' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values

@@ -25,7 +25,7 @@ class PlotInterpretCurves(PlotStructure):
         method,
         data,
         features,
-        model_names,
+        estimator_names,
         display_feature_names={},
         display_units={},
         to_probability=False,
@@ -40,7 +40,7 @@ class PlotInterpretCurves(PlotStructure):
             data : dict of data
             features : list of strs
                 List of the features to be plotted.
-            model_names : list of strs
+            estimator_names : list of strs
                 List of models to be plotted
             display_feature_names : dict or list
             display_units : dict or list
@@ -55,8 +55,8 @@ class PlotInterpretCurves(PlotStructure):
         if line_colors is None:
             line_colors = self.line_colors
 
-        if not is_list(model_names):
-            model_names = to_list(model_names)
+        if not is_list(estimator_names):
+            estimator_names = to_list(estimator_names)
 
         self.display_feature_names = display_feature_names
         self.display_units = display_units
@@ -103,7 +103,7 @@ class PlotInterpretCurves(PlotStructure):
                 hist_ax, hist_data, min_value=xdata[0], max_value=xdata[-1]
             )
 
-            for i, model_name in enumerate(model_names):
+            for i, model_name in enumerate(estimator_names):
                 if ice_curves:
                     ice_data = ice_curves[f"{feature}__{model_name}__ice"].values
                     ice_xdata = ice_curves[f"{feature}__bin_values"].values

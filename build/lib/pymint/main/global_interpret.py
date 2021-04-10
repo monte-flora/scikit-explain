@@ -134,7 +134,7 @@ class GlobalInterpret(Attributes):
         n_jobs=1,
         n_bootstrap=None,
         scoring_strategy=None,
-        perm_method="marginal",
+        direction='backward',
         verbose=False,
         random_state=None,
     ):
@@ -184,7 +184,7 @@ class GlobalInterpret(Attributes):
                 )
 
         if is_str:
-            if perm_method == 'backwards':
+            if direction == 'forward':
                 if 'max' in scoring_strategy:
                     scoring_strategy = scoring_strategy.replace('max', 'min') 
                 else:
@@ -215,7 +215,7 @@ class GlobalInterpret(Attributes):
                 njobs=n_jobs,
                 nbootstrap=n_bootstrap,
                 verbose=verbose,
-                perm_method=perm_method,
+                direction=direction,
                 random_state=random_state,
             )
 
