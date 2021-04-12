@@ -28,11 +28,9 @@ If you employ PyMint in your research, please cite this github and the relevant 
 
 ## Install
 
-PyMint can be installed through pip or conda-forge. 
+PyMint can be installed through pip, but we are working on uploading to conda-forge. 
 ```
 pip install py-mint
-or 
-conda install -c conda-forge py-mint
 ```
 
 ## Dependencies 
