@@ -60,13 +60,9 @@ import pymint
 # Loads three ML models (random forest, gradient-boosted tree, and logistic regression)
 # trained on a subset of the road surface temperature data from Handler et al. (2020).
 model_objs, model_names = pymint.load_models()
-examples, targets = pymint.load_data()
+X,y = pymint.load_data()
 
-myInterpreter = pymint.InterpretToolkit(model=model_objs,
-                                 model_names=model_names,
-                                 examples=examples,
-                                 targets=targets,
-                                )
+explainer = pymint.InterpretToolkit(estimators=model_objs,estimator_names=model_names,X=X,y=y,)
 ```
 ## Permutation Importance
 
@@ -74,8 +70,8 @@ For predictor ranking, PyMint uses both single-pass and multiple-pass permutatio
 We can calculate the permutation importance and then plot the results. In the tutorial it discusses options to make the figure publication-quality giving the plotting method
 additional argument to convert the feature names to a more readable format or color coding by feature type. 
 ```python
-myInterpreter.calc_permutation_importance(n_vars=10, evaluation_fn='auc')
-myInterpreter.plot_importance(method='multipass')
+explainer.calc_permutation_importance(n_vars=10, evaluation_fn='auc')
+explainer.plot_importance(method='multipass')
 ```
 
 <p align="center">
@@ -90,10 +86,10 @@ Sample notebook can be found here: [**Permutation Importance**](https://github.c
 To compute the expected functional relationship between a feature and an ML model's prediction, you can use partial dependence or accumulated local effects. There is also an option for second-order interaction effects. For the choice of feature, you can manually select or can run the permutation importance and a built-in method will retrieve those features. It is also possible to configure the plot for readable feature names. 
 ```python 
 # Assumes the calc_permutation_importance has already been run.
-important_vars = myInterpreter.get_important_vars(results, multipass=True, nvars=7)
+important_vars = explainer.get_important_vars(results, multipass=True, nvars=7)
 
-myInterpreter.calc_ale(features=important_vars, n_bins=20)
-myInterpreter.plot_ale()
+ale = explainer.calc_ale(features=important_vars, n_bins=20)
+explainer.plot_ale(ale)
 ```
 <p align="center">
   <img width="811" src="https://github.com/monte-flora/py-mint/blob/master/images/ale_1d.png?raw=true"  />
@@ -115,31 +111,24 @@ Sample notebook can be found here:
 To explain specific examples, you can use SHAP values. PyMint employs both KernelSHAP for any model and TreeSHAP for tree-based methods. In future work, PyMint will also include DeepSHAP for convolution neural network-based models. PyMint can create the summary and dependence plots from the shap python package, but is adapted for multiple predictors and an easier user interface. It is also possible to plot contributions for a single example or summarized by model performance. 
 
 ```python
+import shap
 single_example = examples.iloc[[0]]
-myInterpreter = pymint.InterpretToolkit(models=model_objs[0],
-                                 model_names=model_names[0],
-                                 examples=single_example,
-                                 targets=targets,
-                                )
+explainer = pymint.InterpretToolkit(estimators=model_objs[0], estimator_names=model_names[0],X=single_example,)
 
 background_dataset = shap.sample(examples, 100)
-results = myInterpreter.calc_contributions(method='shap', background_dataset=background_dataset)
-fig = myInterpreter.plot_contributions()
+results = explainer.calc_contributions(method='shap', background_dataset=background_dataset)
+fig = explainer.plot_contributions(results)
 ```
 <p align="center">
   <img width="811" src="https://github.com/monte-flora/py-mint/blob/master/images/feature_contribution_single.png?raw=true" />
 </p>
 
 ```python
-myInterpreter = pymint.InterpretToolkit(models=model_objs[0],
-                                 model_names=model_names[0],
-                                 examples=examples,
-                                 targets=targets,
-                                )
+explainer = pymint.InterpretToolkit(models=model_objs[0],model_names=model_names[0],X=X, y=y)
 
 background_dataset = shap.sample(examples, 100)
-results = myInterpreter.calc_contributions(method='shap', background_dataset=background_dataset, performance_based=True,)
-fig = myInterpreter.plot_contributions()
+results = explainer.calc_contributions(method='shap', background_dataset=background_dataset, performance_based=True,)
+fig = myInterpreter.plot_contributions(results)
 ```
 
 <p align="center">
@@ -147,14 +136,10 @@ fig = myInterpreter.plot_contributions()
 </p>
 
 ```python
-myInterpreter = pymint.InterpretToolkit(models=model_objs[0],
-                                 model_names=model_names[0],
-                                 examples=examples,
-                                 targets=targets,
-                                )
+explainer = pymint.InterpretToolkit(models=model_objs[0],model_names=model_names[0],X=X, y=y)
                                 
 background_dataset = shap.sample(examples, 100)
-results = myInterpreter.calc_shap(background_dataset=background_dataset)
+results = explainer.calc_shap(background_dataset=background_dataset)
 shap_values, bias = results['Random Forest']
 myInterpreter.plot_shap(plot_type = 'summary', shap_values=shap_values,) 
 ```
@@ -164,8 +149,10 @@ myInterpreter.plot_shap(plot_type = 'summary', shap_values=shap_values,)
 </p>
 
 ```python
+from pymint.common import plotting_config
+
 features = ['tmp2m_hrs_bl_frez', 'sat_irbt', 'sfcT_hrs_ab_frez', 'tmp2m_hrs_ab_frez', 'd_rad_d']
-myInterpreter.plot_shap(features=features,
+explainer.plot_shap(features=features,
                         plot_type = 'dependence',
                         shap_values=shap_values,
                         display_feature_names=plotting_config.display_feature_names,
