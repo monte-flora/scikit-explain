@@ -26,6 +26,8 @@ make a single source for computing several machine learning interpretation metho
 
 If you employ PyMint in your research, please cite this github and the relevant packages listed above. 
 
+If you are experiencing issues with loading the tutorial jupyter notebooks, you can enter the URL/location of the notebooks into the following address: https://nbviewer.jupyter.org/. 
+
 ## Install
 
 PyMint can be installed through pip, but we are working on uploading to conda-forge. 
@@ -182,7 +184,7 @@ Sample notebook can be found here:
 
 ## Tutorial notebooks
 
-The notebooks provides the package documentation and demonstrate PyMint API, which was used to create the above figures. 
+The notebooks provides the package documentation and demonstrate PyMint API, which was used to create the above figures. If you are experiencing issues with loading the jupyter notebooks, you can enter the URL/location of the notebooks into the following address: https://nbviewer.jupyter.org/. 
 
 - [**Permutation Importance**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/permutation_importance_tutorial.ipynb) 
 - [**Accumulated Local effects**](https://github.com/monte-flora/py-mint/blob/master/tutorial_notebooks/accumulated_local_effect_tutorial.ipynb) 
