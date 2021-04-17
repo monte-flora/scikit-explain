@@ -854,16 +854,17 @@ class InterpretToolkit(Attributes):
 
     def ale(self, features=None, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1):
         """
-        Compute the 1D or 2D centered accumulated local effects (ALE) [9]_ [10]_ If any features are categorical, 
-        then set the type of those features as 'category' in the pandas.DataFrame. E.g.,
-        X = X.astype({'urban': 'category', 'rural':'category'})
-        
+        Compute the 1D or 2D centered accumulated local effects (ALE) [9]_ [10]_.
+        For categorical features, simply set the type of those features in the 
+        dataframe as ``category`` and the categorical ALE will be computed. 
+
         References
         -----------
         
         .. [9] https://christophm.github.io/interpretable-ml-book/ale.html
+        
         .. [10] Apley, D. W., and J. Zhu, 2016: Visualizing the Effects of Predictor Variables in 
-        Black Box Supervised Learning Models. ArXiv. 
+                Black Box Supervised Learning Models. ArXiv. 
         
         
         Parameters

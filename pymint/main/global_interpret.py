@@ -1397,8 +1397,6 @@ class GlobalInterpret(Attributes):
         n_bootstrap = kwargs.get("n_bootstrap", 1) 
         estimator_output = kwargs.get("estimator_output", 'raw')
         
-        print(n_bootstrap, subsample, estimator_output)
-        
         estimator = self.estimators[estimator_name]
         feature_names = list(self.X.columns)
         data = self.data

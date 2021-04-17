@@ -111,7 +111,8 @@ class PlotImportance(PlotStructure):
         Args:
             data : xarray.Dataset or list of xarray.Dataset
                 Permutation importance dataset for one or more metrics
-            method: 'multipass', 'singlepass', or 'ale_variance'
+            method: 'multipass', 'singlepass', 'perm_based', 'ale_variance', 
+                     or 'ale_variance_interactions'
                 Method used to produce the feature ranking.
             display_feature_names : dict
                 A dict mapping feature names to readable, "pretty" feature names
@@ -122,6 +123,9 @@ class PlotImportance(PlotStructure):
             xaxis_label : str
                 Metric used to compute the predictor importance, which will display as the X-axis label.
         """
+        single_var_methods = ['multipass', 'singlepass', 'ale_variance']
+        
+        
         xticks = kwargs.get("xticks", None)
         title = kwargs.get("title", "")
 
@@ -275,19 +279,20 @@ class PlotImportance(PlotStructure):
                     x_pos = 0
                     ha = ["left" if score > 0 else "right" for score in scores_to_plot] 
 
+                    
                 # Put the variable names _into_ the plot
-                if ('pass' not in method and plot_correlated_features):
+                if (method not in single_var_methods and plot_correlated_features):
                     results_dict = is_correlated(
                         corr_matrix, sorted_var_names, rho_threshold=rho_threshold
                     )
 
                 for i in range(len(variable_names_to_plot)):
                     color = "k"
-                    if ('pass' not in method and plot_correlated_features):
+                    if (method not in single_var_methods and plot_correlated_features):
                         correlated = results_dict.get(sorted_var_names[i], False)
                         color = "xkcd:medium green" if correlated else "k"
 
-                    if 'pass' not in method:
+                    if method not in single_var_methods:
                         var = variable_names_to_plot[i].replace('__', ' & ')
                     else:
                         var = variable_names_to_plot[i]
