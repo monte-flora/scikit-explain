@@ -1450,8 +1450,8 @@ class GlobalInterpret(Attributes):
 
             # Compute the interaction strength
             ias.append(num / denom)
-
-        return {estimator_name: np.array(ias)}
+	
+		return {f'{estimator_name}_ias': (['n_bootstrap'], np.array(ias))}
 
     def compute_ale_variance(
         self,
