@@ -1328,11 +1328,11 @@ class GlobalInterpret(Attributes):
                 values_sorted = values[idx, :]
 
                 final_results[f"hstat_rankings__{estimator_name}"] = (
-                    [f"n_vars_perm_based_interactions"],
+                    [f"n_vars_hstat"],
                     feature_names_sorted,
                     )
                 final_results[f"hstat_scores__{estimator_name}"] = (
-                    [f"n_vars_perm_based_interactions", "n_bootstrap"],
+                    [f"n_vars_hstat", "n_bootstrap"],
                     values_sorted,
                 )
             results = to_xarray(final_results)
