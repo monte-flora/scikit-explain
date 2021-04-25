@@ -240,7 +240,8 @@ class PlotFeatureContributions(PlotStructure):
                 figsize = (4+(0.65*len(estimator_names)), 9) 
             else:
                 figsize = (8, 4)
-
+                
+            figsize = kwargs.get('figsize', figsize)
             hspace = kwargs.get("hspace", 0.5)
 
         # create subplots, one for each feature
