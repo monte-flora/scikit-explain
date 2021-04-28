@@ -158,7 +158,7 @@ def dependence_plot(
 
     # get both the raw and display color values
     if interaction_index is not None:
-        cdata = xdata[:, interaction_index]
+        cdata = feature_values[oinds, interaction_index]
         clow = np.nanpercentile(cdata.astype(np.float), 5)
         chigh = np.nanpercentile(cdata.astype(np.float), 95)
         if clow == chigh:
