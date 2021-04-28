@@ -119,8 +119,9 @@ def dependence_plot(
     if feature_values is None:
         feature_values = X.values
 
-    #if unnormalize is not None:
-    #    feature_values = unnormalize._full_inverse_transform(original_feature_values)
+    ### OLD CODE CODE 
+    ###if unnormalize is not None:
+    ###    feature_values = unnormalize._full_inverse_transform(original_feature_values)
    
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
@@ -157,7 +158,7 @@ def dependence_plot(
 
     # get both the raw and display color values
     if interaction_index is not None:
-        cdata = feature_values[:, interaction_index]
+        cdata = xdata[:, interaction_index]
         clow = np.nanpercentile(cdata.astype(np.float), 5)
         chigh = np.nanpercentile(cdata.astype(np.float), 95)
         if clow == chigh:
