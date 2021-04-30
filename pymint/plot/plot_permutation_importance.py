@@ -23,37 +23,21 @@ class PlotImportance(PlotStructure):
 
         return bootstrapped, original_score_mean
 
-    def _get_axes(self, estimator_names, metrics_used, **kwargs):
+    def _get_axes(self, xlabels, ylabels, **kwargs):
         """
         Determine how many axes are required.
         """
-        ylabels = kwargs.get("ylabels", "")
-        xlabels = kwargs.get("xlabels", "")
         hspace = kwargs.get("hspace", 0.5)
         wspace = kwargs.get("wspace", 0.2)
-        n_columns = kwargs.get("n_columns", 3)
+        
+        # Determine number of rows and columns
+        # len(xlabels) = number of columns and len(ylabels) = number of rows 
+        n_columns = len(xlabels)
+        n_rows = len(ylabels) 
 
-        if len(estimator_names) == 1:
-            # Only one estimator, but one or more metrics
-            only_one_estimator = True
-            xlabels = metrics_used
-            n_columns = min(len(xlabels), 3)
-            n_panels = len(xlabels)
-        else:
-            # More than one estimator, and one or more metrics
-            only_one_estimator = False
-            n_columns = min(len(estimator_names), 3)
-            if metrics_used is not None:
-                if len(metrics_used) == 1:
-                    xlabels = metrics_used
-                else:
-                    ylabels = metrics_used
-
-        if ylabels is not None:
-            n_panels = n_columns * len(ylabels)
-        else:
-            n_panels = n_columns
-
+        n_columns = kwargs.get("n_columns", n_columns)
+        n_panels = n_columns * n_rows
+        
         if n_panels == 1:
             figsize = (3, 2.5)
         elif n_panels == 2:
@@ -76,7 +60,7 @@ class PlotImportance(PlotStructure):
         if n_panels == 1:
             axes = [axes]
 
-        return fig, axes, xlabels, ylabels, only_one_estimator, n_panels
+        return fig, axes, n_panels
 
     def _check_for_estimators(self, data, estimator_names):
         """Check that each estimator is in data"""
@@ -95,16 +79,17 @@ class PlotImportance(PlotStructure):
     def plot_variable_importance(
         self,
         data,
+        xlabels,
+        ylabels,
+        estimator_names,
         method="multipass",
-        metrics_used=None,
         display_feature_names={},
         feature_colors=None,
         num_vars_to_plot=10,
         estimator_output="raw",
-        estimator_names=None,
         plot_correlated_features=False,
         **kwargs,
-    ):
+        ):
 
         """Plots any variable importance method for a particular estimator
 
@@ -125,6 +110,12 @@ class PlotImportance(PlotStructure):
         """
         single_var_methods = ['multipass', 'singlepass', 'ale_variance']
         
+        all_methods = ['multipass', 
+                   'singlepass', 
+                   'perm_based', 
+                   'ale_variance',
+                   'ale_variance_interactions'
+                  ]
         
         xticks = kwargs.get("xticks", None)
         title = kwargs.get("title", "")
@@ -132,7 +123,7 @@ class PlotImportance(PlotStructure):
         if plot_correlated_features:
             X = kwargs.get("X", None)
             if X is None or X.empty:
-                raise ValueError("Must provide X to compute the correlations!")
+                raise ValueError("Must provide X to InterpretToolkit to compute the correlations!")
             rho_threshold = 0.8
             corr_matrix = X.corr().abs()
 
@@ -142,30 +133,39 @@ class PlotImportance(PlotStructure):
         if any(isinstance(i, list) for i in estimator_names):
             estimator_names = estimator_names[0]
 
-        fig, axes, xlabels, ylabels, only_one_estimator, n_panels = self._get_axes(
-            estimator_names, metrics_used, **kwargs
-        )
+        fig, axes, n_panels = self._get_axes(xlabels, ylabels,**kwargs)
 
-        # List of data for different metrics
-        for g, results in enumerate(data):
-            # loop over each estimator creating one panel per estimator
-            for k, estimator_name in enumerate(estimator_names):
+        only_one_estimator = True if len(estimator_names)==1 else False 
+        if only_one_estimator:
+            estimator_names = [estimator_names[0]]*len(xlabels)
+        
+        ###assert (len(data) == len(ylabels)), 'Number of datasets in data must match the number of ylabels'
+        
+        # y = rows (different metrics, different perm. directions)
+        for ylabel, (g, results) in zip(ylabels, enumerate(data)):
+            # x = columns (different models, different methods)
+            for (k, xlabel), estimator_name in zip(enumerate(xlabels), estimator_names):
                 if np.ndim(axes) == 1:
                     ax = axes[k]
                 else:
                     ax = axes[g, k]
-
-                if g == 0:
+                    
+                if g == 0 and not only_one_estimator:
                     ax.set_title(
                         estimator_name, fontsize=self.FONT_SIZES["small"], alpha=0.8
                     )
 
-                if only_one_estimator:
-                    ax.set_xlabel(xlabels[g])
+                if only_one_estimator and g==len(data)-1:
+                    ax.set_xlabel(xlabel)
 
                 if num_vars_to_plot is None:
                     num_vars_to_plot == len(sorted_var_names)
 
+                if xlabel in all_methods:
+                    method=xlabel
+                if ylabel in all_methods:
+                    method=ylabel
+                    
                 sorted_var_names = list(
                     results[f"{method}_rankings__{estimator_name}"].values
                 )
@@ -366,9 +366,11 @@ class PlotImportance(PlotStructure):
 
                 if k == 0:
                     pad = -0.2 if plot_correlated_features else -0.15
+                    diff = 0.2 if n_panels > 3 else 0.0
+                    
                     ax.annotate(
                         "higher ranking",
-                        xy=(pad, 0.8),
+                        xy=(pad, 0.8+diff),
                         xytext=(pad, 0.5),
                         arrowprops=dict(arrowstyle="->", color="xkcd:blue grey"),
                         xycoords=ax.transAxes,
@@ -382,8 +384,8 @@ class PlotImportance(PlotStructure):
 
                     ax.annotate(
                         "lower ranking",
-                        xy=(pad + 0.05, 0.2),
-                        xytext=(pad + 0.05, 0.5),
+                        xy=(pad + 0.05, 0.2-diff),
+                        xytext=(pad + 0.05 , 0.5),
                         arrowprops=dict(arrowstyle="->", color="xkcd:blue grey"),
                         xycoords=ax.transAxes,
                         rotation=90,

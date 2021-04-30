@@ -1636,9 +1636,12 @@ class InterpretToolkit(Attributes):
                            **kwargs
                           )
 
-    def plot_importance(self, method='multipass', data=None,
-                        xlabels=None, ylabels=None, metrics_used=None, 
-                        estimator_names=None, plot_correlated_features=False,
+    def plot_importance(self, method='multipass',
+                        data=None,
+                        columns=None, 
+                        rows=None,
+                        estimator_names=None, 
+                        plot_correlated_features=False,
                         **kwargs):
         """
         Method for plotting the permutation importance and other ranking-based results.
@@ -1656,14 +1659,12 @@ class InterpretToolkit(Attributes):
             - :func:`~InterpretToolkit.friedman_h_stat`
             - :func:`~InterpretToolkit.perm_based_interaction`
             
-        xlabels : list of strings
-            X-axis label 
+        columns : list of strings
+            What will be the columns of the plot? These can be x-axis label (default is
+            the different estimator names)
         
-        ylabels : list of strings
-            Y-axis label or multiple labels for each row in a multi-panel plot. 
-        
-        metrics_used : list of strings 
-            Determined internally if possible. 
+        rows : list of strings
+            Y-axis label or multiple labels for each row in a multi-panel plot. (default is None). 
         
         plot_correlated_features : boolean
             If True, pairs of features with a linear correlation coefficient > 0.8 
@@ -1708,28 +1709,50 @@ class InterpretToolkit(Attributes):
         .. image :: ../../images/multi_pass_perm_imp.png
         
         """
-        if method == 'ale_variance':
-            metrics_used = '$\sigma$(ALE)'
+        methods = ['multipass', 
+                   'singlepass', 
+                   'perm_based', 
+                   'ale_variance',
+                   'ale_variance_interactions'
+                  ]
         
         estimator_output = kwargs.get('estimator_output', self.estimator_output)
         kwargs.pop('estimator_output', None)
 
+        if not isinstance(data, list):
+            data = [data]
+        
         # initialize a plotting object
         plot_obj = PlotImportance()
 
-        if is_str(metrics_used):
-            metrics_used=[metrics_used]
+        if estimator_names is None:
+            estimator_names = self.estimator_names
+        elif is_str(estimator_names):
+            estimator_names = [estimator_names]
+        
+        if columns is None:
+            columns = estimator_names
+        elif is_str(columns):
+            columns = [columns]
             
-        if xlabels is None and metrics_used is None and ylabels is None:
-            metrics_used = [data.attrs['evaluation_fn'].replace("_", "").upper()]
-        else:
-            xlabels = ['']
+        if rows is None:
+            rows  =['']
+        elif is_str(rows):
+            rows  = [rows]
             
-        if estimator_names is not None:
-            if is_str(estimator_names):
-                estimator_names = [estimator_names]            
-        else:
-            estimator_names=self.estimator_names
+        metrics_used=[]
+        for d in data:
+            if 'evaluation_fn' in d.attrs:
+                metrics_used.append([d.attrs['evaluation_fn'].replace("_", "").upper()])
+            
+            
+        if len(columns) > 1 and len(estimator_names) > 1 and (columns!=estimator_names):
+            raise ValueError("""
+                            PyMint does not currently handle plot the 
+                            feature importance for multiple models and 
+                            multiple x-axis labels (columns arg)
+                            """
+                            )
             
         if plot_correlated_features:
             kwargs['X'] = self.X
@@ -1737,10 +1760,10 @@ class InterpretToolkit(Attributes):
         return plot_obj.plot_variable_importance(data,
                                                 method=method, 
                                                 estimator_output=estimator_output,
+                                                xlabels = columns,
+                                                ylabels= rows,
+                                                metrics_used=metrics_used,
                                                 estimator_names=estimator_names,
-                                                metrics_used = metrics_used,
-                                                xlabels = xlabels,
-                                                ylabels=ylabels,
                                                 plot_correlated_features=plot_correlated_features,
                                                  **kwargs)
 
