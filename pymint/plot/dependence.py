@@ -53,7 +53,7 @@ def dependence_plot(
     cmap=None,
     dot_size=5,
     x_jitter=0,
-    alpha=1,
+    alpha=0.8,
     title=None,
     xmin=None,
     xmax=None,
@@ -184,7 +184,21 @@ def dependence_plot(
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xdata_nan = np.isnan(xdata)
     xdata_notnan = np.invert(xdata_nan)
-    if interaction_index is not None:
+    
+    
+    ####
+    if target_values is not None and interaction_index is not None:
+        # Binary classification
+        classes = np.unique(target_values)
+        n_classes = len(classes)
+        if n_classes == 2:
+            dot_sizes = [5,15]
+            markers = ["v", "o"]
+            idx_set = [np.where(target_values==i)[0] for i in classes]
+            alphas = [0.4, 1.0]
+            
+
+    if interaction_index is not None and target_values is None:
         cdata_imp = cdata.copy()
         cdata_imp[np.isnan(cdata)] = (clow + chigh) / 2.0
         cdata[cdata_imp > chigh] = chigh
@@ -202,7 +216,8 @@ def dependence_plot(
             rasterized=len(xdata) > 500,
         )
         p.set_array(cdata[xdata_notnan])
-    elif target_values is not None:
+        
+    elif target_values is not None and interaction_index is None:
         p = ax.scatter(
             xdata[xdata_notnan],
             s[xdata_notnan],
@@ -215,6 +230,32 @@ def dependence_plot(
             vmax=np.max(target_values),
             rasterized=len(xdata) > 500,
         )
+        
+    elif target_values is not None and interaction_index is not None:
+        
+        cdata_imp = cdata.copy()
+        cdata_imp[np.isnan(cdata)] = (clow + chigh) / 2.0
+        cdata[cdata_imp > chigh] = chigh
+        cdata[cdata_imp < clow] = clow
+        for idxs, dot_size, marker, alpha in zip(idx_set, dot_sizes, markers, alphas):
+            xdata_temp = xdata[xdata_notnan]
+            ydata_temp = s[xdata_notnan]
+            cdata_temp = cdata[xdata_notnan]
+            
+            p = ax.scatter(
+                xdata_temp[idxs],
+                ydata_temp[idxs],
+                s=dot_size,
+                linewidth=0,
+                c=cdata_temp[idxs],
+                cmap=cmap,
+                alpha=alpha,
+                vmin=clow,
+                vmax=chigh,
+                rasterized=len(xdata) > 500,
+                marker=marker,
+            )
+        
     else:
         p = ax.scatter(
             xdata[xdata_notnan],
@@ -224,6 +265,7 @@ def dependence_plot(
             color=color,
             alpha=alpha,
             rasterized=len(xdata) > 500,
+            marker=marker,
         )
 
     if interaction_index != feature_ind and interaction_index is not None:
