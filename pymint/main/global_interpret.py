@@ -147,6 +147,7 @@ class GlobalInterpret(Attributes):
         direction='backward',
         verbose=False,
         random_state=None,
+        return_iterations=True
     ):
 
         """
@@ -229,7 +230,7 @@ class GlobalInterpret(Attributes):
             pi_dict[estimator_name] = pi_result
 
             del pi_result
-
+            
         data = {}
         for estimator_name in self.estimator_names:
             for func in ["retrieve_multipass", "retrieve_singlepass"]:
@@ -253,6 +254,30 @@ class GlobalInterpret(Attributes):
                 pi_dict[estimator_name].original_score,
             )
 
+        if return_iterations:
+            for estimator_name in self.estimator_names:
+                temp_results = getattr(pi_dict[estimator_name], 'retrieve_all_iterations')()
+                temp_scores = []
+                temp_features = []
+                for adict in temp_results:
+                    features = np.array(list(adict.keys()))
+                    rankings = np.argsort([adict[f][0] for f in features])
+                    top_features = features[rankings]
+                    scores = np.array([adict[f][1] for f in top_features])
+                    pass_method = func.split("_")[1]
+                    #Just retrieve the second most important feature. 
+                    temp_scores.append(scores[1])
+                    temp_features.append(top_features[1])
+                    
+                data[f"second_place_scores__{estimator_name}"] = (
+                    [f"n_vars_second_place", "n_bootstrap"],
+                    temp_scores,
+                )
+                data[f"second_place_rankings__{estimator_name}"] = (
+                    [f"n_vars_second_place"],
+                    temp_features,
+                )   
+                
         results_ds = to_xarray(data)
 
         return results_ds

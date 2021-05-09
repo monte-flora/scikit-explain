@@ -119,6 +119,7 @@ class PlotImportance(PlotStructure):
         
         xticks = kwargs.get("xticks", None)
         title = kwargs.get("title", "")
+        p_values = kwargs.get('p_values', None)
 
         if plot_correlated_features:
             X = kwargs.get("X", None)
@@ -286,6 +287,15 @@ class PlotImportance(PlotStructure):
                         corr_matrix, sorted_var_names, rho_threshold=rho_threshold
                     )
 
+                # First regular is for the 'No Permutations'
+                if p_values is None:
+                    weights = ['regular'] +['regular']*len(variable_names_to_plot)
+                else:
+                    weights = ['regular']+['bold' if v else 'regular' for v in p_values]
+                    
+                # Reverse the order since the variable names are reversed. 
+                weights = weights[::-1]
+                
                 for i in range(len(variable_names_to_plot)):
                     color = "k"
                     if (method not in single_var_methods and plot_correlated_features):
@@ -305,6 +315,7 @@ class PlotImportance(PlotStructure):
                         size=size,
                         alpha=0.8,
                         color=color,
+                        weight=weights[i]
                     )
 
                 if estimator_output == "probability" and "pass" in method:
