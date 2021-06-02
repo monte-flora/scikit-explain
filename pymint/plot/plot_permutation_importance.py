@@ -120,12 +120,13 @@ class PlotImportance(PlotStructure):
         xticks = kwargs.get("xticks", None)
         title = kwargs.get("title", "")
         p_values = kwargs.get('p_values', None)
+        colinear_predictors = kwargs.get('colinear_predictors', None)
+        rho_threshold = kwargs.get('rho_threshold', 0.8)
 
         if plot_correlated_features:
             X = kwargs.get("X", None)
             if X is None or X.empty:
                 raise ValueError("Must provide X to InterpretToolkit to compute the correlations!")
-            rho_threshold = 0.8
             corr_matrix = X.corr().abs()
 
         if not isinstance(data, list):
@@ -134,29 +135,37 @@ class PlotImportance(PlotStructure):
         if any(isinstance(i, list) for i in estimator_names):
             estimator_names = estimator_names[0]
 
-        fig, axes, n_panels = self._get_axes(xlabels, ylabels,**kwargs)
+        fig, axes, n_panels = self._get_axes(xlabels, ylabels, **kwargs)
 
         only_one_estimator = True if len(estimator_names)==1 else False 
         if only_one_estimator:
             estimator_names = [estimator_names[0]]*len(xlabels)
         
-        ###assert (len(data) == len(ylabels)), 'Number of datasets in data must match the number of ylabels'
-        
+        only_one_row = True if len(ylabels)==1 else False
+        only_one_column = True if len(xlabels) ==1 else False
+        # row_idx == g
+        # col_idx == k 
+
         # y = rows (different metrics, different perm. directions)
-        for ylabel, (g, results) in zip(ylabels, enumerate(data)):
+        idx=0
+        for row_idx, ylabel in enumerate(ylabels):
             # x = columns (different models, different methods)
-            for (k, xlabel), estimator_name in zip(enumerate(xlabels), estimator_names):
-                if np.ndim(axes) == 1:
-                    ax = axes[k]
-                else:
-                    ax = axes[g, k]
-                    
-                if g == 0 and not only_one_estimator:
+            for (col_idx, xlabel), estimator_name in zip(enumerate(xlabels), estimator_names):
+                
+                # Could be iterating over different datasets or within a dataset, 
+                # iterating over different models 
+                results = data[col_idx] if only_one_row else data[row_idx] 
+
+                ax = axes[col_idx] if only_one_row else axes[row_idx, col_idx]
+
+                # Place the model names as titles if more than one model
+                if row_idx == 0 and not only_one_estimator:
                     ax.set_title(
                         estimator_name, fontsize=self.FONT_SIZES["small"], alpha=0.8
                     )
-
-                if only_one_estimator and g==len(data)-1:
+                
+                # If using one model, set the last row with the x-axis labels
+                if only_one_estimator and row_idx==len(ylabels)-1:
                     ax.set_xlabel(xlabel)
 
                 if num_vars_to_plot is None:
@@ -289,18 +298,29 @@ class PlotImportance(PlotStructure):
 
                 # First regular is for the 'No Permutations'
                 if p_values is None:
-                    weights = ['regular'] +['regular']*len(variable_names_to_plot)
+                    colors = ['k'] +['k']*len(variable_names_to_plot)
                 else:
-                    weights = ['regular']+['bold' if v else 'regular' for v in p_values]
-                    
+                    # Bold text if value is insignificant. 
+                    colors = ['k']+['xkcd:bright blue' if v else 'k' for v in p_values[idx]]
+                
+                if colinear_predictors is None:
+                    style = ['normal'] +['normal']*len(variable_names_to_plot)
+                else:
+                    # Italicize text if the VIF > threshold (indicates a multicolinear predictor)
+                    style = ['normal']+['italic' if v else 'normal' for v in colinear_predictors[idx]]
+            
                 # Reverse the order since the variable names are reversed. 
-                weights = weights[::-1]
+                colors = colors[::-1]
+                style = style[::-1]
                 
                 for i in range(len(variable_names_to_plot)):
                     color = "k"
                     if (method not in single_var_methods and plot_correlated_features):
                         correlated = results_dict.get(sorted_var_names[i], False)
                         color = "xkcd:medium green" if correlated else "k"
+
+                    if p_values is not None:
+                        color = colors[i] 
 
                     if method not in single_var_methods:
                         var = variable_names_to_plot[i].replace('__', ' & ')
@@ -315,7 +335,7 @@ class PlotImportance(PlotStructure):
                         size=size,
                         alpha=0.8,
                         color=color,
-                        weight=weights[i]
+                        style=style[i], 
                     )
 
                 if estimator_output == "probability" and "pass" in method:
@@ -375,10 +395,9 @@ class PlotImportance(PlotStructure):
                         x=tick, linestyle="dashed", alpha=0.4, color="#eeeeee", zorder=1
                     )
 
-                if k == 0:
+                if col_idx == 0:
                     pad = -0.2 if plot_correlated_features else -0.15
                     diff = 0.2 if n_panels > 3 else 0.0
-                    
                     ax.annotate(
                         "higher ranking",
                         xy=(pad, 0.8+diff),
@@ -396,7 +415,7 @@ class PlotImportance(PlotStructure):
                     ax.annotate(
                         "lower ranking",
                         xy=(pad + 0.05, 0.2-diff),
-                        xytext=(pad + 0.05 , 0.5),
+                        xytext=(pad + 0.05, 0.5),
                         arrowprops=dict(arrowstyle="->", color="xkcd:blue grey"),
                         xycoords=ax.transAxes,
                         rotation=90,
@@ -407,7 +426,9 @@ class PlotImportance(PlotStructure):
                         alpha=0.65,
                     )
 
-        if len(xlabels) == 1 and not only_one_estimator:
+                idx+=1
+
+        if only_one_column and not only_one_estimator:
             major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=xlabels[0],
@@ -416,7 +437,7 @@ class PlotImportance(PlotStructure):
                 fontsize=self.FONT_SIZES["tiny"],
             )
 
-        if ylabels is not None:
+        if ylabels is not None and not only_one_row:
             if isinstance(ylabels, str):
                 major_ax.set_ylabel(ylabels, fontsize=self.FONT_SIZEs["tiny"])
             else:
@@ -493,3 +514,4 @@ class PlotImportance(PlotStructure):
                 return VARIABLES_COLOR_DICT
             else:
                 return VARIABLES_COLOR_DICT[var]
+

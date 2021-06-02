@@ -1767,6 +1767,7 @@ class InterpretToolkit(Attributes):
                                                 plot_correlated_features=plot_correlated_features,
                                                  **kwargs)
 
+
     def get_important_vars(self, perm_imp_data, multipass=True, n_vars=10, combine=False):
         """
         Retrieve the most important variables from permutation importance.
@@ -1867,10 +1868,15 @@ class InterpretToolkit(Attributes):
             results = load_dataframe(fnames=fnames) 
         else:
             raise ValueError('dtype must be "dataset" or "dataframe"!')
-        
+       
         for s in [self, self.global_obj, self.local_obj]:
-            setattr(s, 'estimator_output', results.attrs['estimator_output'])
-            estimator_names = [results.attrs['estimators used']]
+            try:
+                setattr(s, 'estimator_output', results.attrs['estimator_output'])
+                estimator_names = [results.attrs['estimators used']]
+            except:
+                setattr(s, 'estimator_output', results.attrs['model_output'])
+                estimator_names = [results.attrs['models used']]
+            
             if not is_list(estimator_names):
                 estimator_names = [estimator_names]
 

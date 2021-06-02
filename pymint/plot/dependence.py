@@ -10,6 +10,7 @@ except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
 
+import seaborn as sns
 from shap.plots import colors
 
 try:
@@ -18,6 +19,7 @@ except:
     from shap.common import convert_name, approximate_interactions
 
 from matplotlib.ticker import MaxNLocator
+from math import log10
 
 from .base_plotting import PlotStructure
 
@@ -115,7 +117,10 @@ def dependence_plot(
     unnormalize = kwargs.get("unnormalize", None)
     cmap = colors.red_blue
     feature_names = list(X.columns)
-    
+ 
+    histdata = kwargs.get('histdata', None) 
+    target = kwargs.get('target', None)
+
     if feature_values is None:
         feature_values = X.values
 
@@ -192,11 +197,22 @@ def dependence_plot(
         classes = np.unique(target_values)
         n_classes = len(classes)
         if n_classes == 2:
-            dot_sizes = [5,15]
-            markers = ["v", "o"]
+            dot_sizes = [1,8]
+            markers = ["o", "v"]
             idx_set = [np.where(target_values==i)[0] for i in classes]
             alphas = [0.4, 1.0]
             
+
+    # Plot background histogram 
+    # add histogram
+    if histdata is not None:
+        hist_ax = make_twin_ax(ax)
+        twin_yaxis_label = add_histogram_axis(
+                hist_ax, 
+                feature=feature,
+                target=target,
+                data = histdata, 
+            )
 
     if interaction_index is not None and target_values is None:
         cdata_imp = cdata.copy()
@@ -254,7 +270,7 @@ def dependence_plot(
                 vmax=chigh,
                 rasterized=len(xdata) > 500,
                 marker=marker,
-            )
+                )
         
     else:
         p = ax.scatter(
@@ -270,7 +286,8 @@ def dependence_plot(
 
     if interaction_index != feature_ind and interaction_index is not None:
         # draw the color bar
-        cb = pl.colorbar(p, ticks=MaxNLocator(5), ax=ax)
+        pad = 0.05 if histdata is None else 0.18
+        cb = pl.colorbar(p, ticks=MaxNLocator(5), ax=ax, pad=pad)
         cb.set_label(display_feature_names[interaction_index], size=8)
         cb.ax.tick_params(labelsize=8)
         cb.set_alpha(1)
@@ -304,8 +321,9 @@ def dependence_plot(
             alpha=alpha,
         )
 
-    xmin = np.nanmin(xdata)
-    xmax = np.nanmax(xdata)
+    # NOT plotting the full range. 
+    xmin = np.nanpercentile(xdata, 1.0)
+    xmax = np.nanpercentile(xdata, 99.0)
     ax.set_xlim([xmin, xmax])
 
     # make the plot more readable
@@ -335,4 +353,67 @@ def get_interaction_index(feature_ind,
         )
         
     return interaction_index  
-        
+
+def add_histogram_axis(
+        ax, data, feature, target, bins='auto', min_value=None, max_value=None, density=False, **kwargs
+    ):
+        """
+        Adds a background histogram of data for a given feature.
+        """
+        sns.histplot(
+                ax=ax, 
+                data=data,
+                x=feature,
+                hue = target,
+                legend=False,
+                stat='probability',
+                common_norm=False
+               )
+        ax.set_ylabel('') 
+
+        '''
+        color = kwargs.get("color", "xkcd:dark sky blue")
+        edgecolor = kwargs.get("color", "white")
+
+        cnt, bins, patches = ax.hist(
+            data,
+            bins=bins,
+            alpha=0.3,
+            color=color,
+            density=density,
+            edgecolor=edgecolor,
+            zorder=1,
+        )
+
+        if density:
+            return "Relative Frequency"
+        else:
+            ax.set_yscale("log")
+            ymax = round(10 * len(data))
+            n_ticks = round(log10(ymax))
+            ax.set_ylim([0, ymax])
+            ax.set_yticks([10 ** i for i in range(n_ticks + 1)])
+            return "Frequency"
+        '''
+
+def make_twin_ax(ax):
+        """
+        Create a twin axis on an existing axis with a shared x-axis
+        """
+        # align the twinx axis
+        twin_ax = ax.twinx()
+
+        # Turn twin_ax grid off.
+        twin_ax.grid(False)
+
+        # Set ax's patch invisible
+        ax.patch.set_visible(False)
+        # Set axtwin's patch visible and colorize it in grey
+        twin_ax.patch.set_visible(True)
+
+        # move ax in front
+        ax.set_zorder(twin_ax.get_zorder() + 1)
+
+        return twin_ax
+
+

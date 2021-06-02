@@ -230,7 +230,7 @@ class GlobalInterpret(Attributes):
             pi_dict[estimator_name] = pi_result
 
             del pi_result
-            
+
         data = {}
         for estimator_name in self.estimator_names:
             for func in ["retrieve_multipass", "retrieve_singlepass"]:
@@ -277,7 +277,8 @@ class GlobalInterpret(Attributes):
                     [f"n_vars_second_place"],
                     temp_features,
                 )   
-                
+
+
         results_ds = to_xarray(data)
 
         return results_ds
@@ -1353,11 +1354,11 @@ class GlobalInterpret(Attributes):
                 values_sorted = values[idx, :]
 
                 final_results[f"hstat_rankings__{estimator_name}"] = (
-                    [f"n_vars_hstat"],
+                    [f"n_vars_perm_based_interactions"],
                     feature_names_sorted,
                     )
                 final_results[f"hstat_scores__{estimator_name}"] = (
-                    [f"n_vars_hstat", "n_bootstrap"],
+                    [f"n_vars_perm_based_interactions", "n_bootstrap"],
                     values_sorted,
                 )
             results = to_xarray(final_results)
@@ -1475,7 +1476,7 @@ class GlobalInterpret(Attributes):
 
             # Compute the interaction strength
             ias.append(num / denom)
-    
+
         return {f'{estimator_name}_ias': (['n_bootstrap'], np.array(ias))}
 
     def compute_ale_variance(
