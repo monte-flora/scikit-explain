@@ -114,6 +114,7 @@ def dependence_plot(
          In this case we do not create a Figure, otherwise we do.
 
     """
+    marker = kwargs.get('marker', 'o')
     unnormalize = kwargs.get("unnormalize", None)
     cmap = colors.red_blue
     feature_names = list(X.columns)
@@ -124,10 +125,6 @@ def dependence_plot(
     if feature_values is None:
         feature_values = X.values
 
-    ### OLD CODE CODE 
-    ###if unnormalize is not None:
-    ###    feature_values = unnormalize._full_inverse_transform(original_feature_values)
-   
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
         shap_values = np.reshape(shap_values, len(shap_values), 1)
@@ -297,6 +294,11 @@ def dependence_plot(
         base_plot._to_sci_notation(ax=None, colorbar=cb, ydata=cdata)
 
     # plot any nan feature values as tick marks along the y-axis
+    # NOT plotting the full range. 
+    xmin = np.nanpercentile(xdata, 2.0)
+    xmax = np.nanpercentile(xdata, 97.5)
+    ax.set_xlim([xmin, xmax])
+    
     xlim = ax.get_xlim()
     if interaction_index is not None:
         p = ax.scatter(
@@ -322,9 +324,9 @@ def dependence_plot(
         )
 
     # NOT plotting the full range. 
-    xmin = np.nanpercentile(xdata, 1.0)
-    xmax = np.nanpercentile(xdata, 99.0)
-    ax.set_xlim([xmin, xmax])
+    #xmin = np.nanpercentile(xdata, 1.0)
+    #xmax = np.nanpercentile(xdata, 99.0)
+    #ax.set_xlim([xmin, xmax])
 
     # make the plot more readable
     ax.xaxis.set_ticks_position("bottom")

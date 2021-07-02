@@ -108,14 +108,15 @@ class PlotImportance(PlotStructure):
             xaxis_label : str
                 Metric used to compute the predictor importance, which will display as the X-axis label.
         """
-        single_var_methods = ['multipass', 'singlepass', 'ale_variance', 'coefs']
+        single_var_methods = ['multipass', 'singlepass', 'ale_variance', 'coefs', 'shap']
         
         all_methods = ['multipass', 
                    'singlepass', 
                    'perm_based', 
                    'ale_variance',
                    'ale_variance_interactions', 
-                   'coefs', 
+                   'coefs',
+                    'shap', 
                   ]
         
         xticks = kwargs.get("xticks", None)
@@ -155,8 +156,11 @@ class PlotImportance(PlotStructure):
                 
                 # Could be iterating over different datasets or within a dataset, 
                 # iterating over different models 
-                results = data[col_idx] if only_one_row else data[row_idx] 
-
+                if only_one_estimator:
+                    results = data[col_idx] if only_one_row else data[row_idx] 
+                else:
+                    results = data[row_idx] 
+                    
                 ax = axes[col_idx] if only_one_row else axes[row_idx, col_idx]
 
                 # Place the model names as titles if more than one model

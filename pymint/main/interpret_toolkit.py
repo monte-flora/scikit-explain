@@ -117,11 +117,13 @@ class InterpretToolkit(Attributes):
                  estimator_output=None,
                  feature_names=None):
 
-        if not is_list(estimators):
-            estimators = [estimators]
-        
-        estimator_names = [e[0] for e in estimators]
-        estimators = [e[1] for e in estimators]
+        if estimators is not None:
+            if not is_list(estimators) and estimators:
+                estimators = [estimators]
+            estimator_names = [e[0] for e in estimators]
+            estimators = [e[1] for e in estimators]
+        else:
+            estimator_names = None 
         
         self.set_estimator_attribute(estimators, estimator_names)
         self.set_y_attribute(y)
@@ -1719,7 +1721,9 @@ class InterpretToolkit(Attributes):
                    'singlepass', 
                    'perm_based', 
                    'ale_variance',
-                   'ale_variance_interactions'
+                   'ale_variance_interactions', 
+                   'coefs',
+                   'shap', 
                   ]
         
         estimator_output = kwargs.get('estimator_output', self.estimator_output)

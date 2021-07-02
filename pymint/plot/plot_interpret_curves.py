@@ -169,22 +169,18 @@ class PlotInterpretCurves(PlotStructure):
         """
         Adds a background histogram of data for a given feature.
         """
-
         color = kwargs.get("color", "lightblue")
         edgecolor = kwargs.get("color", "white")
 
-        # if min_value is not None and max_value is not None:
-        #    data = np.clip(data, a_min=min_value, a_max=max_value)
-
         cnt, bins, patches = ax.hist(
-            data,
-            bins=bins,
-            alpha=0.3,
-            color=color,
-            density=density,
-            edgecolor=edgecolor,
-            zorder=1,
-        )
+                data,
+                bins=bins,
+                alpha=0.3,
+                color=color,
+                density=density,
+                edgecolor=edgecolor,
+                zorder=1,
+            )
 
         if density:
             return "Relative Frequency"

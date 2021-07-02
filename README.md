@@ -47,6 +47,7 @@ shap>=0.30.0
 xarray>=0.16.0
 tqdm
 statsmodels
+seaborn>=0.11.0
 ```
 
 ### Initializing PyMint
@@ -59,10 +60,10 @@ import pymint
 
 # Loads three ML models (random forest, gradient-boosted tree, and logistic regression)
 # trained on a subset of the road surface temperature data from Handler et al. (2020).
-model_objs, model_names = pymint.load_models()
+estimators = pymint.load_models()
 X,y = pymint.load_data()
 
-explainer = pymint.InterpretToolkit(estimators=model_objs,estimator_names=model_names,X=X,y=y,)
+explainer = pymint.InterpretToolkit(estimators=estimators,X=X,y=y,)
 ```
 ## Permutation Importance
 
@@ -70,7 +71,7 @@ For predictor ranking, PyMint uses both single-pass and multiple-pass permutatio
 We can calculate the permutation importance and then plot the results. In the tutorial it discusses options to make the figure publication-quality giving the plotting method
 additional argument to convert the feature names to a more readable format or color coding by feature type. 
 ```python
-explainer.calc_permutation_importance(n_vars=10, evaluation_fn='auc')
+explainer.permutation_importance(n_vars=10, evaluation_fn='auc')
 explainer.plot_importance(method='multipass')
 ```
 
@@ -85,10 +86,10 @@ Sample notebook can be found here: [**Permutation Importance**](https://github.c
 
 To compute the expected functional relationship between a feature and an ML model's prediction, you can use partial dependence or accumulated local effects. There is also an option for second-order interaction effects. For the choice of feature, you can manually select or can run the permutation importance and a built-in method will retrieve those features. It is also possible to configure the plot for readable feature names. 
 ```python 
-# Assumes the calc_permutation_importance has already been run.
+# Assumes the .permutation_importance has already been run.
 important_vars = explainer.get_important_vars(results, multipass=True, nvars=7)
 
-ale = explainer.calc_ale(features=important_vars, n_bins=20)
+ale = explainer.ale(features=important_vars, n_bins=20)
 explainer.plot_ale(ale)
 ```
 <p align="center">
@@ -113,10 +114,10 @@ To explain specific examples, you can use SHAP values. PyMint employs both Kerne
 ```python
 import shap
 single_example = examples.iloc[[0]]
-explainer = pymint.InterpretToolkit(estimators=model_objs[0], estimator_names=model_names[0],X=single_example,)
+explainer = pymint.InterpretToolkit(estimators=estimators[0], X=single_example,)
 
 background_dataset = shap.sample(examples, 100)
-results = explainer.calc_contributions(method='shap', background_dataset=background_dataset)
+results = explainer.local_contributions(method='shap', background_dataset=background_dataset)
 fig = explainer.plot_contributions(results)
 ```
 <p align="center">
@@ -124,10 +125,10 @@ fig = explainer.plot_contributions(results)
 </p>
 
 ```python
-explainer = pymint.InterpretToolkit(models=model_objs[0],model_names=model_names[0],X=X, y=y)
+explainer = pymint.InterpretToolkit(estimators=estimators[0],X=X, y=y)
 
 background_dataset = shap.sample(examples, 100)
-results = explainer.calc_contributions(method='shap', background_dataset=background_dataset, performance_based=True,)
+results = explainer.local_contributions(method='shap', background_dataset=background_dataset, performance_based=True,)
 fig = myInterpreter.plot_contributions(results)
 ```
 
@@ -136,10 +137,10 @@ fig = myInterpreter.plot_contributions(results)
 </p>
 
 ```python
-explainer = pymint.InterpretToolkit(models=model_objs[0],model_names=model_names[0],X=X, y=y)
+explainer = pymint.InterpretToolkit(estimators=estimators[0],X=X, y=y)
                                 
 background_dataset = shap.sample(examples, 100)
-results = explainer.calc_shap(background_dataset=background_dataset)
+results = explainer.shap(background_dataset=background_dataset)
 shap_values, bias = results['Random Forest']
 myInterpreter.plot_shap(plot_type = 'summary', shap_values=shap_values,) 
 ```

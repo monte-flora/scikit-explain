@@ -38,7 +38,8 @@ REQUIRED = [
     "xarray>=0.16.0",
     "tqdm", 
     "statsmodels",
-    "stanford_theme"
+    "stanford_theme",
+    "seaborn>=0.11.0",
 ]
 
 # What packages are optional?
