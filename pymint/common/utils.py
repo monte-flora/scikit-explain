@@ -11,6 +11,56 @@ from sklearn.metrics._base import _average_binary_score
 from sklearn.utils.multiclass import type_of_target
 
 
+def coefficients_to_importance(coefficients, estimator_name, feature_names):
+    """Convert coefficients into a importance dataset from plotting purposes"""
+    ranked_indices = np.argsort(np.absolute(coefficients))[::-1]
+    scores_ranked = np.array(coefficients[ranked_indices])
+    features_ranked = np.array(feature_names)[ranked_indices]
+
+    data={}
+    data[f"coefs_rankings__{estimator_name}"] = (
+                    [f"n_vars_coefs"],
+                    features_ranked,
+                )
+    data[f"coefs_scores__{estimator_name}"] = (
+                    [f"n_vars_coefs", "n_bootstrap"],
+                    scores_ranked.reshape(len(scores_ranked),1),
+    )
+    data = xr.Dataset(data)
+
+    return data
+
+
+
+def shap_values_to_importance(shap_values, estimator_name, feature_names, method='sum'):
+    """
+    Convert SHAP values into feature importance.
+    """
+    if method == 'std':
+        # Compute the std(SHAP) 
+        shap_rank= np.std(shap_values, axis=0)
+    elif method == 'sum':
+        #Compute sum of abs values
+        shap_rank = np.sum(np.absolute(shap_values), axis=0)
+
+    ranked_indices = np.argsort(shap_rank)[::-1]
+    scores_ranked = np.array(shap_rank[ranked_indices])
+    features_ranked = np.array(feature_names)[ranked_indices]
+
+    data={}
+    data[f"shap_rankings__{estimator_name}"] = (
+                    [f"n_vars_shap"],
+                    features_ranked,
+                )
+    data[f"shap_scores__{estimator_name}"] = (
+                    [f"n_vars_shap", "n_bootstrap"],
+                    scores_ranked.reshape(len(scores_ranked),1),
+    )
+    data = xr.Dataset(data)
+
+    return data
+
+
 def flatten_nested_list(list_of_lists):
     """Turn a list of list into a single, flatten list"""
     all_elements_are_lists = all([is_list(item) for item in list_of_lists])

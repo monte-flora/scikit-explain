@@ -365,8 +365,10 @@ class GlobalInterpret(Attributes):
                 [n_bootstrap],
             )
 
+            total = len(features) * len(self.estimator_names) 
             results = run_parallel(
-                func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs
+                func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs, 
+                total=total, 
             )
 
         if len(cat_features) > 0:
@@ -385,8 +387,10 @@ class GlobalInterpret(Attributes):
                 [feature_encoder],
             )
 
+            total = len(cat_features) * len(self.estimator_names) 
             cat_results = run_parallel(
-                func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs
+                func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs, 
+                total=total,
             )
 
         results = cat_results + results
@@ -1331,15 +1335,18 @@ class GlobalInterpret(Attributes):
         if method == "ias":
             func = self.compute_interaction_strength
             args_iterator = to_iterator(estimator_names,)
+            total=len(estimator_names)
         elif method == "hstat":
             func = self.friedman_h_statistic
             args_iterator = to_iterator(estimator_names, features,)
+            total=len(estimator_names)*len(features)
 
         self.data = data
         self.data_2d = data_2d
         n_jobs = len(estimator_names)
         results = run_parallel(
-            func=func, args_iterator=args_iterator, kwargs=kwargs, nprocs_to_use=n_jobs
+            func=func, args_iterator=args_iterator, kwargs=kwargs, nprocs_to_use=n_jobs, 
+            total=total
         )
         
         results = merge_dict(results)

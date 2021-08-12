@@ -20,40 +20,60 @@ class PlotStructure:
     Plot handles figure and subplot generation
     """
 
-    # Setting the font style to serif
-    rcParams["font.family"] = "serif"
+    def __init__(self, BASE_FONT_SIZE = 12):
+    
+        # Setting the font style to serif
+        rcParams["font.family"] = "serif"
 
-    # Set up the font sizes for matplotlib
-    BASE_FONT_SIZE = 12
+        GENERIC_FONT_SIZE_NAMES = [
+            "teensie",
+            "tiny",
+            "small",
+            "normal",
+            "big",
+            "large",
+            "huge",
+        ]
 
-    GENERIC_FONT_SIZE_NAMES = [
-        "teensie",
-        "tiny",
-        "small",
-        "normal",
-        "big",
-        "large",
-        "huge",
-    ]
+        FONT_SIZES_ARRAY = np.arange(-6, 8, 2) + BASE_FONT_SIZE
 
-    FONT_SIZES_ARRAY = np.arange(-6, 8, 2) + BASE_FONT_SIZE
+        self.FONT_SIZES = {
+            name: size for name, size in zip(GENERIC_FONT_SIZE_NAMES, FONT_SIZES_ARRAY)
+        }
 
-    FONT_SIZES = {
-        name: size for name, size in zip(GENERIC_FONT_SIZE_NAMES, FONT_SIZES_ARRAY)
-    }
+        plt.rc("font", size=self.FONT_SIZES["normal"])  # controls default text sizes
+        plt.rc("axes", titlesize=self.FONT_SIZES["tiny"])  # fontsize of the axes title
+        plt.rc("axes", labelsize=self.FONT_SIZES["normal"])  # fontsize of the x and y labels
+        plt.rc(
+        "xtick", labelsize=self.FONT_SIZES["teensie"]
+        )  # fontsize of the x-axis tick marks
+        plt.rc(
+        "ytick", labelsize=self.FONT_SIZES["teensie"]
+        )  # fontsize of the y-axis tick marks
+        plt.rc("legend", fontsize=self.FONT_SIZES["teensie"])  # legend fontsize
+        plt.rc("figure", titlesize=self.FONT_SIZES["big"])  # fontsize of the figure title
 
-    plt.rc("font", size=FONT_SIZES["normal"])  # controls default text sizes
-    plt.rc("axes", titlesize=FONT_SIZES["tiny"])  # fontsize of the axes title
-    plt.rc("axes", labelsize=FONT_SIZES["normal"])  # fontsize of the x and y labels
-    plt.rc(
-        "xtick", labelsize=FONT_SIZES["teensie"]
-    )  # fontsize of the x-axis tick marks
-    plt.rc(
-        "ytick", labelsize=FONT_SIZES["teensie"]
-    )  # fontsize of the y-axis tick marks
-    plt.rc("legend", fontsize=FONT_SIZES["teensie"])  # legend fontsize
-    plt.rc("figure", titlesize=FONT_SIZES["big"])  # fontsize of the figure title
-
+    def get_fig_props(self, n_panels, **kwargs):
+        """Determine appropriate figure properties"""
+        width_slope = 0.875
+        height_slope = 0.45
+        intercept = (3.0 - width_slope)
+        figsize = (min((n_panels*width_slope)+intercept,19) , 
+                   min((n_panels*height_slope)+intercept,12)
+                  )
+        
+        wspace=(-0.03*n_panels)+0.85
+        hspace=(0.0175*n_panels)+0.3
+        
+        n_columns = kwargs.get('n_columns', 3)
+        wspace = wspace+0.25 if n_columns > 3 else wspace
+        
+        kwargs["figsize"] = kwargs.get("figsize", figsize)
+        kwargs["wspace"] = kwargs.get("wspace", wspace)
+        kwargs["hspace"] = kwargs.get("hspace", hspace)
+        
+        return kwargs    
+        
     def create_subplots(self, n_panels, **kwargs):
         """
         Create a series of subplots (MxN) based on the
@@ -84,8 +104,8 @@ class PlotStructure:
 
         delete = True
         if n_panels <= 3:
-            n_columns = n_panels
-            delete = False
+            n_columns = kwargs.get("n_columns", n_panels)
+            delete = True if n_panels != n_columns else False
         else:
             n_columns = kwargs.get("n_columns", 3)
 
@@ -200,7 +220,7 @@ class PlotStructure:
             return ax_iterator
 
     def set_major_axis_labels(
-        self, fig, xlabel=None, ylabel_left=None, ylabel_right=None, **kwargs
+        self, fig, xlabel=None, ylabel_left=None, ylabel_right=None, title=None, **kwargs
     ):
         """
         Generate a single X- and Y-axis labels for
@@ -230,6 +250,8 @@ class PlotStructure:
             ax_right.yaxis.set_label_position("right")
             ax_right.set_ylabel(ylabel_right, labelpad=2 * labelpad, fontsize=fontsize)
 
+        ax.set_title(title)     
+            
         return ax
 
     def set_row_labels(self, labels, axes, pos=-1, pad=1.15, rotation=270, **kwargs):
@@ -264,8 +286,9 @@ class PlotStructure:
         A alphabet character to each subpanel.
         """
         fontsize = kwargs.get("fontsize", 10)
-        alphabet_list = [chr(x) for x in range(ord("a"), ord("z") + 1)]
-
+        alphabet_list = [chr(x) for x in range(ord("a"), ord("z") + 1)] + \
+            [f"{chr(x)}{chr(x)}" for x in range(ord("a"), ord("z") + 1)]
+       
         ax_iterator = self.axes_to_iterator(n_panels, axes)
 
         for i, ax in enumerate(ax_iterator):

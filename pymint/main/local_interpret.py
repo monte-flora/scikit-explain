@@ -225,7 +225,7 @@ class LocalInterpret(Attributes):
             contributions = explainer.shap_values(X)
 
         except Exception as e:
-            ### traceback.print_exc()
+            ###traceback.print_exc()
             if self.estimator_output == "probability":
                 func = estimator.predict_proba
             else:
