@@ -25,6 +25,14 @@ class MidpointNormalize(colors.Normalize):
 
 
 class PlotInterpret2D(PlotStructure):
+    """
+    PlotInterpret2D handles the 2D explainability graphics, which include
+    the 2D ALE and PD. 
+    """
+    
+    def __init__(self, BASE_FONT_SIZE=12):
+        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
+    
     def add_histogram_axis(
         self,
         ax,

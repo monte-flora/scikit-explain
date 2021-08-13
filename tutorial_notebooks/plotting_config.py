@@ -22,8 +22,8 @@ units = ['W m$^{-2}$', '$^{\circ}$C', 'm s$^{-1}$', 'W m$^{-2}$', '%', 'W m$^{-2
 
 pretty_names = [ '$\lambda_{\downarrow}$', '$T_{d}$', '$V_{fric}$', 'Gflux', '$Cloud_{high}$',
  '$Lat_{F}$', '$Cloud_{low}$', '$Cloud_{mid}$', 'IRBT', '$Sens_{F}$',
- 'Hours $T_{sfc}$ $>$ 0', 'Hours $T_{sfc}$ $<=$ 0', 'SfcRough', '$T_{sfc}$',
- '$I_{S}$', '$T_{2m}$', 'Hours $T_{2m}$ $>$ 0', 'Hours $T_{2m}$ $<=$ 0',
+ 'Hours $T_{sfc}$ $>$ 0', 'Hours $T_{sfc} \leq 0$', 'SfcRough', '$T_{sfc}$',
+ '$I_{S}$', '$T_{2m}$', 'Hours $T_{2m}$ $>$ 0', 'Hours $T_{2m}$ $\leq $ 0',
  '$Cloud_{Tot}$', r'$\lambda_{\uparrow}$', 'VBD', 'VDD', '10m wind',
  'Date marker', 'Urban', 'Rural', 'Diff1', 'Diff2', 'Diff3',
  '$T_{sfc}$ - $T_{2m}$']

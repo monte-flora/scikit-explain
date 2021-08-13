@@ -124,7 +124,7 @@ class InterpretToolkit(Attributes):
             estimators = [e[1] for e in estimators]
         else:
             estimator_names = None 
-        
+
         self.set_estimator_attribute(estimators, estimator_names)
         self.set_y_attribute(y)
         self.set_X_attribute(X, feature_names)
@@ -1128,7 +1128,9 @@ class InterpretToolkit(Attributes):
                                           to_probability = to_probability,
                                           **kwargs)
         else:
-            plot_obj = PlotInterpretCurves()
+            base_font_size = 12 if len(features) <= 6 else 16
+            base_font_size = kwargs.get('base_font_size', base_font_size) 
+            plot_obj = PlotInterpretCurves(BASE_FONT_SIZE=base_font_size)
             return plot_obj.plot_1d_curve(method=method,
                                           data=data,
                                           estimator_names=estimator_names,
@@ -1268,6 +1270,9 @@ class InterpretToolkit(Attributes):
             If True, the values are multipled by 100. 
         
         Keyword arguments include arguments typically used for matplotlib. 
+            E.g., 
+            figsize, hist_color,  
+        
         
         
         Returns
@@ -1412,7 +1417,6 @@ class InterpretToolkit(Attributes):
                            contrib=None,
                            features=None, 
                            estimator_names=None,
-                           to_only_varname=None,
                            display_feature_names={}, 
                            **kwargs):
         """
@@ -1434,8 +1438,6 @@ class InterpretToolkit(Attributes):
             If using multiple estimators, you can pass a single (or subset of) estimator name(s) 
             to compute the IAS for. 
 
-        to_only_varname : callable (default=None)
-        
         display_feature_names : dict 
             For plotting purposes. Dictionary that maps the feature names 
             in the pandas.DataFrame to display-friendly versions.
@@ -1481,14 +1483,15 @@ class InterpretToolkit(Attributes):
             features = contrib.attrs['feature_names']
             
         # initialize a plotting object
-        plot_obj = PlotFeatureContributions()
-
+        only_one_panel = (contrib.index[0][0] == 'non_performance' and len(estimator_names)==1)
+        base_font_size = kwargs.get('base_font_size', 16 if only_one_panel else 11)
+        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size)
+        kwargs['estimator_output'] = self.estimator_output
+        
         return plot_obj.plot_contributions(data=contrib,
                                            estimator_names = estimator_names,
                                            features=features,
-                                           to_only_varname=to_only_varname,
                                            display_feature_names=display_feature_names,
-                                           estimator_output=estimator_output,
                                            **kwargs)
 
     def shap(self, background_dataset=None):
@@ -1633,7 +1636,13 @@ class InterpretToolkit(Attributes):
             shap_values_copy = shap_values
             
         # initialize a plotting object
-        plot_obj = PlotFeatureContributions()
+        if plot_type == 'summary':
+            fontsize=12
+        else:
+            fontsize=12 if len(features) <= 6 else 16
+
+        base_font_size = kwargs.get('base_font_size', fontsize)
+        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size)
         plot_obj.feature_names = self.feature_names
         plot_obj.plot_shap(shap_values=shap_values_copy,
                            X=self.X,
@@ -1644,11 +1653,9 @@ class InterpretToolkit(Attributes):
                            **kwargs
                           )
 
-    def plot_importance(self, method='multipass',
-                        data=None,
-                        columns=None, 
-                        rows=None,
-                        estimator_names=None, 
+    def plot_importance(self, 
+                        data,
+                        panels,
                         plot_correlated_features=False,
                         **kwargs):
         """
@@ -1656,10 +1663,14 @@ class InterpretToolkit(Attributes):
 
         Parameters
         -------------
-        method: 'multipass', 'singlepass', 'perm_based', 'ale_variance', or 'ale_variance_interactions'
-            Method used to compute the feature rankings. 
+        panels: List of 2-tuple of (estimator name, method) to determine the sub-panel
+                matrixing for the plotting. E.g., If you wanted to compare multi-pass to 
+                single-pass permutation importance for a random forest: 
+               ``panels  = [('Random Forest', 'multipass'), ('Random Forest', 'singlepass')``
+                The available ranking methods in PyMint include 'multipass', 'singlepass', 
+                'perm_based', 'ale_variance', or 'ale_variance_interactions'. 
                 
-        data : xarray.Dataset or list of xarray.Datasets
+        data :  list of xarray.Datasets
             Results from 
             
             - :func:`~InterpretToolkit.permutation_importance`
@@ -1667,6 +1678,8 @@ class InterpretToolkit(Attributes):
             - :func:`~InterpretToolkit.friedman_h_stat`
             - :func:`~InterpretToolkit.perm_based_interaction`
             
+            For each element in panels, there needs to be a corresponding element in data. 
+
         columns : list of strings
             What will be the columns of the plot? These can be x-axis label (default is
             the different estimator names)
@@ -1717,64 +1730,31 @@ class InterpretToolkit(Attributes):
         .. image :: ../../images/multi_pass_perm_imp.png
         
         """
-        methods = ['multipass', 
-                   'singlepass', 
-                   'perm_based', 
-                   'ale_variance',
-                   'ale_variance_interactions', 
-                   'coefs',
-                   'shap', 
-                  ]
+        data = [data] if not is_list(data) else data
+        assert len(data) == len(panels), 'Panels and Data must have the same number of elements' 
         
+        for r, (method, estimator_name) in zip(data, panels):
+            available_methods = [d.split('__')[0] for d in list(r.data_vars) if f'rankings__{estimator_name}' in d]
+            if f"{method}_rankings"not in available_methods:
+                raise ValueError(f"""{method} does not match the available methods for this item({available_methods}). 
+                         Ensure that the elements of data match up with those panels!
+                         Also check for any possible spelling error. 
+                         """)
+     
         estimator_output = kwargs.get('estimator_output', self.estimator_output)
         kwargs.pop('estimator_output', None)
-
-        if not isinstance(data, list):
-            data = [data]
         
         # initialize a plotting object
-        plot_obj = PlotImportance()
+        base_font_size = kwargs.get('base_font_size', 12)
+        plot_obj = PlotImportance(BASE_FONT_SIZE=base_font_size)
 
-        if estimator_names is None:
-            estimator_names = self.estimator_names
-        elif is_str(estimator_names):
-            estimator_names = [estimator_names]
-        
-        if columns is None:
-            columns = estimator_names
-        elif is_str(columns):
-            columns = [columns]
-            
-        if rows is None:
-            rows  =['']
-        elif is_str(rows):
-            rows  = [rows]
-            
-        metrics_used=[]
-        for d in data:
-            if 'evaluation_fn' in d.attrs:
-                metrics_used.append([d.attrs['evaluation_fn'].replace("_", "").upper()])
-            
-            
-        if len(columns) > 1 and len(estimator_names) > 1 and (columns!=estimator_names):
-            raise ValueError("""
-                            PyMint does not currently handle plot the 
-                            feature importance for multiple models and 
-                            multiple x-axis labels (columns arg)
-                            """
-                            )
-            
         if plot_correlated_features:
             kwargs['X'] = self.X
 
         return plot_obj.plot_variable_importance(data,
-                                                method=method, 
-                                                estimator_output=estimator_output,
-                                                xlabels = columns,
-                                                ylabels= rows,
-                                                metrics_used=metrics_used,
-                                                estimator_names=estimator_names,
+                                                panels=panels, 
                                                 plot_correlated_features=plot_correlated_features,
+                                                 estimator_output=estimator_output,
                                                  **kwargs)
 
 
