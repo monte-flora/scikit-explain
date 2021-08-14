@@ -19,7 +19,8 @@ class PlotImportance(PlotStructure):
                    'ale_variance',
                    'ale_variance_interactions', 
                    'coefs',
-                    'shap', 
+                   'shap',
+                   'hstat', 
                   ]
     DISPLAY_NAMES = ['Multiple Pass', 
                    'Single Pass', 
@@ -27,7 +28,8 @@ class PlotImportance(PlotStructure):
                    'ALE-Based',
                    'ALE-Based Interactions', 
                    'Coefficients',
-                    'SHAP', 
+                   'SHAP',
+                   'H-Statistic'
                   ]
     
     DISPLAY_NAMES_DICT = {m : n for m,n in zip(ALL_METHODS, DISPLAY_NAMES)}
@@ -115,6 +117,8 @@ class PlotImportance(PlotStructure):
             num_vars_to_plot : int
                 Number of top variables to plot (defalut is None and will use number of multipass results)
         """
+        xlabels = kwargs.get('xlabels', None) 
+        ylabels = kwargs.get('ylabels', None) 
         xticks = kwargs.get("xticks", None)
         title = kwargs.get("title", "")
         p_values = kwargs.get('p_values', None)
@@ -142,8 +146,11 @@ class PlotImportance(PlotStructure):
         for i, (panel, ax) in enumerate(zip(panels, ax_iterator)):
             method, estimator_name = panel
             results = data[i]
-            if not only_one_method:
-                ax.set_xlabel(self.DISPLAY_NAMES_DICT.get(method, method), fontsize=self.FONT_SIZES["small"])
+            if xlabels is not None:
+                ax.set_xlabel(xlabels[i], fontsize=self.FONT_SIZES["small"])
+            else:    
+                if not only_one_method:
+                    ax.set_xlabel(self.DISPLAY_NAMES_DICT.get(method, method), fontsize=self.FONT_SIZES["small"])
             if not only_one_estimator:
                 ax.set_title(estimator_name)
      
@@ -360,7 +367,7 @@ class PlotImportance(PlotStructure):
                         x=tick, linestyle="dashed", alpha=0.4, color="#eeeeee", zorder=1
                     )
   
-        xlabel = self.DISPLAY_NAMES_DICT.get(method, method) if only_one_method else ''
+        xlabel = self.DISPLAY_NAMES_DICT.get(method, method) if (only_one_method and xlabels is None) else ''
         major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=xlabel,
@@ -401,6 +408,14 @@ class PlotImportance(PlotStructure):
                         alpha=0.65,
                     )
 
+        if ylabels is not None:
+            self.set_row_labels(labels=ylabels, 
+                                axes=axes, 
+                                pos=-1, 
+                                pad=1.15, 
+                                rotation=270, 
+                                **kwargs)
+        
         if estimator_output == "probability":
             pos = (0.9, 0.09)
         else:

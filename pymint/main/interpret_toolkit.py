@@ -13,6 +13,8 @@ from ..plot.plot_interpret_curves import PlotInterpretCurves
 from ..plot.plot_permutation_importance import PlotImportance
 from ..plot.plot_feature_contributions import PlotFeatureContributions
 from ..plot.plot_2D import PlotInterpret2D
+from ..plot._box_and_whisker import box_and_whisker
+from ..plot._kde_2d import PlotScatter
 
 from ..common.utils import (
     to_xarray,
@@ -1730,9 +1732,26 @@ class InterpretToolkit(Attributes):
         .. image :: ../../images/multi_pass_perm_imp.png
         
         """
-        data = [data] if not is_list(data) else data
-        assert len(data) == len(panels), 'Panels and Data must have the same number of elements' 
+        if is_list(data):
+            assert len(data) == len(panels), 'Panels and Data must have the same number of elements'
+        else:
+            data = [data] 
         
+        if len(data) != len(panels):
+            # Assuming that data contains multiple models. 
+            given_estimator_names = [m[1] for m in panels]
+            available_estimators = [f.split('rankings__')[1] for f in list(data[0].data_vars) if 'rank' in f]
+            missing = np.array([True if f not in available_estimators else False  for f in given_estimator_names])
+            missing_estimators = list(np.array(given_estimator_names)[missing])
+            if any(missing):
+                txt = ''
+                for i in missing_estimators:
+                    txt += (i + ', ')
+                raise ValueError (f"""Results for {txt} are not in the given dataset. 
+                      Check for possible spelling errors""")
+               
+            data *= len(panels)
+  
         for r, (method, estimator_name) in zip(data, panels):
             available_methods = [d.split('__')[0] for d in list(r.data_vars) if f'rankings__{estimator_name}' in d]
             if f"{method}_rankings"not in available_methods:
@@ -1758,6 +1777,72 @@ class InterpretToolkit(Attributes):
                                                  **kwargs)
 
 
+    def plot_box_and_whisker(self, important_vars, example, 
+                             display_feature_names={}, display_units={}, **kwargs):
+        """
+        Plot the training dataset distribution for a given set of important variables
+        as a box-and-whisker plot. The user provides a single example, which is highlighted
+        over those examples. Useful for real-time explainability. 
+        
+        Parameters:
+        ----------------
+        
+        important_vars : str or list of strings
+            List of features to plot 
+        
+        example : Pandas Series, shape = (important_vars,) 
+            Single row dataframe to be overlaid, must have columns equal to
+            the given important_vars
+               
+        
+        """
+        if not is_list(important_vars):
+            important_vars = [important_vars]
+        
+        axis = 'columns' if isinstance(example, pd.DataFrame) else 'index'
+        if set(getattr(example, axis)) != set(important_vars):
+            raise ValueError('The example dataframe/series must have important_vars as columns!')
+        
+        f, axes = box_and_whisker(self.X, 
+                                  top_preds=important_vars, 
+                                  example=example, 
+                                 display_feature_names=display_feature_names,
+                                 display_units=display_units, 
+                                 **kwargs)
+        return f, axes 
+    
+    def plot_scatter(self, features, kde=True, 
+                         subsample=1.0, display_feature_names={}, display_units={}, **kwargs):
+        """
+        2-D Scatter plot of ML model predictions. If kde=True, it will plot KDE contours 
+        overlays to show highest concentrations. If the model type is classification, then
+        the code will plot KDE contours per class. 
+        """
+        # TODO: Handle plotting multiple models! 
+        # TODO: Determining if it is raw or probability (multiple classes too!) 
+        # if there is more than a couple classes, then only plot one kde contours
+        
+        # Are features in X? 
+        bad_features = [f for f in features if f not in self.feature_names]
+        if len(bad_features) > 0:
+            raise ValueError(f'{bad_features} is not a valid feature. Check for possible spelling errors!')
+        
+        # initialize a plotting object
+        base_font_size = kwargs.get('base_font_size', 12)
+        plot_obj = PlotScatter(base_font_size)
+        
+        f, axes = plot_obj.plot_scatter(self.estimators,
+                   X=self.X, 
+                   y=self.y, 
+                   features=features, 
+                   display_feature_names=display_feature_names,
+                   display_units = display_units,
+                   subsample=subsample, 
+               peak_val=None, kde=kde, **kwargs)
+        
+        return f, axes
+    
+    
     def get_important_vars(self, perm_imp_data, multipass=True, n_vars=10, combine=False):
         """
         Retrieve the most important variables from permutation importance.
