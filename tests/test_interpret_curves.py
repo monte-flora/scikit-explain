@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
-sys.path.append(os.path.dirname(os.getcwd()))
-
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pymint
 
 class TestInterpretToolkit(unittest.TestCase):

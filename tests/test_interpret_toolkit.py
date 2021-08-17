@@ -3,7 +3,7 @@ import unittest
 from sklearn.ensemble import RandomForestRegressor
 import os,sys
 
-sys.path.append(os.path.dirname(os.getcwd()))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pymint
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
