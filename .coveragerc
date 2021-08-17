@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = mintpy
+source = py-mint
 
 [report]
 exclude_lines =
