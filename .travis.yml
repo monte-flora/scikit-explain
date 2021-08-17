@@ -8,18 +8,15 @@ python:
 before_install: 
   - python --version
   - pip install --upgrade pip
-  - pip install --upgrade pytest-cov codecov pytest  
+  - pip install --upgrade pytest-cov codecov coverage 
 install:
   - pip install -r requirements.txt
   - pip install pylint scikit-learn==0.23.2 ipython 
 script:
-  - pytest -s tests --cov=codecov
-
-env:
-- CODECOV_TOKEN='6f003a89-f2c5-4586-845f-79c0e5410aa5'
+  - pytest -s tests --cov='.'
 
 after_success:
-  - codecov # submit coverage 
+  - codecov -t 6f003a89-f2c5-4586-845f-79c0e5410aa5 # submit coverage 
   - bash <(curl -s https://codecov.io/bash)
   
 
