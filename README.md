@@ -4,7 +4,7 @@
 
 
 <a href="https://travis-ci.com/monte-flora/py-mint"><img src="https://travis-ci.com/monte-flora/py-mint.svg?branch=master"></a>
-[![codecov](https://codecov.io/gh/monte-flora/mintpy/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/mintpy)
+[![codecov](https://codecov.io/gh/monte-flora/py-mint/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/py-mint)
 [![Updates](https://pyup.io/repos/github/monte-flora/py-mint/shield.svg)](https://pyup.io/repos/github/monte-flora/py-mint/)
 [![Python 3](https://pyup.io/repos/github/monte-flora/py-mint/python-3-shield.svg)](https://pyup.io/repos/github/monte-flora/py-mint/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -12,12 +12,31 @@
 [![Documentation Status](https://readthedocs.org/projects/py-mint/badge/?version=latest)](https://py-mint.readthedocs.io/en/latest/?badge=latest)
 
 
-__PyMint__ (__Python-based Model INTerpretations__) is designed to be a user-friendly package for computing and plotting machine learning interpretation output in Python. Current computation includes partial dependence (PD), accumulated local effects (ALE), random forest-based feature contributions (treeinterpreter), single- and multiple-pass permutation importance, and Shapley Additive Explanations (SHAP). All of these methods are discussed at length in [Christoph Molnar's interpretable ML book](https://christophm.github.io/interpretable-ml-book/). Most calculations can be performed in parallel when multi-core processing is available. The primary feature of this package is the accompanying built-in plotting methods, which are desgined to be easy to use while producing publication-level quality figures. Documentation for PyMint can be found at https://py-mint.readthedocs.io/en/master/. 
+__PyMint__ (__Python-based Model INTerpretations__) is designed to be a user-friendly package for computing and plotting machine learning interpretability/explainability output in Python. Current computation includes
+* Feature importance: 
+  * Single- and Multi-pass Permutation Importance ([Brieman et al. 2001](https://link.springer.com/article/10.1023/A:1010933404324)], [Lakshmanan et al. 2015](https://journals.ametsoc.org/view/journals/atot/32/6/jtech-d-13-00205_1.xml?rskey=hlSyXu&result=2))
+  * SHAP 
+  * First-order PD/ALE Variance ([Greenwell et al. 2018](https://arxiv.org/abs/1805.04755))    
+
+* Feature Effects/Attributions: 
+  * Partial Dependence (PD), 
+  * Accumulated local effects (ALE), 
+  * Random forest-based feature contributions (treeinterpreter)
+  * SHAP 
+  * Main Effect Complexity (MEC; [Molnar et al. 2019](https://arxiv.org/abs/1904.03867))
+
+* Feature Interactions:
+  * Second-order PD/ALE 
+  * Interaction Strength and Main Effect Complexity (IAS; [Molnar et al. 2019](https://arxiv.org/abs/1904.03867))
+  * Second-order PD/ALE Variance ([Greenwell et al. 2018](https://arxiv.org/abs/1805.04755)) 
+  * Second-order Permutation Importance ([Oh et al. 2019](https://www.mdpi.com/2076-3417/9/23/5191))
+  * Friedman H-statistic ([Friedman and Popescu](https://projecteuclid.org/journals/annals-of-applied-statistics/volume-2/issue-3/Predictive-learning-via-rule-ensembles/10.1214/07-AOAS148.full))
+
+All of these methods are discussed at length in [Christoph Molnar's interpretable ML book](https://christophm.github.io/interpretable-ml-book/). Most calculations can be performed in parallel when multi-core processing is available. The primary feature of this package is the accompanying built-in plotting methods, which are desgined to be easy to use while producing publication-level quality figures. Documentation for PyMint can be found at https://py-mint.readthedocs.io/en/master/. 
 
 The package is under active development and will likely contain bugs or errors. Feel free to raise issues!
 
-This package is largely original code, but also includes snippets from preexisting packages. Our goal is not take credit from other code authors, but to
-make a single source for computing several machine learning interpretation methods. Here is a list of packages used in PyMint: 
+This package is largely original code, but also includes snippets or chunks of code from preexisting packages. Our goal is not take credit from other code authors, but to make a single source for computing several machine learning interpretation methods. Here is a list of packages used in PyMint: 
 [**PyALE**](https://github.com/DanaJomar/PyALE),
 [**PermutationImportance**](https://github.com/gelijergensen/PermutationImportance),
 [**ALEPython**](https://github.com/blent-ai/ALEPython),
@@ -67,12 +86,12 @@ explainer = pymint.InterpretToolkit(estimators=estimators,X=X,y=y,)
 ```
 ## Permutation Importance
 
-For predictor ranking, PyMint uses both single-pass and multiple-pass permutation importance method (Breiman 2001; Lakshmanan et al. 2015; McGovern et al. 2019).
+For predictor ranking, PyMint uses both single-pass and multiple-pass permutation importance method ([Breiman 2001]; Lakshmanan et al. 2015; McGovern et al. 2019).
 We can calculate the permutation importance and then plot the results. In the tutorial it discusses options to make the figure publication-quality giving the plotting method
 additional argument to convert the feature names to a more readable format or color coding by feature type. 
 ```python
-explainer.permutation_importance(n_vars=10, evaluation_fn='auc')
-explainer.plot_importance(method='multipass')
+perm_results = explainer.permutation_importance(n_vars=10, evaluation_fn='auc')
+explainer.plot_importance(data=perm_results)
 ```
 
 <p align="center">
@@ -142,7 +161,7 @@ explainer = pymint.InterpretToolkit(estimators=estimators[0],X=X, y=y)
 background_dataset = shap.sample(examples, 100)
 results = explainer.shap(background_dataset=background_dataset)
 shap_values, bias = results['Random Forest']
-myInterpreter.plot_shap(plot_type = 'summary', shap_values=shap_values,) 
+explainer.plot_shap(plot_type = 'summary', shap_values=shap_values,) 
 ```
 
 <p align="center">
