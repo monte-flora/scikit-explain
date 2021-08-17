@@ -5,23 +5,22 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
-import sys, os 
-current_dir = os.getcwd()
-path = os.path.dirname(current_dir)
-sys.path.append(path)
+#import sys, os 
+#current_dir = os.getcwd()
+#path = os.path.dirname(current_dir)
+#sys.path.append(path)
 
 import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        estimator_objs, estimator_names = pymint.load_models()
+        estimators = pymint.load_models()
         X_clf, y_clf = pymint.load_data()
         X_clf = X_clf.astype({'urban': 'category', 'rural':'category'})
         
         self.X_clf = X_clf
         self.y_clf = y_clf
-        self.estimators = estimator_objs
-        self.estimator_names = estimator_names
+        self.estimators = estimators
         
         random_state=np.random.RandomState(42)
         
@@ -49,8 +48,7 @@ class Test1DPlotting(TestInterpretToolkit):
         # Make sure the plot data is correct. 
         feature='X_1'
         explainer = pymint.InterpretToolkit(
-                estimators=self.lr,
-                estimator_names=self.lr_estimator_name,
+                estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
             )
