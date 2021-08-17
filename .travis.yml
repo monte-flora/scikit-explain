@@ -5,15 +5,22 @@ python:
   - '3.6'
   - '3.7'
   - '3.8'
+before_install: 
+  - python --version
+  - pip install -U pip
+  - pip install -U pytest-cov 
+  - pip install -U pytest 
+  - pip install codecov
 install:
-  - pip install pytest-cov codecov
+  - pip install ".[test]" . # install package + test dependencies
   - pip install -r requirements.txt
   - pip install pylint scikit-learn==0.23.2 ipython 
 script:
   - pytest -s tests --cov=codecov
 after_success:
-  - codecov
+  - codecov # submit coverage 
   - bash <(curl -s https://codecov.io/bash)
+  
 #deploy:
 #  provider: testpypi
 #  user: "__token__"
