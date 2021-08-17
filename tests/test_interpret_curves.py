@@ -10,13 +10,12 @@ import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        estimators = pymint.load_models()
+        self.estimators = pymint.load_models()
         X_clf, y_clf = pymint.load_data()
         X_clf = X_clf.astype({'urban': 'category', 'rural':'category'})
         
         self.X_clf = X_clf
         self.y_clf = y_clf
-        self.estimators = estimators
         
         random_state=np.random.RandomState(42)
         

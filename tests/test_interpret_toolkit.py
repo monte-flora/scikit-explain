@@ -26,7 +26,6 @@ class TestInitializeInterpretToolkit(TestInterpretToolkit):
                 y=self.y
             )
         except_msg = "One or more of the estimators given has NOT been fit!"
-        print(ex.exception.args[0], except_msg)
         self.assertEqual(ex.exception.args[0], except_msg)
         
     def test_X_and_feature_names(self):
