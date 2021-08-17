@@ -1,14 +1,14 @@
 language: python
 os:
-- linux
+  - linux
 python:
-- '3.6'
+  - '3.6'
+  - '3.7'
+  - '3.8'
 install:
-- python setup.py upload 
-- pip install .[test]
-- pip install pytest-cov codecov
-- pip install -r requirements.txt
-- pip install pylint scikit-learn==0.23.2 ipython 
+  - pip install pytest-cov codecov
+  - pip install -r requirements.txt
+  - pip install pylint scikit-learn==0.23.2 ipython 
 script:
   - pytest -s tests --cov=codecov
 after_success:
