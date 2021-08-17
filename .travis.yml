@@ -7,12 +7,11 @@ python:
   - '3.8'
 before_install: 
   - python --version
-  - pip install -U pip
-  - pip install -U pytest-cov 
-  - pip install -U pytest 
-  - pip install codecov
+  - pip install --upgrade pip
+  - pip install --upgrade pytest-cov codecov 
 install:
-  - pip install -e ".[tests]" . # install package + test dependencies
+ # - python setup.py develop
+ # - pip install -e ".[tests]" . # install package + test dependencies
   - pip install -r requirements.txt
   - pip install pylint scikit-learn==0.23.2 ipython 
 script:
