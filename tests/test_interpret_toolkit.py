@@ -1,13 +1,10 @@
 # Unit test for the InterpretToolkit code in MintPy
 import unittest
 from sklearn.ensemble import RandomForestRegressor
+import os,sys
 
-#import sys, os 
-#current_dir = os.getcwd()
-#path = os.path.dirname(current_dir)
-#sys.path.append(path)
+sys.path.append(os.path.dirname(os.getcwd()))
 import pymint
-
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
         estimators = pymint.load_models()

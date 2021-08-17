@@ -1,15 +1,11 @@
 # Unit test for the accumulated local effect code in MintPy
 import unittest
-import os
+import sys,os
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
-#import sys, os 
-#current_dir = os.getcwd()
-#path = os.path.dirname(current_dir)
-#sys.path.append(path)
-
+sys.path.append(os.path.dirname(os.getcwd()))
 import pymint
 
 class TestInterpretToolkit(unittest.TestCase):
