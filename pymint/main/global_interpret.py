@@ -706,7 +706,6 @@ class GlobalInterpret(Attributes):
             results : nested dictionary
 
         """
-        print(feature)
         estimator = self.estimators[estimator_name]
         # check to make sure feature is valid
         if feature not in self.feature_names:
