@@ -732,7 +732,6 @@ class GlobalInterpret(Attributes):
                     interpolation="lower",
                 )
             )
-            print(len(bin_edges), n_bins) 
             # Initialize an empty ale array
             ale = np.zeros((n_bootstrap, len(bin_edges) - 1))
         else:
