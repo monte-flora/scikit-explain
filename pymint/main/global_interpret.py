@@ -8,6 +8,8 @@ from functools import reduce
 from operator import add
 import traceback
 from copy import copy
+from inspect import currentframe, getframeinfo
+from pandas.core.common import SettingWithCopyError
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import (
@@ -39,6 +41,10 @@ from ..common.multiprocessing_utils import run_parallel, to_iterator
 from ..common.attributes import Attributes
 
 from .PermutationImportance import sklearn_permutation_importance
+
+import warnings
+warnings.filterwarnings('error')
+
 
 
 class GlobalInterpret(Attributes):
@@ -700,6 +706,7 @@ class GlobalInterpret(Attributes):
             results : nested dictionary
 
         """
+        print(feature)
         estimator = self.estimators[estimator_name]
         # check to make sure feature is valid
         if feature not in self.feature_names:
@@ -725,6 +732,7 @@ class GlobalInterpret(Attributes):
                     interpolation="lower",
                 )
             )
+            print(len(bin_edges), n_bins) 
             # Initialize an empty ale array
             ale = np.zeros((n_bootstrap, len(bin_edges) - 1))
         else:
@@ -1109,9 +1117,6 @@ class GlobalInterpret(Attributes):
             results : nested dictionary
 
         """
-        from inspect import currentframe, getframeinfo
-        from pandas.core.common import SettingWithCopyError
-
         pd.options.mode.chained_assignment = "raise"
 
         if feature_encoder is None:
@@ -1186,13 +1191,13 @@ class GlobalInterpret(Attributes):
                     ],
                     axis=1,
                 )
+                X_coded = np.array(X_coded[self.feature_names], dtype=float)
+
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat = estimator.predict_proba(X_coded[self.feature_names])[
-                        :, 1
-                    ]
+                    y_hat = estimator.predict_proba(X_coded)[:,1]
                 else:
-                    y_hat = estimator.predict(X_coded[self.feature_names])
+                    y_hat = estimator.predict(X_coded)
 
                 # encode the categorical feature
                 X_plus_coded = pd.concat(
@@ -1202,15 +1207,14 @@ class GlobalInterpret(Attributes):
                     ],
                     axis=1,
                 )
+  
+                X_plus_coded = np.array(X_plus_coded[ind_plus][self.feature_names], dtype=float)
+                
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat_plus = estimator.predict_proba(
-                        X_plus_coded[ind_plus][self.feature_names]
-                    )[:, 1]
+                    y_hat_plus = estimator.predict_proba(X_plus_coded)[:, 1]
                 else:
-                    y_hat_plus = estimator.predict(
-                        X_plus_coded[ind_plus][self.feature_names]
-                    )
+                    y_hat_plus = estimator.predict(X_plus_coded)
 
                 # encode the categorical feature
                 X_neg_coded = pd.concat(
@@ -1220,15 +1224,14 @@ class GlobalInterpret(Attributes):
                     ],
                     axis=1,
                 )
+                
+                X_neg_coded = np.array(X_neg_coded[ind_neg][self.feature_names], dtype=float)
+                
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat_neg = estimator.predict_proba(
-                        X_neg_coded[ind_neg][self.feature_names]
-                    )[:, 1]
+                    y_hat_neg = estimator.predict_proba(X_neg_coded)[:, 1]
                 else:
-                    y_hat_neg = estimator.predict(
-                        X_neg_coded[ind_neg][self.feature_names]
-                    )
+                    y_hat_neg = estimator.predict(X_neg_coded)
 
             except Exception as ex:
                 raise Exception(
@@ -1260,6 +1263,7 @@ class GlobalInterpret(Attributes):
                     ),
                 ]
             )
+                       
             res_df = delta_df.groupby([feature]).mean()
             res_df.loc[:, "ale"] = res_df.loc[:, "eff"].cumsum()
 
@@ -1271,7 +1275,7 @@ class GlobalInterpret(Attributes):
             ale_temp = res_df["ale"] - sum(res_df["ale"] * groups_props)
             ale.append(ale_temp)
 
-        ale = np.array(ale)
+        ale = np.array(ale, dtype=float)
 
         results = self._store_results(
             method="ale",
