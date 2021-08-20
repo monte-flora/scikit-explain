@@ -6,7 +6,6 @@ from joblib import load
 
 path = os.path.dirname(os.path.realpath(__file__))
 
-
 def load_models():
     """Loads models trained on the road surface temperature dataset from Handler et al. (2020)"""
 
@@ -20,4 +19,4 @@ def load_models():
     model_names = ["Random Forest", "Gradient Boosting", "Logistic Regression"]
     model_objs = [load(join(path, "models", fname)) for fname in model_fname]
 
-    return model_objs, model_names
+    return list(zip(model_names, model_objs))

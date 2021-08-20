@@ -44,21 +44,24 @@ from .PermutationImportance import sklearn_permutation_importance
 class GlobalInterpret(Attributes):
 
     """
-    GlobalInterpret incorporates important methods for explaining global model behavior
-    across all data examples. These include permutation importance and
-    partial dependence [Friedman (2001)]/accumulated local effects [Apley and Zhy et al. (2016)]
+    InterpretToolkit inherits functionality from GlobalInterpret and is not meant to be
+    instantiated by the end-user. 
+    
+    GlobalInterpret incorporates important methods for explaining global estimator behavior
+    across all data instances. These include permutation importance and
+    partial dependence (Friedman 2001) / accumulated local effects (Apley and Zhy et al. 2016)
     which produce feature ranking and expected relationship between a feature
     with the predict outcome, respectively.
 
-    The permutation importance computations relies on the
+    The permutation importance computations rely on the
     PermutationImportance python package (Jergensen 2019) with slight modification for
-    use in mintpy.
+    use in py-mint.
 
     Parts of the partial dependence code were based on
     the computations in sklearn.inspection.partial_dependence (Pedregosa et al. 2011).
 
     Parts of the accumulated local effects
-    are based on ALEPython (Jumelle 2020).
+    are based on ALEPython (Jumelle 2020) and PyALE.
 
 
     PartialDependence is a class for computing first- and second-order
@@ -66,30 +69,37 @@ class GlobalInterpret(Attributes):
     the computations in sklearn.inspection.partial_dependence (Pedregosa et al. 2011).
     Currently, the package handles regression and binary classification.
 
-    Attributes:
-        model : pre-fit scikit-learn model object, or list of
-            Provide a list of model objects to compute the global methods for.
+    Attributes
+    --------------
+    estimators : object, list of objects
+        A fitted estimator object or list thereof implementing `predict` or 
+        `predict_proba`.
+        Multioutput-multiclass classifiers are not supported.
+        
+    estimator_names : string, list
+        Names of the estimators (for internal and plotting purposes)
 
-        model_names : str, list
-            List of model names for the model objects in model.
-            For internal and plotting purposes.
+    X : {array-like or dataframe} of shape (n_samples, n_features)
+        Training or validation data used to compute the IML methods.
+        If ndnumpy array, make sure to specify the feature names
 
-        examples : pandas.DataFrame or ndnumpy.array.
-            Examples to explain. Typically, one should use the training dataset for
-            the global methods.
+    y : {list or numpy.array} of shape = (n_samples,)
+        y values.
 
-        feature_names : list of strs
-            If examples are ndnumpy.array, then provide the feature_names
-            (default is None; assumes examples are pandas.DataFrame).
+    estimator_output : "raw" or "probability"
+        What output of the estimator should be evaluated. default is None. If None, 
+        InterpretToolkit will determine internally what the estimator output is. 
 
-        model_output : 'probability' or 'regression'
-            What is the expected model output. 'probability' uses the positive class of
-            the .predict_proba() method while 'regression' uses .predict().
-
-        checked_attributes : boolean
-            Ignore this parameter; For internal purposes only
-
-    Reference:
+    feature_names : array-like of shape (n_features,), dtype=str, default=None
+        Name of each feature; `feature_names[i]` holds the name of the feature
+        with index `i`.
+        By default, the name of the feature corresponds to their numerical
+        index for NumPy array and their column name for pandas dataframe. 
+        Feature names are only required if X is an ndnumpy.array, it will be 
+        converted to a pandas.DataFrame internally. 
+        
+    Reference
+    ------------
         Friedman, J. H., 2001: GREEDY FUNCTION APPROXIMATION: A GRADIENT BOOSTING MACHINE.
         Ann Statistics, 29, 1189–1232, https://doi.org/10.1214/aos/1013203451.
 
@@ -104,29 +114,29 @@ class GlobalInterpret(Attributes):
 
     def __init__(
         self,
-        models,
-        model_names,
-        examples,
-        targets=None,
-        model_output="probability",
+        estimators,
+        estimator_names,
+        X,
+        y=None,
+        estimator_output=None,
         feature_names=None,
         checked_attributes=False,
     ):
         # These functions come from the inherited Attributes class
         if not checked_attributes:
-            self.set_model_attribute(models, model_names)
-            self.set_examples_attribute(examples, feature_names)
-            self.set_target_attribute(targets)
+            self.set_estimator_attribute(estimators, estimator_names)
+            self.set_X_attribute(X, feature_names)
+            self.set_y_attribute(y)
         else:
-            self.models = models
-            self.model_names = model_names
-            self.examples = examples
-            self.targets = targets
-            self.feature_names = list(examples.columns)
+            self.estimators = estimators
+            self.estimator_names = estimator_names
+            self.X = X
+            self.y = y
+            self.feature_names = list(X.columns)
 
-        self.model_output = model_output
+        self.estimator_output = estimator_output
 
-    def permutation_importance(
+    def calc_permutation_importance(
         self,
         n_vars=5,
         evaluation_fn="auprc",
@@ -137,6 +147,7 @@ class GlobalInterpret(Attributes):
         direction='backward',
         verbose=False,
         random_state=None,
+        return_iterations=True
     ):
 
         """
@@ -155,9 +166,9 @@ class GlobalInterpret(Attributes):
         if not isinstance(evaluation_fn, str) and scoring_strategy is None:
             raise ValueError(
                 """ 
-                The scoring_strategy argument is None! If you are using a user-define evaluation_fn 
-                then scoring_strategy must be set! If a metric is positively-oriented (a higher value is better), 
-                then set scoring_strategy = "argmin_of_mean" and if is negatively-oriented-
+                The scoring_strategy argument is None! If you are using a non-default evaluation_fn 
+                then scoring_strategy must be set! If the metric is positively-oriented (a higher value is better), 
+                then set scoring_strategy = "argmin_of_mean" and if it is negatively-oriented-
                 (a lower value is better), then set scoring_strategy = "argmax_of_mean"
                 """
             )
@@ -195,18 +206,15 @@ class GlobalInterpret(Attributes):
         if subsample != 1.0 and n_bootstrap is None:
             n_bootstrap = 1
 
-        targets = pd.DataFrame(data=self.targets, columns=["Test"])
+        y = pd.DataFrame(data=self.y, columns=["Test"])
 
         pi_dict = {}
 
-        # loop over each model
-        for model_name, model in self.models.items():
-
-            ### print(f"Processing {model_name}...")
-
+        # loop over each estimator
+        for estimator_name, estimator in self.estimators.items():
             pi_result = sklearn_permutation_importance(
-                model=model,
-                scoring_data=(self.examples.values, targets.values),
+                model=estimator,
+                scoring_data=(self.X.values, y.values),
                 evaluation_fn=evaluation_fn,
                 variable_names=self.feature_names,
                 scoring_strategy=scoring_strategy,
@@ -219,32 +227,57 @@ class GlobalInterpret(Attributes):
                 random_state=random_state,
             )
 
-            pi_dict[model_name] = pi_result
+            pi_dict[estimator_name] = pi_result
 
             del pi_result
 
         data = {}
-        for model_name in self.model_names:
+        for estimator_name in self.estimator_names:
             for func in ["retrieve_multipass", "retrieve_singlepass"]:
-                adict = getattr(pi_dict[model_name], func)()
+                adict = getattr(pi_dict[estimator_name], func)()
                 features = np.array(list(adict.keys()))
                 rankings = np.argsort([adict[f][0] for f in features])
                 top_features = features[rankings]
                 scores = np.array([adict[f][1] for f in top_features])
                 pass_method = func.split("_")[1]
 
-                data[f"{pass_method}_rankings__{model_name}"] = (
+                data[f"{pass_method}_rankings__{estimator_name}"] = (
                     [f"n_vars_{pass_method}"],
                     top_features,
                 )
-                data[f"{pass_method}_scores__{model_name}"] = (
+                data[f"{pass_method}_scores__{estimator_name}"] = (
                     [f"n_vars_{pass_method}", "n_bootstrap"],
                     scores,
                 )
-            data[f"original_score__{model_name}"] = (
+            data[f"original_score__{estimator_name}"] = (
                 ["n_bootstrap"],
-                pi_dict[model_name].original_score,
+                pi_dict[estimator_name].original_score,
             )
+
+        if return_iterations:
+            for estimator_name in self.estimator_names:
+                temp_results = getattr(pi_dict[estimator_name], 'retrieve_all_iterations')()
+                temp_scores = []
+                temp_features = []
+                for adict in temp_results:
+                    features = np.array(list(adict.keys()))
+                    rankings = np.argsort([adict[f][0] for f in features])
+                    top_features = features[rankings]
+                    scores = np.array([adict[f][1] for f in top_features])
+                    pass_method = func.split("_")[1]
+                    #Just retrieve the second most important feature. 
+                    temp_scores.append(scores[1])
+                    temp_features.append(top_features[1])
+                    
+                data[f"second_place_scores__{estimator_name}"] = (
+                    [f"n_vars_second_place", "n_bootstrap"],
+                    temp_scores,
+                )
+                data[f"second_place_rankings__{estimator_name}"] = (
+                    [f"n_vars_second_place"],
+                    temp_features,
+                )   
+
 
         results_ds = to_xarray(data)
 
@@ -254,7 +287,6 @@ class GlobalInterpret(Attributes):
         self,
         method,
         features=None,
-        cat_features=None,
         n_bins=25,
         n_jobs=1,
         subsample=1.0,
@@ -271,42 +303,43 @@ class GlobalInterpret(Attributes):
 
         Returns a nested dictionary with all neccesary inputs for plotting.
 
-        Args:
+        Parameters
         ---------
-            method : 'pd' , 'ale', or 'ice'
+        method : 'pd' , 'ale', or 'ice'
                 determines whether to compute partial dependence ('pd'),
                 accumulated local effects ('ale'), or individual conditional expectations ('ice')
 
-            features: string, 2-tuple of strings, list of strings, or lists of 2-tuple strings
+        features: string, 2-tuple of strings, list of strings, or lists of 2-tuple strings
                 feature names to compute for. If 2-tuple, it will compute
                 the second-order results.
 
-            cat_features: string, or list of strings
-                categorical features to compute ALE for. ALE requires a special distinction
-                for categorical features.
+        n_bins : int
+            Number of evenly-spaced bins to compute PD/ALE over.
 
-            n_bins : int
-                Number of evenly-spaced bins to compute PD/ALE over.
+        n_jobs : int or float
+            if int, the number of processors to use for parallelization
+            if float, percentage of total processors to use for parallelization
 
-            n_jobs : int or float
-                 if int, the number of processors to use for parallelization
-                 if float, percentage of total processors to use for parallelization
-
-            subsample : float or integer
-                    if value between 0-1 interpreted as fraction of total examples to use
-                    if value > 1, interpreted as the number of examples to randomly sample
+        subsample : float or integer
+            if value between 0-1 interpreted as fraction of total X to use
+                    if value > 1, interpreted as the number of X to randomly sample
                         from the original dataset.
 
-            n_bootstrap: integer
-                number of bootstrap iterations to perform. Defaults to 1 (no
-                        bootstrapping).
+        n_bootstrap: integer
+            Number of bootstrap iterations to perform. Defaults to 1 (no bootstrapping).
+                        
+        Returns
+        ---------
+        
+        results_ds : xarray.Dataset 
+        
         """
         # Check if features is a string
         if is_str(features) or isinstance(features, tuple):
             features = [features]
 
         if not isinstance(features[0], tuple):
-            features, cat_features = determine_feature_dtype(self.examples, features)
+            features, cat_features = determine_feature_dtype(self.X, features)
         else:
             cat_features = []
 
@@ -325,15 +358,17 @@ class GlobalInterpret(Attributes):
                 func = self.compute_individual_cond_expect
 
             args_iterator = to_iterator(
-                self.model_names,
+                self.estimator_names,
                 features,
                 [n_bins],
                 [subsample],
                 [n_bootstrap],
             )
 
+            total = len(features) * len(self.estimator_names) 
             results = run_parallel(
-                func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs
+                func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs, 
+                total=total, 
             )
 
         if len(cat_features) > 0:
@@ -345,15 +380,17 @@ class GlobalInterpret(Attributes):
                 func = self.compute_individual_cond_expect
 
             args_iterator = to_iterator(
-                self.model_names,
+                self.estimator_names,
                 cat_features,
                 [subsample],
                 [n_bootstrap],
                 [feature_encoder],
             )
 
+            total = len(cat_features) * len(self.estimator_names) 
             cat_results = run_parallel(
-                func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs
+                func=func, args_iterator=args_iterator, kwargs={}, nprocs_to_use=n_jobs, 
+                total=total,
             )
 
         results = cat_results + results
@@ -364,11 +401,14 @@ class GlobalInterpret(Attributes):
         return results_ds
 
     def _store_results(
-        self, method, model_name, features, ydata, xdata, hist_data, categorical=False
+        self, method, estimator_name, features, ydata, xdata, hist_data, categorical=False
     ):
         """
-        Store the results of the ALE/PD/ICE calculations into dict,
+        FOR INTERNAL PURPOSES ONLY.
+        
+        Store the results of the ALE/PD/ICE calculations into a dict,
         which is converted to an xarray.Dataset
+        
         """
         results = {}
 
@@ -397,23 +437,51 @@ class GlobalInterpret(Attributes):
             if feature2 != "":
                 hist_data2 = hist_data[1]
 
-        results[f"{feature1}{feature2}__{model_name}__{method}"] = (y_shape, ydata)
+        results[f"{feature1}{feature2}__{estimator_name}__{method}"] = (y_shape, ydata)
         results[f"{feature1}__bin_values"] = ([f"n_bins__{feature1}"], xdata1)
-        results[f"{feature1}"] = (["n_examples"], hist_data1)
+        results[f"{feature1}"] = (["n_X"], hist_data1)
         if feature2 != "":
             results[f"{feature2[2:]}__bin_values"] = ([f"n_bins{feature2[2:]}"], xdata2)
-            results[f"{feature2[2:]}"] = (["n_examples"], hist_data2)
+            results[f"{feature2[2:]}"] = (["n_X"], hist_data2)
 
         return results
 
     def compute_individual_cond_expect(
-        self, model_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
+        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
     ):
         """
         Compute the Individual Conditional Expectations (see https://christophm.github.io/interpretable-ml-book/ice.html)
+        
+        Parameters
+        -----------
+        
+        estimator_name : string
+            Name of the estimator; used as a dict keys 
+            
+        features : string or 2-tuple of strings
+            Feature name or pair of feature names to compute ICE for. 
+            
+        n_bins : integer
+            Number of bins 
+            
+        subsample: float or integer (default=1.0 for no subsampling)
+        
+            if value is between 0-1, it is interpreted as fraction of total X to use 
+            if value > 1, interpreted as the number of X to randomly sample 
+            from the original dataset.
+        
+        n_bootstrap: integer (default=None for no bootstrapping)
+            number of bootstrap resamples for computing confidence intervals. 
+        
+        
+        Returns
+        ------------
+        
+        results : dict 
+        
         """
-        # Retrieve the model object from the models dict attribute
-        model = self.models[model_name]
+        # Retrieve the estimator object from the estimators dict attribute
+        estimator = self.estimators[estimator_name]
 
         # Check if features is a string
         if is_str(features):
@@ -423,33 +491,33 @@ class GlobalInterpret(Attributes):
         is_valid_feature(features, self.feature_names)
 
         if float(subsample) != 1.0:
-            n_examples = len(self.examples)
-            size = int(n_examples * subsample) if subsample <= 1.0 else subsample
-            idx = np.random.choice(n_examples, size=size)
-            examples = self.examples.iloc[idx, :]
-            examples.reset_index(drop=True, inplace=True)
+            n_X = len(self.X)
+            size = int(n_X * subsample) if subsample <= 1.0 else subsample
+            idx = np.random.choice(n_X, size=size)
+            X = self.X.iloc[idx, :]
+            X.reset_index(drop=True, inplace=True)
         else:
-            examples = self.examples.copy()
+            X = self.X.copy()
 
         # Extract the values for the features
-        feature_values = [examples[f].to_numpy() for f in features]
+        feature_values = [X[f].to_numpy() for f in features]
 
         # Create a grid of values
         grid = [np.linspace(np.amin(f), np.amax(f), n_bins) for f in feature_values]
 
-        if self.model_output == "probability":
-            prediction_method = model.predict_proba
-        elif self.model_output == "raw":
-            prediction_method = model.predict
+        if self.estimator_output == "probability":
+            prediction_method = estimator.predict_proba
+        elif self.estimator_output == "raw":
+            prediction_method = estimator.predict
 
         ice_values = []
         for value_set in cartesian(grid):
-            examples_temp = examples.copy()
-            examples_temp.loc[:, features[0]] = value_set[0]
-            ice_values.append(prediction_method(examples_temp.values))
+            X_temp = X.copy()
+            X_temp.loc[:, features[0]] = value_set[0]
+            ice_values.append(prediction_method(X_temp.values))
 
         ice_values = np.array(ice_values).T
-        if self.model_output == "probability":
+        if self.estimator_output == "probability":
             # Binary classification, shape is (2, n_points).
             # we output the effect of **positive** class
             # and convert to percentages
@@ -465,7 +533,7 @@ class GlobalInterpret(Attributes):
 
         results = self._store_results(
             method="ice",
-            model_name=model_name,
+            estimator_name=estimator_name,
             features=features,
             ydata=ice_values,
             xdata=grid,
@@ -475,7 +543,7 @@ class GlobalInterpret(Attributes):
         return results
 
     def compute_partial_dependence(
-        self, model_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
+        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
     ):
 
         """
@@ -485,30 +553,39 @@ class GlobalInterpret(Attributes):
         Annals of Statistics, 29 (5), 1189–1232.
         ##########################################################################
         # Partial dependence plots fix a value for one or more predictors
-        # for examples, passing these new data through a trained model,
+        # for X, passing these new data through a trained estimator,
         # and then averaging the resulting predictions. After repeating this process
         # for a range of values of X*, regions of non-zero slope indicates that
-        # where the ML model is sensitive to X* (McGovern et al. 2019). Only disadvantage is
+        # where the ML estimator is sensitive to X* (McGovern et al. 2019). Only disadvantage is
         # that PDP do not account for non-linear interactions between X and the other predictors.
         #########################################################################
 
-        Args:
-            model_name : str
-                string identifier or key value for the model object dict
-            features : str
-                name of feature to compute PD for (string)
-            n_bins : int
-                Number of evenly-spaced bins to compute PD
-            subsample : float between 0-1
-                Percent of randomly sampled examples to compute PD for.
-            n_bootstrap : int
-                Number of bootstrapping
+        Parameters
+        --------------
+        estimator_name : string
+            Name of the estimator; used as a dict keys 
+            
+        features : string or 2-tuple of strings
+            Feature name or pair of feature names to compute ICE for. 
+            
+        n_bins : integer
+            Number of bins 
+            
+        subsample: float or integer (default=1.0 for no subsampling)
+        
+            if value is between 0-1, it is interpreted as fraction of total X to use 
+            if value > 1, interpreted as the number of X to randomly sample 
+            from the original dataset.
+        
+        n_bootstrap: integer (default=None for no bootstrapping)
+            number of bootstrap resamples for computing confidence intervals. 
 
-        Returns:
-            pd, partial dependence values (in %, i.e., multiplied by 100.)
+        Returns
+        ------------------
+            results : dict 
         """
-        # Retrieve the model object from the models dict attribute
-        model = self.models[model_name]
+        # Retrieve the estimator object from the estimators dict attribute
+        estimator = self.estimators[estimator_name]
 
         # Check if features is a string
         if is_str(features):
@@ -518,7 +595,7 @@ class GlobalInterpret(Attributes):
         is_valid_feature(features, self.feature_names)
 
         # Extract the values for the features
-        full_feature_values = [self.examples[f].to_numpy() for f in features]
+        full_feature_values = [self.X[f].to_numpy() for f in features]
 
         # Create a grid of values
         grid = [
@@ -528,38 +605,38 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.examples, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap
             )
         else:
-            bootstrap_indices = [self.examples.index.to_list()]
+            bootstrap_indices = [self.X.index.to_list()]
 
-        if self.model_output == "probability":
-            prediction_method = model.predict_proba
-        elif self.model_output == "raw":
-            prediction_method = model.predict
+        if self.estimator_output == "probability":
+            prediction_method = estimator.predict_proba
+        elif self.estimator_output == "raw":
+            prediction_method = estimator.predict
 
         pd_values = []
 
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
             # get samples
-            examples = self.examples.iloc[idx, :].reset_index(drop=True)
-            feature_values = [examples[f].to_numpy() for f in features]
+            X = self.X.iloc[idx, :].reset_index(drop=True)
+            feature_values = [X[f].to_numpy() for f in features]
             averaged_predictions = []
             # for each value, set all indices to the value,
             # make prediction, store mean prediction
             for value_set in cartesian(grid):
-                examples_temp = examples.copy()
+                X_temp = X.copy()
                 for i, feature in enumerate(features):
-                    examples_temp.loc[:, feature] = value_set[i]
-                    predictions = prediction_method(examples_temp.values)
+                    X_temp.loc[:, feature] = value_set[i]
+                    predictions = prediction_method(X_temp.values)
 
                 # average over samples
                 averaged_predictions.append(np.mean(predictions, axis=0))
 
             averaged_predictions = np.array(averaged_predictions).T
 
-            if self.model_output == "probability":
+            if self.estimator_output == "probability":
                 # Binary classification, shape is (2, n_points).
                 # we output the effect of **positive** class
                 # and convert to percentages
@@ -579,7 +656,7 @@ class GlobalInterpret(Attributes):
 
         results = self._store_results(
             method="pd",
-            model_name=model_name,
+            estimator_name=estimator_name,
             features=features,
             ydata=pd_values,
             xdata=grid,
@@ -589,7 +666,7 @@ class GlobalInterpret(Attributes):
         return results
 
     def compute_first_order_ale(
-        self, model_name, feature, n_bins=30, subsample=1.0, n_bootstrap=1
+        self, estimator_name, feature, n_bins=30, subsample=1.0, n_bootstrap=1
     ):
         """
         Computes first-order ALE function on single continuous feature data.
@@ -597,22 +674,33 @@ class GlobalInterpret(Attributes):
         Script is largely the _first_order_ale_quant from
         https://github.com/blent-ai/ALEPython/ with small modifications.
 
-        Args:
+        Parameters
         ----------
-            model_name : str
-                 the string identifier for model in the attribute "models" dict
-            feature : string
-                The name of the feature to consider.
-            n_bins : int
-            subsample : float [0,1]
-            n_bootstrap : int
-
-        Returns:
+        estimator_name : string
+            Name of the estimator; used as a dict keys 
+            
+        features : string or 2-tuple of strings
+            Feature name or pair of feature names to compute ICE for. 
+            
+        n_bins : integer
+            Number of bins 
+            
+        subsample: float or integer (default=1.0 for no subsampling)
+        
+            if value is between 0-1, it is interpreted as fraction of total X to use 
+            if value > 1, interpreted as the number of X to randomly sample 
+            from the original dataset.
+        
+        n_bootstrap: integer (default=None for no bootstrapping)
+            number of bootstrap resamples for computing confidence intervals. 
+            
+            
+        Returns
         ----------
             results : nested dictionary
 
         """
-        model = self.models[model_name]
+        estimator = self.estimators[estimator_name]
         # check to make sure feature is valid
         if feature not in self.feature_names:
             raise KeyError(f"Feature {feature} is not a valid feature.")
@@ -620,16 +708,16 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.examples, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap
             )
         else:
-            bootstrap_indices = [self.examples.index.to_list()]
+            bootstrap_indices = [self.X.index.to_list()]
 
         # Using the original, unaltered feature values
         # calculate the bin edges to be used in the bootstrapping.
-        original_feature_values = self.examples[feature].values
+        original_feature_values = self.X[feature].values
 
-        if self.examples[feature].dtype.name != "category":
+        if self.X[feature].dtype.name != "category":
             bin_edges = np.unique(
                 np.percentile(
                     original_feature_values,
@@ -648,17 +736,17 @@ class GlobalInterpret(Attributes):
 
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
-            examples = self.examples.iloc[idx, :].reset_index(drop=True)
+            X = self.X.iloc[idx, :].reset_index(drop=True)
 
             # Find the ranges to calculate the local effects over
-            # Using xdata ensures each bin gets the same number of examples
-            feature_values = examples[feature].values
+            # Using xdata ensures each bin gets the same number of X
+            feature_values = X[feature].values
 
             # if right=True, then the smallest value in data is not included in a bin.
             # Thus, Define the bins the feature samples fall into. Shift and clip to ensure we are
             # getting the index of the left bin edge and the smallest sample retains its index
             # of 0.
-            if self.examples[feature].dtype.name != "category":
+            if self.X[feature].dtype.name != "category":
                 indices = np.clip(
                     np.digitize(feature_values, bin_edges, right=True) - 1, 0, None
                 )
@@ -670,12 +758,12 @@ class GlobalInterpret(Attributes):
             # one for each bin edge. Then compute the difference between the corresponding predictions
             predictions = []
             for offset in range(2):
-                examples_temp = examples.copy()
-                examples_temp[feature] = bin_edges[indices + offset]
-                if self.model_output == "probability":
-                    predictions.append(model.predict_proba(examples_temp.values)[:, 1])
-                elif self.model_output == "raw":
-                    predictions.append(model.predict(examples_temp.values))
+                X_temp = X.copy()
+                X_temp[feature] = bin_edges[indices + offset]
+                if self.estimator_output == "probability":
+                    predictions.append(estimator.predict_proba(X_temp.values)[:, 1])
+                elif self.estimator_output == "raw":
+                    predictions.append(estimator.predict(X_temp.values))
 
             # The individual (local) effects.
             effects = predictions[1] - predictions[0]
@@ -707,11 +795,11 @@ class GlobalInterpret(Attributes):
                 )
 
             # Center the ALE by substracting the bin-size weighted mean.
-            ale[k, :] -= np.sum(ale[k, :] * index_groupby.size() / examples.shape[0])
+            ale[k, :] -= np.sum(ale[k, :] * index_groupby.size() / X.shape[0])
 
         results = self._store_results(
             method="ale",
-            model_name=model_name,
+            estimator_name=estimator_name,
             features=feature,
             ydata=ale,
             xdata=bin_edges,
@@ -724,28 +812,41 @@ class GlobalInterpret(Attributes):
         return 0.5 * (x[1:] + x[:-1])
 
     def compute_second_order_ale(
-        self, model_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
+        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
     ):
         """
         Computes second-order ALE function on two continuous features data.
 
-        Script is based on the _second_order_ale_quant from
-        https://github.com/blent-ai/ALEPython/
+        Script is largely the _first_order_ale_quant from
+        https://github.com/blent-ai/ALEPython/ with small modifications.
 
-        Args:
+        Parameters
         ----------
-            model_name : str
-            features : string
-                The name of the feature to consider.
-            n_bins : int
-            subsample : float between [0,1]
-            n_bootstrap : int
+        estimator_name : string
+            Name of the estimator; used as a dict key 
+            
+        features : string or 2-tuple of strings
+            Feature name or pair of feature names to compute ICE for. 
+            
+        n_bins : integer
+            Number of bins 
+            
+        subsample: float or integer (default=1.0 for no subsampling)
+        
+            if value is between 0-1, it is interpreted as fraction of total X to use 
+            if value > 1, interpreted as the number of X to randomly sample 
+            from the original dataset.
+        
+        n_bootstrap: integer (default=None for no bootstrapping)
+            number of bootstrap resamples for computing confidence intervals. 
+            
+            
+        Returns
+        ----------
+            results : nested dictionary
 
-        Returns :
-        ----------
-            results : nested dict
         """
-        model = self.models[model_name]
+        estimator = self.estimators[estimator_name]
 
         # make sure there are two features...
         assert len(features) == 2, "Size of features must be equal to 2."
@@ -759,7 +860,7 @@ class GlobalInterpret(Attributes):
 
         # create bins for computation for both features
 
-        original_feature_values = [self.examples[features[i]].values for i in range(2)]
+        original_feature_values = [self.X[features[i]].values for i in range(2)]
 
         bin_edges = [
             np.unique(
@@ -773,10 +874,10 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.examples, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap
             )
         else:
-            bootstrap_indices = [self.examples.index.to_list()]
+            bootstrap_indices = [self.X.index.to_list()]
 
         feature1_nbin_edges = len(bin_edges[0])
         feature2_nbin_edges = len(bin_edges[1])
@@ -793,10 +894,10 @@ class GlobalInterpret(Attributes):
             )
 
             # get samples
-            examples = self.examples.iloc[idx, :].reset_index(drop=True)
+            X = self.X.iloc[idx, :].reset_index(drop=True)
 
             # create bins for computation for both features
-            feature_values = [examples[features[i]].values for i in range(2)]
+            feature_values = [X[features[i]].values for i in range(2)]
 
             # Define the bins the feature samples fall into. Shift and clip to ensure we are
             # getting the index of the left bin edge and the smallest sample retains its index
@@ -810,18 +911,18 @@ class GlobalInterpret(Attributes):
             # difference between the predictions at the bin corners.
             predictions = {}
             for shifts in itertools.product(*(range(2),) * 2):
-                examples_temp = examples.copy()
+                X_temp = X.copy()
                 for i in range(2):
-                    examples_temp[features[i]] = bin_edges[i][
+                    X_temp[features[i]] = bin_edges[i][
                         indices_list[i] + shifts[i]
                     ]
 
-                if self.model_output == "probability":
-                    predictions[shifts] = model.predict_proba(examples_temp.values)[
+                if self.estimator_output == "probability":
+                    predictions[shifts] = estimator.predict_proba(X_temp.values)[
                         :, 1
                     ]
-                elif self.model_output == "raw":
-                    predictions[shifts] = model.predict(examples_temp.values)
+                elif self.estimator_output == "raw":
+                    predictions[shifts] = estimator.predict(X_temp.values)
 
             # The individual (local) effects.
             effects = (predictions[(1, 1)] - predictions[(1, 0)]) - (
@@ -952,7 +1053,7 @@ class GlobalInterpret(Attributes):
             )
 
             # Center the ALE by subtracting its expectation value.
-            ale -= np.sum(samples_grid * ale) / len(examples)
+            ale -= np.sum(samples_grid * ale) / len(X)
             
             ale_set.append(ale)
 
@@ -960,7 +1061,7 @@ class GlobalInterpret(Attributes):
 
         results = self._store_results(
             method="ale",
-            model_name=model_name,
+            estimator_name=estimator_name,
             features=features,
             ydata=ale_set,
             xdata=bin_edges,
@@ -971,7 +1072,7 @@ class GlobalInterpret(Attributes):
 
     def compute_first_order_ale_cat(
         self,
-        model_name,
+        estimator_name,
         feature,
         subsample=1.0,
         n_bootstrap=1,
@@ -983,17 +1084,27 @@ class GlobalInterpret(Attributes):
         Script is largely from aleplot_1D_categorical from
         PyALE with small modifications (https://github.com/DanaJomar/PyALE).
 
-        Args:
+        Parameters
         ----------
-            model_name : str
-                 the string identifier for model in the attribute "models" dict
-            feature : string
-                The name of the feature to consider.
-            n_bins : int
-            subsample : float [0,1]
-            n_bootstrap : int
-
-        Returns:
+        estimator_name : string
+            Name of the estimator; used as a dict keys 
+            
+        features : string or 2-tuple of strings
+            Feature name or pair of feature names to compute ICE for. 
+            
+        n_bins : integer
+            Number of bins 
+            
+        subsample: float or integer (default=1.0 for no subsampling)
+        
+            if value is between 0-1, it is interpreted as fraction of total X to use 
+            if value > 1, interpreted as the number of X to randomly sample 
+            from the original dataset.
+        
+        n_bootstrap: integer (default=None for no bootstrapping)
+            number of bootstrap resamples for computing confidence intervals. 
+            
+        Returns
         ----------
             results : nested dictionary
 
@@ -1010,7 +1121,7 @@ class GlobalInterpret(Attributes):
 
             feature_encoder = feature_encoder_func
 
-        model = self.models[model_name]
+        estimator = self.estimators[estimator_name]
         # check to make sure feature is valid
         if feature not in self.feature_names:
             raise Exception(f"Feature {feature} is not a valid feature")
@@ -1018,12 +1129,12 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.examples, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap
             )
         else:
-            bootstrap_indices = [self.examples.index.to_list()]
+            bootstrap_indices = [self.X.index.to_list()]
 
-        original_feature_values = [feature_encoder(self.examples[feature].values)]
+        original_feature_values = [feature_encoder(self.X[feature].values)]
         xdata = np.array([np.unique(original_feature_values)])
         xdata.sort()
 
@@ -1032,100 +1143,100 @@ class GlobalInterpret(Attributes):
 
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
-            examples = self.examples.iloc[idx, :].reset_index(drop=True)
+            X = self.X.iloc[idx, :].reset_index(drop=True)
 
-            if (examples[feature].dtype.name != "category") or (
-                not examples[feature].cat.ordered
+            if (X[feature].dtype.name != "category") or (
+                not X[feature].cat.ordered
             ):
-                examples[feature] = examples[feature].astype(str)
-                groups_order = order_groups(examples, feature)
+                X[feature] = X[feature].astype(str)
+                groups_order = order_groups(X, feature)
                 groups = groups_order.index.values
-                examples[feature] = examples[feature].astype(
+                X[feature] = X[feature].astype(
                     pd.api.types.CategoricalDtype(categories=groups, ordered=True)
                 )
 
-            groups = examples[feature].unique()
+            groups = X[feature].unique()
             groups = groups.sort_values()
-            feature_codes = examples[feature].cat.codes
-            groups_counts = examples.groupby(feature).size()
+            feature_codes = X[feature].cat.codes
+            groups_counts = X.groupby(feature).size()
             groups_props = groups_counts / sum(groups_counts)
 
             K = len(groups)
 
             # create copies of the dataframe
-            examples_plus = examples.copy()
-            examples_neg = examples.copy()
+            X_plus = X.copy()
+            X_neg = X.copy()
             # all groups except last one
             last_group = groups[K - 1]
-            ind_plus = examples[feature] != last_group
+            ind_plus = X[feature] != last_group
             # all groups except first one
             first_group = groups[0]
-            ind_neg = examples[feature] != first_group
+            ind_neg = X[feature] != first_group
             # replace once with one level up
-            examples_plus.loc[ind_plus, feature] = groups[feature_codes[ind_plus] + 1]
+            X_plus.loc[ind_plus, feature] = groups[feature_codes[ind_plus] + 1]
             # replace once with one level down
-            examples_neg.loc[ind_neg, feature] = groups[feature_codes[ind_neg] - 1]
+            X_neg.loc[ind_neg, feature] = groups[feature_codes[ind_neg] - 1]
             try:
                 # predict with original and with the replaced values
                 # encode the categorical feature
-                examples_coded = pd.concat(
+                X_coded = pd.concat(
                     [
-                        examples.drop(feature, axis=1),
-                        feature_encoder(examples[[feature]]),
+                        X.drop(feature, axis=1),
+                        feature_encoder(X[[feature]]),
                     ],
                     axis=1,
                 )
                 # predict
-                if self.model_output == "probability":
-                    y_hat = model.predict_proba(examples_coded[self.feature_names])[
+                if self.estimator_output == "probability":
+                    y_hat = estimator.predict_proba(X_coded[self.feature_names])[
                         :, 1
                     ]
                 else:
-                    y_hat = model.predict(examples_coded[self.feature_names])
+                    y_hat = estimator.predict(X_coded[self.feature_names])
 
                 # encode the categorical feature
-                examples_plus_coded = pd.concat(
+                X_plus_coded = pd.concat(
                     [
-                        examples_plus.drop(feature, axis=1),
-                        feature_encoder(examples_plus[[feature]]),
+                        X_plus.drop(feature, axis=1),
+                        feature_encoder(X_plus[[feature]]),
                     ],
                     axis=1,
                 )
                 # predict
-                if self.model_output == "probability":
-                    y_hat_plus = model.predict_proba(
-                        examples_plus_coded[ind_plus][self.feature_names]
+                if self.estimator_output == "probability":
+                    y_hat_plus = estimator.predict_proba(
+                        X_plus_coded[ind_plus][self.feature_names]
                     )[:, 1]
                 else:
-                    y_hat_plus = model.predict(
-                        examples_plus_coded[ind_plus][self.feature_names]
+                    y_hat_plus = estimator.predict(
+                        X_plus_coded[ind_plus][self.feature_names]
                     )
 
                 # encode the categorical feature
-                examples_neg_coded = pd.concat(
+                X_neg_coded = pd.concat(
                     [
-                        examples_neg.drop(feature, axis=1),
-                        feature_encoder(examples_neg[[feature]]),
+                        X_neg.drop(feature, axis=1),
+                        feature_encoder(X_neg[[feature]]),
                     ],
                     axis=1,
                 )
                 # predict
-                if self.model_output == "probability":
-                    y_hat_neg = model.predict_proba(
-                        examples_neg_coded[ind_neg][self.feature_names]
+                if self.estimator_output == "probability":
+                    y_hat_neg = estimator.predict_proba(
+                        X_neg_coded[ind_neg][self.feature_names]
                     )[:, 1]
                 else:
-                    y_hat_neg = model.predict(
-                        examples_neg_coded[ind_neg][self.feature_names]
+                    y_hat_neg = estimator.predict(
+                        X_neg_coded[ind_neg][self.feature_names]
                     )
 
             except Exception as ex:
                 raise Exception(
-                    """There seems to be a problem when predicting with the model.
+                    """There seems to be a problem when predicting with the estimator.
                     Please check the following: 
-                    - Your model is fitted.
+                    - Your estimator is fitted.
                         - The list of predictors contains the names of all the features"""
-                    """ used for training the model.
+                    """ used for training the estimator.
                         - The encoding function takes the raw feature and returns the"""
                     """ right columns encoding it, including the case of a missing category.
                     """
@@ -1164,7 +1275,7 @@ class GlobalInterpret(Attributes):
 
         results = self._store_results(
             method="ale",
-            model_name=model_name,
+            estimator_name=estimator_name,
             features=feature,
             ydata=ale,
             xdata=xdata,
@@ -1178,31 +1289,64 @@ class GlobalInterpret(Attributes):
         self,
         method,
         data,
-        model_names,
-        n_bins=30,
-        subsample=1.0,
-        n_bootstrap=1,
-        n_jobs=1,
+        estimator_names,
         data_2d=None, 
         features=None,
         **kwargs,
     ):
         """
-        Wrapper function for computing the interaction strength statistic (see below).
-        Will perform calculation in parallel for multiple models.
+        Wrapper function for computing the interaction strength statistic or the Friedman
+        H-statistic (see below). Will perform calculation in parallel for multiple estimators.
+        
+        Parameters
+        ------------
+        
+        method : 'ias' or 'hstat'
+            Whether to compute the interaction strength (ias) or the 
+            Friedman H-statistics (hstat)
+        
+        data : xarray.Dataset
+        data_2d : xarray.Dataset
+        
+        features : string
+      
+        estimator_name : string
+            Name of the estimator; used as a dict keys 
+   
+        n_bins : integer
+            Number of bins 
+            
+        subsample: float or integer (default=1.0 for no subsampling)
+        
+            if value is between 0-1, it is interpreted as fraction of total X to use 
+            if value > 1, interpreted as the number of X to randomly sample 
+            from the original dataset.
+        
+        n_bootstrap: integer (default=None for no bootstrapping)
+            number of bootstrap resamples for computing confidence intervals. 
+            
+        n_jobs : integer or float
+
+        Returns
+        --------
+            results : xarray.Dataset
+        
         """
         if method == "ias":
             func = self.compute_interaction_strength
-            args_iterator = to_iterator(model_names, [n_bins], [subsample], [n_bootstrap])
+            args_iterator = to_iterator(estimator_names,)
+            total=len(estimator_names)
         elif method == "hstat":
             func = self.friedman_h_statistic
-            args_iterator = to_iterator(model_names, features, [n_bins], [subsample], [n_bootstrap])
+            args_iterator = to_iterator(estimator_names, features,)
+            total=len(estimator_names)*len(features)
 
         self.data = data
         self.data_2d = data_2d
-        kwargs["n_jobs"] = n_jobs
+        n_jobs = len(estimator_names)
         results = run_parallel(
-            func=func, args_iterator=args_iterator, kwargs=kwargs, nprocs_to_use=n_jobs
+            func=func, args_iterator=args_iterator, kwargs=kwargs, nprocs_to_use=n_jobs, 
+            total=total
         )
         
         results = merge_dict(results)
@@ -1210,42 +1354,49 @@ class GlobalInterpret(Attributes):
         if method == 'hstat':
             final_results={}
             feature_pairs = np.array([f'{f[0]}__{f[1]}' for f in features])
-            for model_name in model_names:
-                values = np.array([results[f'{f}__{model_name}_hstat'] for f in feature_pairs])
+            for estimator_name in estimator_names:
+                values = np.array([results[f'{f}__{estimator_name}_hstat'] for f in feature_pairs])
                 idx = np.argsort(np.mean(values, axis=1))[::-1]
                 feature_names_sorted = np.array(feature_pairs)[idx]
                 values_sorted = values[idx, :]
 
-                final_results[f"hstat_rankings__{model_name}"] = (
+                final_results[f"hstat_rankings__{estimator_name}"] = (
                     [f"n_vars_perm_based_interactions"],
                     feature_names_sorted,
                     )
-                final_results[f"hstat_scores__{model_name}"] = (
+                final_results[f"hstat_scores__{estimator_name}"] = (
                     [f"n_vars_perm_based_interactions", "n_bootstrap"],
                     values_sorted,
                 )
             results = to_xarray(final_results)
-        
+        else:
+            results = to_xarray(results)
+            
         return results
     
-    def friedman_h_statistic(self, model_name, features, n_bins=30, 
-                             subsample=1.0, n_bootstrap=1, **kwargs):
+    def friedman_h_statistic(self, estimator_name, features, **kwargs):
         """
         Compute the H-statistic for two-way interactions between two features.
 
-        Args:
-            model_name : str
-            feature_tuple : 2-tuple of strs
-            n_bins : int
+        Parameters
+        -------------
+        estimator_name : str
+        feature_tuple : 2-tuple of strs
+        n_bins : int
+        subsample : integer or float
+        n_bootstrap : integer 
 
-        Returns:
+        Returns
+        --------
+        
+        results : dictionary 
         """
         feature1, feature2 = features
-        feature1_pd = self.data[f"{feature1}__{model_name}__pd"].values
-        feature2_pd = self.data[f"{feature2}__{model_name}__pd"].values
+        feature1_pd = self.data[f"{feature1}__{estimator_name}__pd"].values
+        feature2_pd = self.data[f"{feature2}__{estimator_name}__pd"].values
 
         combined_pd = self.data_2d[
-            f"{feature1}__{feature2}__{model_name}__pd"
+            f"{feature1}__{feature2}__{estimator_name}__pd"
         ].values
 
         # Calculate the H-statistics
@@ -1255,61 +1406,41 @@ class GlobalInterpret(Attributes):
         denom = (combined_pd) ** 2
         H_squared = np.sum(np.sum(numer, axis=2), axis=1) / np.sum(np.sum(denom, axis=2), axis=1)
 
-        results = {f"{feature1}__{feature2}__{model_name}_hstat" : np.sqrt(H_squared)}
+        results = {f"{feature1}__{feature2}__{estimator_name}_hstat" : np.sqrt(H_squared)}
         
         return results
 
-    def compute_interaction_strength(
-        self, model_name, n_bins=30, subsample=1.0, n_bootstrap=1, **kwargs
-    ):
+    def compute_interaction_strength(self, estimator_name, **kwargs):
         """
-        Compute the interaction strenth of a ML model (based on IAS from
-        Quantifying Model Complexity via Functional
+        Compute the interaction strenth of a ML estimator (based on IAS from
+        Quantifying estimator Complexity via Functional
         Decomposition for Better Post-Hoc Interpretability).
 
-        Args:
+        Parameters
         --------------------
-            results : xarray.Dataset
+        estimator_names : list of strings
 
-            model_names : list of strings
-
-            n_bins : integer
-
-            subsample : float or integer
-
-            n_jobs : float or integer
-
-            n_bootstrap : integer
-
-            ale_subsample : float or integer
-
+        Returns
+        ---------
+        
+        ias : dict 
 
         """
-        ale_subsample = kwargs.get("ale_subsample", subsample)
-        model = self.models[model_name]
-        feature_names = list(self.examples.columns)
+        subsample = kwargs.get("subsample", 1.0)
+        n_bootstrap = kwargs.get("n_bootstrap", 1) 
+        estimator_output = kwargs.get("estimator_output", 'raw')
+        
+        estimator = self.estimators[estimator_name]
+        feature_names = list(self.X.columns)
+        data = self.data
 
         if "Run Date" in feature_names:
             feature_names.remove("Run Date")
 
-        try:
-            data = self.data
-        except:
-            # Get the ALE curve for each feature
-            feature_names = list(self.examples.columns)
-            n_jobs = kwargs.get("n_jobs", 1)
-            data = self._run_interpret_curves(
-                method="ale",
-                features=feature_names,
-                n_bins=n_bins,
-                n_jobs=n_jobs,
-                subsample=ale_subsample,
-                n_bootstrap=1,
-            )
         # Get the interpolated ALE curves
         ale_main_effects = {}
         for f in feature_names:
-            ale_y = np.mean(data[f"{f}__{model_name}__ale"].values, axis=0)
+            ale_y = np.mean(data[f"{f}__{estimator_name}__ale"].values, axis=0)
             ale_x = data[f"{f}__bin_values"].values
             
             ale_main_effects[f] = interp1d(
@@ -1319,32 +1450,32 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.examples, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap
             )
         else:
-            bootstrap_indices = [self.examples.index.to_list()]
+            bootstrap_indices = [self.X.index.to_list()]
 
         ias = []
         for k, idx in enumerate(bootstrap_indices):
-            examples = self.examples.iloc[idx, :].values
-            if self.model_output == "probability":
-                predictions = model.predict_proba(examples)[:, 1]
+            X = self.X.iloc[idx, :].values
+            if self.estimator_output == "probability":
+                predictions = estimator.predict_proba(X)[:, 1]
             else:
-                predictions = model.predict(examples)
+                predictions = estimator.predict(X)
 
-            # Get the average model prediction
+            # Get the average estimator prediction
             avg_prediction = np.mean(predictions)
 
-            # Get the ALE value for each feature per example
+            # Get the ALE value for each feature per X
             main_effects = np.array(
                 [
-                    ale_main_effects[f](np.array(examples[:,i], dtype=np.float64))
+                    ale_main_effects[f](np.array(X[:,i], dtype=np.float64))
                     for i, f in enumerate(feature_names)
                 ]
             )
 
             
-            # Sum the ALE values per example and add on the average value
+            # Sum the ALE values per X and add on the average value
             main_effects = np.sum(main_effects.T, axis=1) + avg_prediction
 
             num = np.sum((predictions - main_effects) ** 2)
@@ -1353,65 +1484,42 @@ class GlobalInterpret(Attributes):
             # Compute the interaction strength
             ias.append(num / denom)
 
-        return {model_name: np.array(ias)}
+        return {f'{estimator_name}_ias': (['n_bootstrap'], np.array(ias))}
 
     def compute_ale_variance(
         self,
         data,
-        model_names,
+        estimator_names,
         features=None,
-        n_bins=30,
-        subsample=1.0,
-        n_bootstrap=1,
-        **kwargs,
+        **kwargs
     ):
         """
         Compute the standard deviation of the ALE values
         for each feature and rank then for predictor importance.
 
-        Args:
-        --------------------
-            results : xarray.Dataset
+        Parameters
+        ----------
+        data : xarray.Dataset
+        estimator_names : list of strings
+        features : str
+        ale_subsample : float or integer
 
-            model_names : list of strings
+        Returns
+        ---------
 
-            n_bins : integer
-
-            subsample : float or integer
-
-            n_jobs : float or integer
-
-            n_bootstrap : integer
-
-            ale_subsample : float or integer
-
+        results_ds : xarray.Dataset
 
         """
         results = {}
-        for model_name in model_names:
-            if data is None:
-                # Get the ALE curve for each feature
-                ale_subsample = kwargs.get("ale_subsample", subsample)
-                feature_names = list(self.examples.columns)
-                model = self.models[model_name]
-                n_jobs = kwargs.get("n_jobs", 1)
-                data = self._run_interpret_curves(
-                    method="ale",
-                    features=feature_names,
-                    n_bins=n_bins,
-                    n_jobs=n_jobs,
-                    subsample=ale_subsample,
-                    n_bootstrap=n_bootstrap,
-                )
-            else:
-                feature_names = list([f for f in data.data_vars if "__" not in f])
-                feature_names.sort()
+        for estimator_name in estimator_names:
+            feature_names = list([f for f in data.data_vars if "__" not in f])
+            feature_names.sort()
 
             # Compute the std over the bin axis [shape = (n_features, n_bootstrap)]
             # Input shape : (n_bootstrap, n_bins) 
             ale_std = np.array(
                 [
-                    np.std(data[f"{f}__{model_name}__ale"].values, ddof=1, axis=1)
+                    np.std(data[f"{f}__{estimator_name}__ale"].values, ddof=1, axis=1)
                     for f in feature_names
                 ]
             )
@@ -1422,11 +1530,11 @@ class GlobalInterpret(Attributes):
             feature_names_sorted = np.array(feature_names)[idx]
             ale_std_sorted = ale_std[idx,:]
 
-            results[f"ale_variance_rankings__{model_name}"] = (
+            results[f"ale_variance_rankings__{estimator_name}"] = (
                 [f"n_vars_ale_variance"],
                 feature_names_sorted,
             )
-            results[f"ale_variance_scores__{model_name}"] = (
+            results[f"ale_variance_scores__{estimator_name}"] = (
                 [f"n_vars_ale_variance", "n_bootstrap"],
                 ale_std_sorted,
             )
@@ -1435,16 +1543,7 @@ class GlobalInterpret(Attributes):
 
         return results_ds
 
-    def compute_interaction_rankings(
-        self,
-        data,
-        model_names,
-        features,
-        n_bins=30,
-        subsample=1.0,
-        n_bootstrap=1,
-        **kwargs,
-    ):
+    def compute_interaction_rankings(self,data,estimator_names,features,**kwargs,):
         """
         Compute the variable interaction rankings from Greenwell et al. 2018, but
         using the purely second-order ALE rather than the second-order PD.
@@ -1458,49 +1557,23 @@ class GlobalInterpret(Attributes):
         possibly indicative of  stronger feature interactions.
 
 
-        Args:
+        Parameters
         --------------------
-            results : xarray.Dataset
+        data : xarray.Dataset
+        estimator_names : list of strings
+        features : str
+        ale_subsample : float or integer
 
-            model_names : list of strings
-
-            features : lists of 2-tuples
-
-            n_bins : integer
-
-            subsample : float or integer
-
-            n_jobs : float or integer
-
-            n_bootstrap : integer
-
-            ale_subsample : float or integer
-
-        Returns:
-            results_ds, xarray.Dataset
+        Returns
+        --------
+        results_ds : xarray.Dataset
         """
         results = {}
-        for model_name in model_names:
-            if data is None:
-                # Get the ALE curve for each feature
-                if features is None:
-                    feature_names = list(self.examples.columns)
-                    features = list(itertools.combinations(feature_names, r=2))
-                ale_subsample = kwargs.get("ale_subsample", subsample)
-                model = self.models[model_name]
-                n_jobs = kwargs.get("n_jobs", 1)
-                data = self._run_interpret_curves(
-                    method="ale",
-                    features=features,
-                    n_bins=n_bins,
-                    n_jobs=n_jobs,
-                    subsample=ale_subsample,
-                    n_bootstrap=n_bootstrap,
-                )
-
+        for estimator_name in estimator_names:
+            
             interaction_effects = []
             for f in features:
-                data_temp = data[f"{f[0]}__{f[1]}__{model_name}__ale"].values
+                data_temp = data[f"{f[0]}__{f[1]}__{estimator_name}__ale"].values
                 std_feature0 = np.std(np.std(data_temp, ddof=1, axis=1), ddof=1, axis=1)
                 std_feature1 = np.std(np.std(data_temp, ddof=1, axis=2), ddof=1, axis=1)
                 interaction_effects.append(0.5 * (std_feature0 + std_feature1))
@@ -1513,11 +1586,11 @@ class GlobalInterpret(Attributes):
             interaction_effects_sorted = interaction_effects[idx, :]
             feature_names_sorted = [f"{f[0]}__{f[1]}" for f in feature_names_sorted]
 
-            results[f"ale_variance_interactions_rankings__{model_name}"] = (
+            results[f"ale_variance_interactions_rankings__{estimator_name}"] = (
                 [f"n_vars_ale_variance_interactions"],
                 feature_names_sorted,
             )
-            results[f"ale_variance_interactions_scores__{model_name}"] = (
+            results[f"ale_variance_interactions_scores__{estimator_name}"] = (
                 [f"n_vars_ale_variance_interactions", "n_bootstrap"],
                 interaction_effects_sorted,
             )
@@ -1526,35 +1599,35 @@ class GlobalInterpret(Attributes):
 
         return results_ds
 
-    def number_of_features_used(self, model, examples):
+    def number_of_features_used(self, estimator, X):
         """
         Compute the number of features (NF) from Molnar et al. 2019
         """
-        original_predictions = model.predict_proba(examples)[:, 1]
-        features = list(examples.columns)
+        original_predictions = estimator.predict_proba(X)[:, 1]
+        features = list(X.columns)
         for f in features:
-            examples_temp = examples.copy()
-            examples_temp.loc[:, f] = np.random.permutation(examples_temp[f].values)
+            X_temp = X.copy()
+            X_temp.loc[:, f] = np.random.permutation(X_temp[f].values)
 
-            new_predictions = model.predict_proba(examples_temp)[:, 1]
+            new_predictions = estimator.predict_proba(X_temp)[:, 1]
             change = np.absolute(new_predictions - original_predictions)
    
     
-    def compute_interaction_performance_based(self, model, 
+    def compute_interaction_performance_based(self, estimator, 
                                            X, y, 
                                            X_permuted, 
                                            features, 
                                            evaluation_fn,
-                                           model_output, 
+                                           estimator_output, 
                                            verbose=False):
         """
         Compute the performance-based feature interactions from Oh (2019).
     
         Err(F_i) : Error when feature F_i is permuted as compared 
-               against the original model performance.  
+               against the original estimator performance.  
                
         Err({F_i, F_j}) : Error when features F_i & F_j are permuted as 
-                       compared against the original model performance. 
+                       compared against the original estimator performance. 
     
         Interaction = Err(F_i) + Err(F_j) - Err({F_i, F_j}), for classification 
         Interaction = Err({F_i, F_j}) - (Err(F_i) + Err(F_j)), for regression
@@ -1568,47 +1641,78 @@ class GlobalInterpret(Attributes):
         In other words, positive or negative interactions decrease or increase the 
         prediction error, respectively.
     
-        Args:
-        ------------------------
-            model, 
-            X, pandas.DataFrame (n_examples, n_features)
-            y, 
-            features, list of 2-tuples 
-            evaluation_fn, callable 
-            random_state, 
+        Parameters
+        -----------
+        estimator, 
+        X : pandas.DataFrame  of shape (n_X, n_features)
+        Data to compute importance over. 
+        y : numpy.array
+        y values
+        features: list of 2-tuples 
+        evaluation_fn : callable 
+        random_state : integer
     
-        Returns:
-        -------------------------
+        Returns
+        --------
+        
+        err : numpy.array
         """
-        if model_output == 'probability':
+        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
+
+        if isinstance(evaluation_fn, str):
+            evaluation_fn = evaluation_fn.lower()
+            is_str=True
+
+        if isinstance(evaluation_fn,str):    
+            if evaluation_fn == "auc":
+                evaluation_fn = roc_auc_score
+                scoring_strategy = "argmin_of_mean"
+            elif evaluation_fn == "auprc":
+                evaluation_fn = average_precision_score
+                scoring_strategy = "argmin_of_mean"
+            elif evaluation_fn == "norm_aupdc":
+                evaluation_fn = norm_aupdc
+                scoring_strategy = "argmin_of_mean"
+            elif evaluation_fn == "bss":
+                evaluation_fn = brier_skill_score
+                scoring_strategy = "argmin_of_mean"
+            elif evaluation_fn == "mse":
+                evaluation_fn = mean_squared_error
+                scoring_strategy = "argmax_of_mean"
+            else:
+                raise ValueError(
+                    f"evaluation_fn is not set! Available options are {available_scores}"
+                )
+                
+        if estimator_output == 'probability':
             #Classification
-            predictions = model.predict_proba(X)[:,1]
+            predictions = estimator.predict_proba(X)[:,1]
         else:
             #Regression
-            predictions = model.predict(X)
+            predictions = estimator.predict(X)
         
         original_score = evaluation_fn(y, predictions)
         
         err=0
         X_permuted_both = X.copy()
-        # Compute the change in model performance for the two features separately 
+        # Compute the change in estimator performance for the two features separately 
         for feature in features:
             X_temp = X.copy()
             X_temp.loc[:,feature] = X_permuted.loc[:,feature]
             X_permuted_both.loc[:,feature] = X_permuted.loc[:,feature]
 
             # Get the predictions for the dataset with a permuted feature. 
-            if model_output == 'probability':
+            if estimator_output == 'probability':
                 #Classification
-                predictions = model.predict_proba(X_temp)[:,1]
+                predictions = estimator.predict_proba(X_temp)[:,1]
             else:
                 #Regression
-                predictions = model.predict(X_temp)
+                predictions = estimator.predict(X_temp)
 
             # Compute the permuted score 
             permuted_score = evaluation_fn(y, predictions)
             
-            if model_output == 'probability':
+            if estimator_output == 'probability':
                 #Classification
                 err_i = original_score - permuted_score
             else:
@@ -1622,16 +1726,16 @@ class GlobalInterpret(Attributes):
                 
             err+=err_i
         
-        # Compute the change in model performance with both features permuted. 
-        if model_output == 'probability':
-            predictions_both = model.predict_proba(X_permuted_both)[:,1]
+        # Compute the change in estimator performance with both features permuted. 
+        if estimator_output == 'probability':
+            predictions_both = estimator.predict_proba(X_permuted_both)[:,1]
         else:
-            predictions_both = model.predict(X_permuted_both)
+            predictions_both = estimator.predict(X_permuted_both)
         
         # Compute the permuted score 
         permuted_score_both = evaluation_fn(y, predictions_both)
         
-        if model_output == 'probability':
+        if estimator_output == 'probability':
             err_both = original_score - permuted_score_both
         else:
             err_both = permuted_score_both - original_score
@@ -1642,17 +1746,17 @@ class GlobalInterpret(Attributes):
             print(f'Permuted Features: {permuted_features}')
             
         # Combine for the feature interaction between the two features 
-        if model_output == 'probability':
+        if estimator_output == 'probability':
             err-=err_both
         else:
             err = err_both - err  
     
         return err
     
-    def compute_interaction_rankings_performance_based(self, model_names, 
+    def compute_interaction_rankings_performance_based(self, estimator_names, 
                                            features, 
                                            evaluation_fn,
-                                           model_output, 
+                                           estimator_output, 
                                            subsample=1.0,
                                            n_bootstrap=1,
                                            n_jobs=1,                     
@@ -1662,17 +1766,17 @@ class GlobalInterpret(Attributes):
         """
         unique_features = list(set([item for t in features for item in t]))
         n_feature_pairs = len(features)
-        examples_permuted = self.examples.copy()
+        X_permuted = self.X.copy()
         # Permute all features up front to save on computation cost
         for f in unique_features:
-            examples_permuted.loc[:,f] = np.random.permutation(self.examples.loc[:,f])
+            X_permuted.loc[:,f] = np.random.permutation(self.X.loc[:,f])
             
         args_iterator = to_iterator(
-                model_names,
+                estimator_names,
                 features,
-                [examples_permuted],
+                [X_permuted],
                 [evaluation_fn],
-                [model_output], 
+                [estimator_output], 
                 [subsample],
                 [n_bootstrap],
                 [verbose]
@@ -1686,17 +1790,17 @@ class GlobalInterpret(Attributes):
         
         final_results={}
         feature_pairs = np.array([f'{f[0]}__{f[1]}' for f in features])
-        for model_name in model_names:
-            values = np.array([results[f'{f}_interaction__{model_name}'] for f in feature_pairs])
+        for estimator_name in estimator_names:
+            values = np.array([results[f'{f}_interaction__{estimator_name}'] for f in feature_pairs])
             idx = np.argsort(np.absolute(np.mean(values, axis=1)))[::-1]
             feature_names_sorted = np.array(feature_pairs)[idx]
             values_sorted = values[idx, :]
 
-            final_results[f"perm_based_interactions_rankings__{model_name}"] = (
+            final_results[f"perm_based_interactions_rankings__{estimator_name}"] = (
                 [f"n_vars_perm_based_interactions"],
                 feature_names_sorted,
             )
-            final_results[f"perm_based_interactions_scores__{model_name}"] = (
+            final_results[f"perm_based_interactions_scores__{estimator_name}"] = (
                 [f"n_vars_perm_based_interactions", "n_bootstrap"],
                 values_sorted,
             )
@@ -1705,56 +1809,84 @@ class GlobalInterpret(Attributes):
         
         return results_ds
     
-    def _feature_interaction_worker(self, model_name, features, 
-                                    examples_permuted, evaluation_fn, 
-                                    model_output, 
+    def _feature_interaction_worker(self, estimator_name, features, 
+                                    X_permuted, evaluation_fn, 
+                                    estimator_output, 
                                     subsample=1.0, n_bootstrap=1, verbose=False):
         """
         Internal worker function for parallel computations. 
         """
-        model = self.models[model_name]
+        estimator = self.estimators[estimator_name]
             
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                        self.examples, subsample=subsample, n_bootstrap=n_bootstrap
+                        self.X, subsample=subsample, n_bootstrap=n_bootstrap
                     )
         else:
-            bootstrap_indices = [np.arange(self.examples.shape[0])]
+            bootstrap_indices = [np.arange(self.X.shape[0])]
             
         results={}
         err_set = np.zeros((n_bootstrap,))
         for k, idx in enumerate(bootstrap_indices):
             # get samples
-            examples = self.examples.iloc[idx, :].reset_index(drop=True)
-            targets= self.targets[idx]
+            X = self.X.iloc[idx, :].reset_index(drop=True)
+            y= self.y[idx]
 
-            err = self.compute_interaction_performance_based(model, 
-                                          examples, targets, examples_permuted, 
+            err = self.compute_interaction_performance_based(estimator, 
+                                          X, y, X_permuted, 
                                           features, 
                                           evaluation_fn,
-                                          model_output,                        
+                                          estimator_output,                        
                                          verbose=verbose)
             err_set[k]=err
 
-        results[f'{features[0]}__{features[1]}_interaction__{model_name}'] = err_set
+        results[f'{features[0]}__{features[1]}_interaction__{estimator_name}'] = err_set
 
         return results       
 
 
-    def compute_main_effect_complexity(self, model_name, ale_ds,  
+    def compute_main_effect_complexity(self, estimator_name, ale_ds,  
                             features, max_segments=10, approx_error=0.05):
         """
-        Compute the Main Effect Complexity (MEC) from Molnar et al. (2019)
-    
-        Args:
-            model_name,
-            ale_ds,
-            features, 
-            max_segements, default=10
-            approx_error, default=0.05
-    
-        Returns:
+        Compute the Main Effect Complexity (MEC; Molnar et al. 2019). 
+        MEC is the number of linear segements required to approximate 
+        the first-order ALE curves; averaged over all features. 
+        The MEC is weighted-averged by the variance. Higher values indicate
+        a more complex estimator (less interpretable). 
+        
+        References 
+        -----------
+            Molnar, C., G. Casalicchio, and B. Bischl, 2019: Quantifying estimator Complexity via 
+            Functional Decomposition for Better Post-Hoc Interpretability. ArXiv.
+        
+        
+        Parameters
+        ----------------
+        
+        ale_ds : xarray.Dataset
+            
+            The results xarray.Dataset from computing 1D ALE using .calc_ale(). 
+            Must be computed for all features in X. 
+
+        estimator_names : string, list of strings
+        
+            If using multiple estimators, you can pass a single (or subset of) estimator name(s) 
+            to compute the MEC for. 
+            
+        max_segments : integer
+            
+            Maximum number of linear segments used to approximate the main/first-order 
+            effect of a feature. default is 10. Used to limit the computational expense. 
+            
+        approx_error : float
+        
+            The accepted error of the R squared between the piece-wise linear function 
+            and the true ALE curve. If the R square is within the approx_error, then 
+            no additional segments are added. default is 0.05
+
+        Returns
+        ----------
             mec_avg, float
                 Average Main Effect Complexity 
             best_break_dict, dict
@@ -1767,11 +1899,11 @@ class GlobalInterpret(Attributes):
         best_breaks_dict = {}
     
         for j, f in enumerate(features):
-            ale_y = np.mean(ale_ds[f'{f}__{model_name}__ale'].values,axis=0)
+            ale_y = np.mean(ale_ds[f'{f}__{estimator_name}__ale'].values,axis=0)
             ale_x = ale_ds[f'{f}__bin_values'].values
     
             b_max=len(ale_x)
-            # Approximate ALE with linear model
+            # Approximate ALE with linear estimator
             lr = LinearRegression()
             lr.fit(ale_x.reshape(-1, 1), ale_y)
             g = lr.predict(ale_x.reshape(-1, 1))
@@ -1795,30 +1927,30 @@ class GlobalInterpret(Attributes):
                                [range(temp_breaks[i]+1, temp_breaks[i+1]+1) for i in range(len(temp_breaks)-1)] +\
                                [range(temp_breaks[-1]+1, b_max)]
 
-                        model_set = [LinearRegression() for _ in range(len(idxs_set))]
-                        model_fit_set = [model_set[i].fit(ale_x[idxs].reshape(-1, 1), ale_y[idxs])
+                        estimator_set = [LinearRegression() for _ in range(len(idxs_set))]
+                        estimator_fit_set = [estimator_set[i].fit(ale_x[idxs].reshape(-1, 1), ale_y[idxs])
                                              for i, idxs in enumerate(idxs_set)
                             ]
                         predict_set = [
-                            model_fit_set[i].predict(ale_x[idxs].reshape(-1, 1))
+                            estimator_fit_set[i].predict(ale_x[idxs].reshape(-1, 1))
                                 for i, idxs in enumerate(idxs_set)
                         ]
                         for i, idxs in enumerate(idxs_set):
                             g[idxs] = predict_set[i]
              
-                        #coef = [model_fit_set[i].coef_[0] for i in range(len(idxs_set))]
+                        #coef = [estimator_fit_set[i].coef_[0] for i in range(len(idxs_set))]
             
                         current_score = r2_score(g, ale_y)
                         if current_score > best_score:
                             best_score = current_score
                             best_break = b 
             
-                        #coef = [model_fit_set[i].coef_[0] for i in range(len(idxs_set))]
+                        #coef = [estimator_fit_set[i].coef_[0] for i in range(len(idxs_set))]
                         # Greedily set slopes to zero while R^2 > 1 - error
                         # Basically, the ALE curve is approximated quite well 
-                        # by a linear model
+                        # by a linear estimator
                         #if r2_score(g, ale_y) < (1 - approx_error): 
-                        #    coef = [model_fit_set[i].coef_[0] for i in range(len(idxs_set))]
+                        #    coef = [estimator_fit_set[i].coef_[0] for i in range(len(idxs_set))]
                         #else:
                         #    coef = [0]
                 best_breaks.append(best_break)

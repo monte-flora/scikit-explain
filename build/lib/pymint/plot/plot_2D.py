@@ -25,6 +25,14 @@ class MidpointNormalize(colors.Normalize):
 
 
 class PlotInterpret2D(PlotStructure):
+    """
+    PlotInterpret2D handles the 2D explainability graphics, which include
+    the 2D ALE and PD. 
+    """
+    
+    def __init__(self, BASE_FONT_SIZE=12):
+        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
+    
     def add_histogram_axis(
         self,
         ax,
@@ -111,7 +119,7 @@ class PlotInterpret2D(PlotStructure):
         method,
         data,
         features,
-        model_names,
+        estimator_names,
         display_feature_names={},
         display_units={},
         to_probability=False,
@@ -125,8 +133,8 @@ class PlotInterpret2D(PlotStructure):
         kde_curves = kwargs.get('kde_curves', True)
         scatter = kwargs.get('scatter', True)
         
-        if not is_list(model_names):
-            model_names = to_list(model_names)
+        if not is_list(estimator_names):
+            estimator_names = to_list(estimator_names)
 
         unnormalize = kwargs.get("unnormalize", None)
         self.display_feature_names = display_feature_names
@@ -144,15 +152,15 @@ class PlotInterpret2D(PlotStructure):
             colorbar_label = "2nd Order ALE (%)"
 
         # get the number of panels which will be length of feature dictionary
-        n_panels = len(features) * len(model_names)
-        n_columns = len(model_names)
+        n_panels = len(features) * len(estimator_names)
+        n_columns = len(estimator_names)
 
-        if len(model_names) == 1:
+        if len(estimator_names) == 1:
             only_one_model = True
             n_columns = min(len(features), 3)
         else:
             only_one_model = False
-            n_columns = len(model_names)
+            n_columns = len(estimator_names)
 
         if n_panels == 1:
             figsize = (6, 3)
@@ -171,7 +179,7 @@ class PlotInterpret2D(PlotStructure):
 
         ale_max = []
         ale_min = []
-        for feature_set, model_name in itertools.product(features, model_names):
+        for feature_set, model_name in itertools.product(features, estimator_names):
             zdata_temp = data[
                 f"{feature_set[0]}__{feature_set[1]}__{model_name}__{method}"
             ].values.copy()
@@ -210,7 +218,7 @@ class PlotInterpret2D(PlotStructure):
         counter = 0
         n = 1
         i = 0
-        for feature_set, model_name in itertools.product(features, model_names):
+        for feature_set, model_name in itertools.product(features, estimator_names):
             # We want to lowest maximum value and the highest minimum value
             if not only_one_model:
                 max_value = np.nanpercentile(feature_levels[feature_set]["max"], 100)
@@ -227,7 +235,7 @@ class PlotInterpret2D(PlotStructure):
             top_ax = top_axes[i]
             rhs_ax = rhs_axes[i]
 
-            if counter <= len(model_names) - 1 and not only_one_model:
+            if counter <= len(estimator_names) - 1 and not only_one_model:
                 top_ax.set_title(
                     model_name, fontsize=self.FONT_SIZES["normal"], alpha=0.9
                 )
