@@ -42,10 +42,6 @@ from ..common.attributes import Attributes
 
 from .PermutationImportance import sklearn_permutation_importance
 
-import warnings
-warnings.filterwarnings('error')
-
-
 
 class GlobalInterpret(Attributes):
 
@@ -1444,9 +1440,8 @@ class GlobalInterpret(Attributes):
         for f in feature_names:
             ale_y = np.mean(data[f"{f}__{estimator_name}__ale"].values, axis=0)
             ale_x = data[f"{f}__bin_values"].values
-            
             ale_main_effects[f] = interp1d(
-                ale_x, ale_y, fill_value="extrapolate", kind="linear"
+                ale_x, ale_y, fill_value="extrapolate", kind="linear",
             )
 
         # get the bootstrap samples
@@ -1471,12 +1466,11 @@ class GlobalInterpret(Attributes):
             # Get the ALE value for each feature per X
             main_effects = np.array(
                 [
-                    ale_main_effects[f](np.array(X[:,i], dtype=np.float64))
+                   ale_main_effects[f](np.array(X[:,i], dtype=np.float64))
                     for i, f in enumerate(feature_names)
                 ]
             )
 
-            
             # Sum the ALE values per X and add on the average value
             main_effects = np.sum(main_effects.T, axis=1) + avg_prediction
 
@@ -1849,7 +1843,8 @@ class GlobalInterpret(Attributes):
 
 
     def compute_main_effect_complexity(self, estimator_name, ale_ds,  
-                            features, max_segments=10, approx_error=0.05):
+                            features, post_process=False, max_segments=10, approx_error=0.05, 
+                                      debug=False):
         """
         Compute the Main Effect Complexity (MEC; Molnar et al. 2019). 
         MEC is the number of linear segements required to approximate 
@@ -1898,26 +1893,30 @@ class GlobalInterpret(Attributes):
         mec = np.zeros((len(features)))
         var = np.zeros((len(features)))
     
+        # Based on line 6 from Algorithm 2: Main Effect Complexity (MEC) in Molnar et al. 2019 
+        # we ignore categorical features (set the slopes to zero). 
+        categorical_features = [self.X[f].dtype.name == "category" for f in self.feature_names]
         best_breaks_dict = {}
-    
+        best_g={}
         for j, f in enumerate(features):
-            ale_y = np.mean(ale_ds[f'{f}__{estimator_name}__ale'].values,axis=0)
-            ale_x = ale_ds[f'{f}__bin_values'].values
+            ale = np.mean(ale_ds[f'{f}__{estimator_name}__ale'].values,axis=0)
+            x = ale_ds[f'{f}__bin_values'].values.reshape(-1, 1)
     
-            b_max=len(ale_x)
+            b_max=len(x)
             # Approximate ALE with linear estimator
             lr = LinearRegression()
-            lr.fit(ale_x.reshape(-1, 1), ale_y)
-            g = lr.predict(ale_x.reshape(-1, 1))
+            lr.fit(x.reshape(-1, 1), ale)
+            g = lr.predict(x)
+    
+            best_g[f] = g
     
             coef = lr.coef_[0]
-            best_score = r2_score(g, ale_y)
-    
+            best_score = r2_score(g, ale)
+
             # Increase num. of segements until approximation is good enough. 
             k = 1
             best_breaks=[]
-            while k < max_segments and (r2_score(g, ale_y) < (1-approx_error)):
-                #print('k: ', k)
+            while k < max_segments and (r2_score(g, ale) < (1-approx_error)):
                 # Find intervals Z_k through exhaustive search along ALE curve breakpoints
                 for b in range(1, b_max-1):
                     if b not in best_breaks:
@@ -1926,43 +1925,69 @@ class GlobalInterpret(Attributes):
                         temp_breaks.sort()
 
                         idxs_set = [range(0,temp_breaks[0]+1)] + \
-                               [range(temp_breaks[i]+1, temp_breaks[i+1]+1) for i in range(len(temp_breaks)-1)] +\
-                               [range(temp_breaks[-1]+1, b_max)]
+                               [range(temp_breaks[i], temp_breaks[i+1]+1) for i in range(len(temp_breaks)-1)] +\
+                               [range(temp_breaks[-1], b_max)]
 
-                        estimator_set = [LinearRegression() for _ in range(len(idxs_set))]
-                        estimator_fit_set = [estimator_set[i].fit(ale_x[idxs].reshape(-1, 1), ale_y[idxs])
+                        estimator_set = [LinearRegression(normalize=True) for _ in range(len(idxs_set))]
+                        
+                        estimator_fit_set_tmp = [estimator_set[i].fit(x[idxs,:], ale[idxs])
                                              for i, idxs in enumerate(idxs_set)
                             ]
+
+                        # For categorical features, set the slope to zero (but keep the intercept).
+                        if f in categorical_features:
+                            estimator_fit_set=[]
+                            for e in estimator_fit_set_tmp:
+                                e.coef_ = np.array([0.])
+                                estimator_fit_set.append(e) 
+                        else:
+                            estimator_fit_set = [e for e in estimator_fit_set_tmp]
+                  
+                     
                         predict_set = [
-                            estimator_fit_set[i].predict(ale_x[idxs].reshape(-1, 1))
+                            estimator_fit_set[i].predict(x[idxs,:])
                                 for i, idxs in enumerate(idxs_set)
                         ]
+                        
+                        # Combine the predictions from the different breaks into 
+                        # a single piece-wise function (line 7 for Molnar et al. 2019)
                         for i, idxs in enumerate(idxs_set):
                             g[idxs] = predict_set[i]
-             
-                        #coef = [estimator_fit_set[i].coef_[0] for i in range(len(idxs_set))]
-            
-                        current_score = r2_score(g, ale_y)
+
+                        current_score = r2_score(g, ale)
                         if current_score > best_score:
                             best_score = current_score
                             best_break = b 
-            
-                        #coef = [estimator_fit_set[i].coef_[0] for i in range(len(idxs_set))]
-                        # Greedily set slopes to zero while R^2 > 1 - error
-                        # Basically, the ALE curve is approximated quite well 
-                        # by a linear estimator
-                        #if r2_score(g, ale_y) < (1 - approx_error): 
-                        #    coef = [estimator_fit_set[i].coef_[0] for i in range(len(idxs_set))]
-                        #else:
-                        #    coef = [0]
+                            # Is approx good enough? Then stop iterating
+                            if best_score > 1-approx_error:
+                                best_g[f] = g
+                                break
+                           
                 best_breaks.append(best_break)
                 k+=1
-    
+
+            # Greedily set slopes to zero while R^2 > 1 - error
+            # Basically, the ALE curve is approximated quite well by a linear estimator
+            #add = 0
+            #if post_process:
+            #    if k == 1:
+            #        coefs = [1 if abs(coef) > 0 else 0]
+            #    else:
+            #        coefs = [abs(e.coef_[0]) for e in estimator_fit_set]
+           # 
+           #     if np.round(best_score,5) >= np.round(1-approx_error, 5):
+           #         add = -1 # All coefficients are set to zero. 
+           #     else:
+           #         add = np.sum([c>0 for c in coefs]) - 1
+
             # Sum of non-zero coefficients minus first intercept 
             best_breaks_dict[f] = best_breaks
-            mec[j] = k #- 1
-            var[j] = np.mean(ale_y**2)
+            mec[j] = k #+ add
+            var[j] = np.mean(ale**2)
     
         mec_avg = (1/np.sum(var)) * np.sum(var*mec)
     
-        return mec_avg, best_breaks_dict
+        if debug:
+            return mec_avg, best_breaks_dict, best_g
+        else:
+            return mec_avg, best_breaks_dict
