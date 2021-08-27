@@ -1432,16 +1432,13 @@ class GlobalInterpret(Attributes):
         feature_names = list(self.X.columns)
         data = self.data
 
-        if "Run Date" in feature_names:
-            feature_names.remove("Run Date")
-
         # Get the interpolated ALE curves
-        ale_main_effects = {}
+        main_effect_funcs = {}
         for f in feature_names:
-            ale_y = np.mean(data[f"{f}__{estimator_name}__ale"].values, axis=0)
-            ale_x = data[f"{f}__bin_values"].values
-            ale_main_effects[f] = interp1d(
-                ale_x, ale_y, fill_value="extrapolate", kind="linear",
+            ale = np.mean(data[f"{f}__{estimator_name}__ale"].values, axis=0)
+            x = data[f"{f}__bin_values"].values
+            main_effect_funcs[f] = interp1d(
+                x, ale, fill_value="extrapolate", kind="linear",
             )
 
         # get the bootstrap samples
@@ -1466,7 +1463,7 @@ class GlobalInterpret(Attributes):
             # Get the ALE value for each feature per X
             main_effects = np.array(
                 [
-                   ale_main_effects[f](np.array(X[:,i], dtype=np.float64))
+                   main_effect_funcs[f](np.array(X[:,i], dtype=np.float64))
                     for i, f in enumerate(feature_names)
                 ]
             )
