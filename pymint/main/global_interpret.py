@@ -144,12 +144,12 @@ class GlobalInterpret(Attributes):
         evaluation_fn="auprc",
         subsample=1.0,
         n_jobs=1,
-        n_bootstrap=None,
+        n_permute=1,
         scoring_strategy=None,
         direction='backward',
         verbose=False,
-        random_state=None,
-        return_iterations=True
+        return_iterations=True,
+        random_seed=1, 
     ):
 
         """
@@ -202,11 +202,6 @@ class GlobalInterpret(Attributes):
                     scoring_strategy = scoring_strategy.replace('max', 'min') 
                 else:
                     scoring_strategy = scoring_strategy.replace('min', 'max') 
-                    
-         
-                
-        if subsample != 1.0 and n_bootstrap is None:
-            n_bootstrap = 1
 
         y = pd.DataFrame(data=self.y, columns=["Test"])
 
@@ -223,10 +218,10 @@ class GlobalInterpret(Attributes):
                 subsample=subsample,
                 nimportant_vars=n_vars,
                 njobs=n_jobs,
-                nbootstrap=n_bootstrap,
+                n_permute=n_permute,
                 verbose=verbose,
                 direction=direction,
-                random_state=random_state,
+                random_seed=random_seed,
             )
 
             pi_dict[estimator_name] = pi_result
@@ -248,11 +243,11 @@ class GlobalInterpret(Attributes):
                     top_features,
                 )
                 data[f"{pass_method}_scores__{estimator_name}"] = (
-                    [f"n_vars_{pass_method}", "n_bootstrap"],
+                    [f"n_vars_{pass_method}", "n_permute"],
                     scores,
                 )
             data[f"original_score__{estimator_name}"] = (
-                ["n_bootstrap"],
+                ["n_permute"],
                 pi_dict[estimator_name].original_score,
             )
 
@@ -272,7 +267,7 @@ class GlobalInterpret(Attributes):
                     temp_features.append(top_features[1])
                     
                 data[f"second_place_scores__{estimator_name}"] = (
-                    [f"n_vars_second_place", "n_bootstrap"],
+                    [f"n_vars_second_place", "n_permute"],
                     temp_scores,
                 )
                 data[f"second_place_rankings__{estimator_name}"] = (
@@ -1963,27 +1958,16 @@ class GlobalInterpret(Attributes):
                 best_breaks.append(best_break)
                 k+=1
 
-            # Greedily set slopes to zero while R^2 > 1 - error
-            # Basically, the ALE curve is approximated quite well by a linear estimator
-            #add = 0
-            #if post_process:
-            #    if k == 1:
-            #        coefs = [1 if abs(coef) > 0 else 0]
-            #    else:
-            #        coefs = [abs(e.coef_[0]) for e in estimator_fit_set]
-           # 
-           #     if np.round(best_score,5) >= np.round(1-approx_error, 5):
-           #         add = -1 # All coefficients are set to zero. 
-           #     else:
-           #         add = np.sum([c>0 for c in coefs]) - 1
-
             # Sum of non-zero coefficients minus first intercept 
             best_breaks_dict[f] = best_breaks
             mec[j] = k #+ add
-            var[j] = np.mean(ale**2)
+            var[j] = np.var(ale)
     
-        mec_avg = (1/np.sum(var)) * np.sum(var*mec)
+            print(f, k, f'{np.var(ale):.06f}')
     
+        mec_avg = np.average(mec, weights=var) 
+        
+ 
         if debug:
             return mec_avg, best_breaks_dict, best_g
         else:

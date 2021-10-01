@@ -283,13 +283,13 @@ class PlotImportance(PlotStructure):
                 colors = ['k'] +['k']*len(variable_names_to_plot)
             else:
                 # Bold text if value is insignificant. 
-                colors = ['k']+['xkcd:bright blue' if v else 'k' for v in p_values[idx]]
+                colors = ['k']+['xkcd:bright blue' if v else 'k' for v in p_values[i]]
                 
             if colinear_predictors is None:
                 style = ['normal'] +['normal']*len(variable_names_to_plot)
             else:
                 # Italicize text if the VIF > threshold (indicates a multicolinear predictor)
-                style = ['normal']+['italic' if v else 'normal' for v in colinear_predictors[idx]]
+                style = ['normal']+['italic' if v else 'normal' for v in colinear_predictors[i]]
             
             # Reverse the order since the variable names are reversed. 
             colors = colors[::-1]

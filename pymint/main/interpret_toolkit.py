@@ -189,8 +189,8 @@ class InterpretToolkit(Attributes):
         return ds
     
     def permutation_importance(self, n_vars, evaluation_fn, direction='backward',
-            subsample=1.0, n_jobs=1, n_bootstrap=None, scoring_strategy=None, verbose=False, random_state=None, 
-             return_iterations=False,                 
+            subsample=1.0, n_jobs=1, n_permute=1, scoring_strategy=None, verbose=False, 
+             return_iterations=False, random_seed=1,                
                               ):
         """
         Performs single-pass and/or multi-pass permutation importance using a modified version of the
@@ -260,10 +260,10 @@ class InterpretToolkit(Attributes):
             if integer, interpreted as the number of processors to use for multiprocessing
             if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing
         
-        n_bootstrap: integer (default=None for no bootstrapping)
-            Number of bootstrap iterations for computing confidence intervals on the feature rankings. 
+        n_permute: integer (default=1 for only one permutation per feature)
+            Number of permutations for computing confidence intervals on the feature rankings. 
             
-        random_state : int, RandomState instance, default=None
+        random_seed : int, RandomState instance, default=None
         
             Pseudo-random number generator to control the permutations of each
             feature. Pass an int to get reproducible results across function calls.
@@ -292,11 +292,10 @@ class InterpretToolkit(Attributes):
         ----------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
         >>> # Only compute for the first model
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs[0],
-        ...                            estimator_names=estimator_names[0],
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators[0],
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -304,18 +303,18 @@ class InterpretToolkit(Attributes):
         ...                       n_vars=10,
         ...                       evaluation_fn = 'norm_aupdc',
         ...                       subsample=0.5,
-        ...                       n_bootstrap=20, 
+        ...                       n_permute=20, 
         ...                       )
         >>> print(perm_imp_results)
         <xarray.Dataset>
-            Dimensions:           (n_bootstrap: 20, n_vars_multipass: 10, n_vars_singlepass: 30)
-            Dimensions without coordinates: n_bootstrap, n_vars_multipass, n_vars_singlepass
+            Dimensions:           (n_permute: 20, n_vars_multipass: 10, n_vars_singlepass: 30)
+            Dimensions without coordinates: n_permute, n_vars_multipass, n_vars_singlepass
             Data variables:
                 multipass_rankings__Random Forest   (n_vars_multipass) <U17 'sfc_te...
-                multipass_scores__Random Forest     (n_vars_multipass, n_bootstrap) float64 ...
+                multipass_scores__Random Forest     (n_vars_multipass, n_permute) float64 ...
                 singlepass_rankings__Random Forest  (n_vars_singlepass) <U17 'sfc_t...
-                singlepass_scores__Random Forest    (n_vars_singlepass, n_bootstrap) float64 ...
-                original_score__Random Forest       (n_bootstrap) float64 0.9851 .....
+                singlepass_scores__Random Forest    (n_vars_singlepass, n_permute) float64 ...
+                original_score__Random Forest       (n_permute) float64 0.9851 .....
             Attributes:
                 estimator_output:  probability
                 estimators used:   ['Random Forest']
@@ -328,12 +327,12 @@ class InterpretToolkit(Attributes):
                                                     evaluation_fn=evaluation_fn,
                                                     subsample=subsample,
                                                     n_jobs=n_jobs,
-                                                    n_bootstrap=n_bootstrap,
+                                                    n_permute=n_permute,
                                                     scoring_strategy=scoring_strategy,
                                                     verbose=verbose,
                                                     direction=direction,
-                                                    random_state=random_state,
                                                     return_iterations=return_iterations,
+                                                    random_seed=random_seed,
                                                    )
         
         self.attrs_dict['n_multipass_vars'] = n_vars
@@ -403,10 +402,9 @@ class InterpretToolkit(Attributes):
         >>> import pymint
         >>> import itertools
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -566,10 +564,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -668,10 +665,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -754,10 +750,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models()
+        >>> estimators = pymint.load_models()
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -830,10 +825,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -917,13 +911,12 @@ class InterpretToolkit(Attributes):
         Examples
         ---------
         >>> import pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() # pre-fit estimators within pymint
         >>> X, y = pymint.load_data() # training data 
         >>> # Set the type for categorical features and InterpretToolkit with compute the 
         >>> # categorical ALE. 
         >>> X = X.astype({'urban': 'category', 'rural':'category'})
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -997,10 +990,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models()
+        >>> estimators = pymint.load_models()
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1061,10 +1053,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1193,10 +1184,9 @@ class InterpretToolkit(Attributes):
         Examples
         ---------
         >>> import pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() # pre-fit estimators within pymint
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1275,8 +1265,6 @@ class InterpretToolkit(Attributes):
             E.g., 
             figsize, hist_color,  
         
-        
-        
         Returns
         --------
         
@@ -1287,10 +1275,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1375,13 +1362,12 @@ class InterpretToolkit(Attributes):
         >>> import pymint
         >>> import shap
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
         >>> # Only give the X you want contributions for. 
         >>> # In this case, we are using a single example. 
         >>> single_example = X.iloc[[0]]
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=single_example,
         ...                            )
         >>> # Create a background dataset; randomly sample 100 X
@@ -1391,8 +1377,7 @@ class InterpretToolkit(Attributes):
 
         >>> # For the performance-based contributions, 
         >>> # provide the full set of X and y values.
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                            y=y,
         ...                            )
@@ -1457,13 +1442,12 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> import shap
-        >>> estimator_objs, estimator_names = pymint.load_models() # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() # pre-fit estimators within pymint
         >>> X, y = pymint.load_data() # training data 
         >>> # Only give the X you want contributions for. 
         >>> # In this case, we are using a single example. 
         >>> single_example = X.iloc[[0]]
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=single_example,
         ...                            )
         >>> # Create a background dataset; randomly sample 100 X
@@ -1535,10 +1519,9 @@ class InterpretToolkit(Attributes):
         >>> import pymint
         >>> import shap
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1606,10 +1589,9 @@ class InterpretToolkit(Attributes):
         >>> import pymint
         >>> import shap
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1708,10 +1690,9 @@ class InterpretToolkit(Attributes):
         -------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1881,10 +1862,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1977,10 +1957,9 @@ class InterpretToolkit(Attributes):
         Examples
         -------
         >>> import pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() # pre-fit estimators within pymint
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )

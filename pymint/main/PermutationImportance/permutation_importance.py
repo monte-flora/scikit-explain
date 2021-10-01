@@ -23,7 +23,6 @@ from .sklearn_api import (
     score_trained_sklearn_model,
     score_trained_sklearn_model_with_probabilities,
 )
-from .utils import check_random_state
 
 __all__ = ["permutation_importance", "sklearn_permutation_importance"]
 
@@ -41,7 +40,7 @@ def permutation_importance(
     njobs=1,
     direction='backward',
     verbose=False,
-    random_state=None,
+    random_seed=1, 
     **kwargs,
 ):
     """Performs permutation importance over data given a particular
@@ -89,7 +88,7 @@ def permutation_importance(
             nimportant_vars=nimportant_vars,
             njobs=njobs,
             verbose=verbose,
-            random_state=random_state,
+            random_seed=random_seed,
             direction=direction, 
         )
 
@@ -102,11 +101,11 @@ def sklearn_permutation_importance(
     nimportant_vars=None,
     direction="backward",
     njobs=1,
-    nbootstrap=1,
+    n_permute=1,
     subsample=1,
     verbose=False,
-    random_state=None,
-    **kwargs,
+    random_seed=1, 
+    **scorer_kwargs,
 ):
 
     """Performs permutation importance for a particular model,
@@ -131,8 +130,8 @@ def sklearn_permutation_importance(
         for. Defaults to all variables
     :param njobs: an integer for the number of threads to use. If negative, will
         use ``num_cpus + njobs``. Defaults to 1
-    :param nbootstrap: number of times to perform scoring on each variable.
-        Results over different bootstrap iterations are averaged. Defaults to 1
+    :param n_permute: number of times to perform permutation on each variable.
+        Results over different permutations iterations are averaged. Defaults to 1
     :param subsample: number of elements to sample (with replacement) per
         bootstrap round. If between 0 and 1, treated as a fraction of the number
         of total number of events (e.g. 0.5 means half the number of events).
@@ -146,14 +145,15 @@ def sklearn_permutation_importance(
     # if len(scoring_data[1].shape) > 1 and scoring_data[1].shape[1] > 1:
     if len(np.unique(scoring_data[1])) == 2:
         scoring_fn = score_trained_sklearn_model_with_probabilities(
-            model, evaluation_fn, nbootstrap=nbootstrap, subsample=subsample, **kwargs
+            model, evaluation_fn, n_permute=n_permute, 
+            subsample=subsample, random_seed=random_seed, scorer_kwargs={}
         )
     else:
         scoring_fn = score_trained_sklearn_model(
-            model, evaluation_fn, nbootstrap=nbootstrap, subsample=subsample, **kwargs
+            model, evaluation_fn, n_permute=n_permute, 
+            subsample=subsample, random_seed=random_seed, scorer_kwargs={}
         )
 
-    random_state = check_random_state(random_state)
     return permutation_importance(
         scoring_data=scoring_data,
         scoring_fn=scoring_fn,
@@ -163,6 +163,6 @@ def sklearn_permutation_importance(
         njobs=njobs,
         verbose=verbose,
         direction=direction,
-        random_state=random_state,
-        **kwargs,
+        random_seed=random_seed,
+        scorer_kwargs={},
     )
