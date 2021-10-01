@@ -1498,16 +1498,29 @@ class GlobalInterpret(Attributes):
         results_ds : xarray.Dataset
 
         """
+        feature_names = list([f for f in data.data_vars if "__" not in f])
+        feature_names.sort()
+        
+        features, cat_features = determine_feature_dtype(self.X, feature_names)
+        
+        def _std(values, f, cat_features):
+            """
+            Using a different formula for computing standard deviation for 
+            categorical features. 
+            """
+            if f in cat_features:
+                print('f', f) 
+                return 0.25*(np.max(values, axis=1) - np.min(values, axis=1))
+            else:
+                return np.std(values, ddof=1, axis=1) 
+        
         results = {}
         for estimator_name in estimator_names:
-            feature_names = list([f for f in data.data_vars if "__" not in f])
-            feature_names.sort()
-
             # Compute the std over the bin axis [shape = (n_features, n_bootstrap)]
             # Input shape : (n_bootstrap, n_bins) 
             ale_std = np.array(
                 [
-                    np.std(data[f"{f}__{estimator_name}__ale"].values, ddof=1, axis=1)
+                    _std(data[f"{f}__{estimator_name}__ale"].values, f, cat_features)
                     for f in feature_names
                 ]
             )

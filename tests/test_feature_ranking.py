@@ -85,10 +85,10 @@ class TestRankings(TestInterpretToolkit):
                 y=self.y
             )
         n_vars=3
-        n_bootstrap=8
+        n_permute=8
         results = explainer.permutation_importance(n_vars=n_vars, 
                                                   evaluation_fn='mse',
-                                                 n_bootstrap=n_bootstrap)
+                                                 n_permute=n_permute)
         # shape should be (n_vars_multipass, n_bootstrap)
         self.assertEqual( results[f'multipass_scores__{self.lr_estimator_name}'].values.shape,
                           (n_vars, n_bootstrap) 
