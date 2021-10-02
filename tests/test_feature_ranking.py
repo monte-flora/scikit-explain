@@ -89,13 +89,13 @@ class TestRankings(TestInterpretToolkit):
         results = explainer.permutation_importance(n_vars=n_vars, 
                                                   evaluation_fn='mse',
                                                  n_permute=n_permute)
-        # shape should be (n_vars_multipass, n_bootstrap)
+        # shape should be (n_vars_multipass, n_permute)
         self.assertEqual( results[f'multipass_scores__{self.lr_estimator_name}'].values.shape,
-                          (n_vars, n_bootstrap) 
+                          (n_vars, n_permute) 
                         )
-        # shape should be (n_vars_singlepass, n_bootstrap)
+        # shape should be (n_vars_singlepass, n_permute)
         self.assertEqual( results[f'singlepass_scores__{self.lr_estimator_name}'].values.shape,
-                          (len(self.X.columns), n_bootstrap) 
+                          (len(self.X.columns), n_permute) 
                         )
         
     def test_correct_rankings(self):
@@ -107,7 +107,7 @@ class TestRankings(TestInterpretToolkit):
             )
         results = explainer.permutation_importance(n_vars=len(self.X.columns), 
                                                   evaluation_fn='mse',
-                                                 n_bootstrap=10)
+                                                 n_permute=10)
         
         ale = explainer.ale(features=self.X.columns, n_bins=10)
         ale_var_results = explainer.ale_variance(ale, estimator_names=self.lr_estimator_name)

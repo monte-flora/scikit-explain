@@ -534,7 +534,7 @@ def compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=1):
     
     bootstrap_indices = [
         random_state.choice(range(n_samples), size=size).tolist()
-        for random_state in range(random_states)
+        for random_state in random_states
     ]
     return bootstrap_indices
 
