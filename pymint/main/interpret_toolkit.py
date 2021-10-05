@@ -1316,9 +1316,10 @@ class InterpretToolkit(Attributes):
 
     def local_contributions(self, 
                            method='shap', 
-                           background_dataset=None, 
                            performance_based=False,
-                           n_samples=100 ):
+                           n_samples=100, 
+                           shap_kwargs={'algorithm' : 'auto'},
+                           ):
         """
         Computes the individual feature contributions to a predicted outcome for
         a series of examples either based on tree interpreter (only Tree-based methods) 
@@ -1334,12 +1335,6 @@ class InterpretToolkit(Attributes):
             to first use the Tree-based explainer and if that fails, then the 
             Kernel-based explainer. 
 
-        background_dataset : array of shape (n_samples, n_features)
-            A representative (often a K-means or random sample) subset of the 
-            data used to train the ML estimator. Used for the background dataset
-            to compute the expected values for the SHAP calculations. 
-            Only required for non-tree based estimators. 
-
         performance_based : boolean (default=False)
             If True, will average feature contributions over the best and worst
             performing of the given X. The number of examples to average over
@@ -1347,6 +1342,20 @@ class InterpretToolkit(Attributes):
 
         n_samples : interger (default=100)
             Number of samples to compute average over if performance_based = True
+
+        shap_kwargs : dict
+            Arguments passed to the shap.Explainer object. See 
+            https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
+            for details. The main two arguments supported in PyMint is the masker and 
+            algorithm options. By default, the masker option uses 
+            masker = shap.maskers.Partition(X, max_samples=100, clustering="correlation") for
+            hierarchical clustering by correlations. You can also provide a background dataset
+            e.g., background_dataset = shap.sample(X, 100).reset_index(drop=True). The algorithm 
+            option is set to "auto" by default. 
+            
+            - masker
+            - algorithm 
+
 
         Returns
         --------
@@ -1387,9 +1396,9 @@ class InterpretToolkit(Attributes):
 
         """
         results_df = self.local_obj._get_local_prediction(method=method,
-                                            background_dataset=background_dataset,
                                             performance_based=performance_based,
-                                            n_samples=n_samples,)
+                                            n_samples=n_samples, 
+                                            shap_kwargs=shap_kwargs)
 
         # Add metadata
         self.attrs_dict['method'] = method
@@ -1480,7 +1489,7 @@ class InterpretToolkit(Attributes):
                                            display_feature_names=display_feature_names,
                                            **kwargs)
 
-    def shap(self, background_dataset=None):
+    def shap(self, shap_kwargs={'masker' : None, 'algorithm' : 'auto'}):
         """
         Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_. The calculations starts
         with the Tree-based explainer and then defaults to the Kernel-based explainer for
@@ -1529,13 +1538,11 @@ class InterpretToolkit(Attributes):
         >>> background_dataset = shap.sample(X, 100)
         >>> shap_results = explainer.shap(background_dataset)
         """
-
-        self.local_obj.background_dataset = background_dataset
         results = {}
         
         for estimator_name, estimator in self.estimators.items():
             shap_values, bias = self.local_obj._get_shap_values(estimator=estimator,
-                                                 X=self.X,)
+                                                 X=self.X, shap_kwargs=shap_kwargs,)
             results[estimator_name] = (shap_values, bias)
         
         return results

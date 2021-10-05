@@ -95,9 +95,9 @@ class LocalInterpret(Attributes):
     def _get_local_prediction(
         self,
         method="shap",
-        background_dataset=None,
         performance_based=True,
         n_samples=100,
+        shap_kwargs={'algorithm' : 'auto'}
     ):
         """
         Explain individual predictions using SHAP (SHapley Additive exPlanations;
@@ -121,22 +121,26 @@ class LocalInterpret(Attributes):
         n_samples : interger (default=100)
             Number of samples to compute average over if performance_based = True
             
+        shap_kwargs : dict
+            Arguments passed to the shap.Explainer object. See 
+            https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
+            for details. The main two arguments supported in PyMint is the masker and 
+            algorithm options. By default, the masker option uses 
+            masker = shap.maskers.Partition(X, max_samples=100, clustering="correlation") for
+            hierarchical clustering by correlations. You can also provide a background dataset
+            e.g., background_dataset = shap.sample(X, 100).reset_index(drop=True). The algorithm 
+            option is set to "auto" by default. 
+            
+            - masker
+            - algorithm 
+            
+            
         Returns
         ---------
         
         results_ds : pandas.DataFrame
         
         """
-        if background_dataset is None and method == "shap":
-            raise ValueError(
-                """
-                                 background_dataset is None!, but the user set method='shap'.
-                                 If using SHAP, then you must provide data to train the explainer.
-                                 """
-            )
-
-        self.background_dataset = background_dataset
-
         if method not in ["tree_interpreter", "shap"]:
             raise ValueError(
                 """
@@ -179,6 +183,7 @@ class LocalInterpret(Attributes):
                 cont_dict = self._get_feature_contributions(
                     estimator=estimator,
                     X=self.X,
+                    shap_kwargs=shap_kwargs,
                 )
 
                 contributions_dict[estimator_name]["non_performance"] = cont_dict
@@ -202,52 +207,32 @@ class LocalInterpret(Attributes):
         self,
         estimator,
         X,
+        shap_kwargs, 
     ):
         """
         FOR INTERNAL PURPOSES ONLY.
 
         """
-        # if subsample_method=='kmeans':
-        ### print(f'Performing K-means clustering (K={subsample_size}) to subset the data for the background dataset...')
-        #   data_for_shap = shap.kmeans(self.data_for_shap, subsample_size)
-        # elif subsample_method=='random':
-        ### print(f'Performing random sampling (N={subsample_size}) to subset the data for the background dataset...')
-        #   data_for_shap = shap.sample(self.data_for_shap, subsample_size)
-
-        try:
-            print("trying TreeExplainer...")
-            explainer = shap.TreeExplainer(
-                estimator,
-                data=self.background_dataset,
-                feature_perturbation="interventional",
-                estimator_output=self.estimator_output,
-            )
-            contributions = explainer.shap_values(X)
-
-        except Exception as e:
-            ###traceback.print_exc()
-            if self.estimator_output == "probability":
-                func = estimator.predict_proba
-            else:
-                func = estimator.predict
-
-            print("TreeExplainer failed, starting KernelExplainer...")
-            explainer = shap.KernelExplainer(
-                func, self.background_dataset, link="identity"
-            )
-
-            contributions = explainer.shap_values(X, l1_reg="num_features(30)")
+        masker = shap_kwargs.get('masker')
+        algorithm = shap_kwargs.get('algorithm', 'auto')
 
         if self.estimator_output == "probability":
-            # Neccesary for XGBoost, which only outputs a scalar, not a list like scikit-learn
-            try:
-                bias = explainer.expected_value[1]
-                contributions = contributions[1]
-            except IndexError:
-                bias = explainer.expected_value
-                contributions = contributions
+            model = estimator.predict_proba
         else:
-            bias = explainer.expected_value
+            model = estimator.predict
+        
+        explainer = shap.Explainer(model=model, 
+                          masker = masker, 
+                          algorithm=algorithm,
+                          )
+        
+        shap_results = explainer(X)
+        
+        if self.estimator_output == "probability":
+            shap_results = shap_results[...,1]
+        
+        contributions = shap_results.values
+        bias = shap_results.base_values
 
         return contributions, bias
 
@@ -275,7 +260,7 @@ class LocalInterpret(Attributes):
 
         return contributions, bias
 
-    def _get_feature_contributions(self, estimator, X):
+    def _get_feature_contributions(self, estimator, X, shap_kwargs={}):
         """
         FOR INTERNAL PURPOSES ONLY.
 
@@ -288,7 +273,7 @@ class LocalInterpret(Attributes):
 
         """
         if self.method == "shap":
-            contributions, bias = self._get_shap_values(estimator, X)
+            contributions, bias = self._get_shap_values(estimator, X, shap_kwargs)
         elif self.method == "tree_interpreter":
             contributions, bias = self._get_ti_values(estimator, X)
 
