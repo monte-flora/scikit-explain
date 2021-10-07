@@ -17,13 +17,13 @@ import numpy as np
 import multiprocessing as mp
 
 from .data_verification import verify_data, determine_variable_names
-#from .multiprocessing_utils import pool_imap_unordered
+from .multiprocessing_utils import pool_imap_unordered
 from .result import ImportanceResult
 from .scoring_strategies import verify_scoring_strategy
 from .utils import add_ranks_to_dict, get_data_subset, bootstrap_generator
 
-from ...common.multiprocessing_utils import run_parallel
-from ...common.utils import merge_dict
+#from ...common.multiprocessing_utils import run_parallel
+#from ...common.utils import merge_dict
 
 def abstract_variable_importance(
     training_data,
@@ -151,6 +151,13 @@ def _multithread_iteration(selection_iterator, scoring_fn, njobs, n_vars):
     :param num_jobs: number of processes to use
     :returns: a dict of ``{var: score}``
     """
+    result = dict()
+    for index, score in pool_imap_unordered(scoring_fn, selection_iterator, njobs):
+        result[index] = score
+    return result
+
+    
+    '''
     def worker(var, training_data, scoring_data):
         result = {}
         score = scoring_fn(training_data, scoring_data, var_idx=var)
@@ -165,3 +172,4 @@ def _multithread_iteration(selection_iterator, scoring_fn, njobs, n_vars):
                 total=n_vars,
                          )
     return merge_dict(result)
+    '''
