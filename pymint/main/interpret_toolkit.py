@@ -704,7 +704,7 @@ class InterpretToolkit(Attributes):
         return results_ds
     
     
-    def ice(self, features, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1):
+    def ice(self, features, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1, random_seed=1,):
         """
         Compute the indiviudal conditional expectations (ICE) [7]_.
 
@@ -762,13 +762,17 @@ class InterpretToolkit(Attributes):
         if is_str(features):
             if features == 'all':
                 features = self.feature_names
+            else:
+                features = [features]
                 
         results_ds = self.global_obj._run_interpret_curves(method="ice",
                             features=features,
                             n_bins=n_bins,
                             n_jobs=n_jobs,
                             subsample=subsample,
-                            n_bootstrap=n_bootstrap)
+                            n_bootstrap=n_bootstrap, 
+                            random_seed=random_seed
+                                                       )
         
         dimension = '2D' if isinstance(list(features)[0], tuple) else '1D'
         self.attrs_dict['method'] = 'ice'
@@ -781,7 +785,7 @@ class InterpretToolkit(Attributes):
 
         return results_ds
 
-    def pd(self, features, n_bins=25, n_jobs=1, subsample=1.0, n_bootstrap=1):
+    def pd(self, features, n_bins=25, n_jobs=1, subsample=1.0, n_bootstrap=1, random_seed=42,):
         """
         Computes the 1D or 2D centered partial dependence (PD) [8]_.
         
@@ -844,7 +848,8 @@ class InterpretToolkit(Attributes):
                             n_bins=n_bins,
                             n_jobs=n_jobs,
                             subsample=subsample,
-                            n_bootstrap=n_bootstrap)
+                            n_bootstrap=n_bootstrap, 
+                            random_seed=random_seed)
         
         dimension = '2D' if isinstance( list(features)[0] , tuple) else '1D'
         self.attrs_dict['method'] = 'pd'
@@ -856,7 +861,7 @@ class InterpretToolkit(Attributes):
         
         return results_ds
 
-    def ale(self, features=None, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1):
+    def ale(self, features=None, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1, random_seed=42, ):
         """
         Compute the 1D or 2D centered accumulated local effects (ALE) [9]_ [10]_.
         For categorical features, simply set the type of those features in the 
@@ -925,15 +930,18 @@ class InterpretToolkit(Attributes):
         if is_str(features):
             if features == 'all':
                 features = self.feature_names
-            if features == 'all_2d':
+            elif features == 'all_2d':
                 features = list(itertools.combinations(self.feature_names, r=2))
+            else:
+                features = [features]
             
         results_ds = self.global_obj._run_interpret_curves(method="ale",
                             features=features,                            
                             n_bins=n_bins,
                             n_jobs=n_jobs,
                             subsample=subsample,
-                            n_bootstrap=n_bootstrap)
+                            n_bootstrap=n_bootstrap, 
+                            random_seed=random_seed)
         
         dimension = '2D' if isinstance( list(features)[0] , tuple) else '1D'
         self.attrs_dict['method'] = 'ale'

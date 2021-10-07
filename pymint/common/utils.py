@@ -510,7 +510,7 @@ def combine_top_features(results_dict, n_vars=None):
 
     return unique_features
 
-def compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=1):
+def compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=1, seed=90):
     """
     Routine to generate the indices for bootstrapped X.
 
@@ -525,7 +525,7 @@ def compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=1):
         bootstrap_indices : list
             list of indices of the size of subsample or subsample*len(X)
     """
-    base_random_state = np.random.RandomState(seed=90)
+    base_random_state = np.random.RandomState(seed=seed)
     random_num_set = base_random_state.choice(10000, size=n_bootstrap, replace=False)
     random_states = [np.random.RandomState(s) for s in random_num_set]
     

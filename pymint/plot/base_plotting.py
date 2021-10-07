@@ -10,6 +10,7 @@ import matplotlib.ticker as mticker
 from matplotlib import rcParams
 from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
+import matplotlib
 
 from ..common.utils import combine_like_features, is_outlier
 import shap
@@ -489,6 +490,30 @@ class PlotStructure:
             ),
         )
 
+    def get_custom_colormap(self, vals, **kwargs):
+        """Get a custom colormap"""
+        cmap = kwargs.get('cmap', matplotlib.cm.PuOr)
+        bounds = np.linspace(np.nanpercentile(vals, 0),
+                     np.nanpercentile(vals, 100),
+                     10)
+
+        norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N, )
+        mappable = matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap, )
+        
+        return mappable, bounds
+        
+    def add_ice_colorbar(self, fig, ax,  mappable, cb_label, cdata, fontsize, **kwargs):
+        """Add a colorbar to the right of a panel to 
+            accompany ICE color-coded plots"""
+        cb = plt.colorbar(mappable, ax=ax, pad=0.2)
+        cb.set_label(cb_label, size=fontsize)
+        cb.ax.tick_params(labelsize=fontsize)
+        cb.set_alpha(1)
+        cb.outline.set_visible(False)
+        bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        cb.ax.set_aspect((bbox.height - 0.7) * 20)
+        self._to_sci_notation(ax=None, colorbar=cb, ydata=cdata)
+        
     def add_colorbar(
         self,
         fig,

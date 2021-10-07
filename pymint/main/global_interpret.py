@@ -289,6 +289,7 @@ class GlobalInterpret(Attributes):
         subsample=1.0,
         n_bootstrap=1,
         feature_encoder=None,
+        random_seed=42, 
     ):
 
         """
@@ -331,6 +332,7 @@ class GlobalInterpret(Attributes):
         results_ds : xarray.Dataset 
         
         """
+        self.random_seed = random_seed
         # Check if features is a string
         if is_str(features) or isinstance(features, tuple):
             features = [features]
@@ -398,7 +400,8 @@ class GlobalInterpret(Attributes):
         return results_ds
 
     def _store_results(
-        self, method, estimator_name, features, ydata, xdata, hist_data, categorical=False
+        self, method, estimator_name, features, ydata, xdata, hist_data, 
+        ice_X=None, categorical=False
     ):
         """
         FOR INTERNAL PURPOSES ONLY.
@@ -441,10 +444,14 @@ class GlobalInterpret(Attributes):
             results[f"{feature2[2:]}__bin_values"] = ([f"n_bins{feature2[2:]}"], xdata2)
             results[f"{feature2[2:]}"] = (["n_X"], hist_data2)
 
+        if ice_X is not None:
+            results["X_sampled"] = (["n_samples", "n_features"], ice_X)
+            results["features"] = (["n_features"], ice_X.columns)
+            
         return results
 
     def compute_individual_cond_expect(
-        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
+        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1, 
     ):
         """
         Compute the Individual Conditional Expectations (see https://christophm.github.io/interpretable-ml-book/ice.html)
@@ -472,11 +479,13 @@ class GlobalInterpret(Attributes):
         
         
         Returns
-        ------------
+        --------
         
         results : dict 
         
         """
+        random_state = np.random.RandomState(self.random_seed)
+        
         # Retrieve the estimator object from the estimators dict attribute
         estimator = self.estimators[estimator_name]
 
@@ -490,8 +499,8 @@ class GlobalInterpret(Attributes):
         if float(subsample) != 1.0:
             n_X = len(self.X)
             size = int(n_X * subsample) if subsample <= 1.0 else subsample
-            idx = np.random.choice(n_X, size=size)
-            X = self.X.iloc[idx, :]
+            idxs = random_state.choice(n_X, size=size, replace=False)
+            X = self.X.iloc[idxs, :]
             X.reset_index(drop=True, inplace=True)
         else:
             X = self.X.copy()
@@ -535,6 +544,7 @@ class GlobalInterpret(Attributes):
             ydata=ice_values,
             xdata=grid,
             hist_data=feature_values,
+            ice_X=X,
         )
 
         return results
@@ -602,7 +612,7 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.X, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap, seed=self.random_seed,
             )
         else:
             bootstrap_indices = [self.X.index.to_list()]
@@ -705,7 +715,7 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.X, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap, seed=self.random_seed,
             )
         else:
             bootstrap_indices = [self.X.index.to_list()]
@@ -871,7 +881,7 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.X, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap, seed=self.random_seed,
             )
         else:
             bootstrap_indices = [self.X.index.to_list()]
@@ -1123,7 +1133,7 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.X, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap, seed=self.random_seed,
             )
         else:
             bootstrap_indices = [self.X.index.to_list()]
@@ -1509,7 +1519,6 @@ class GlobalInterpret(Attributes):
             categorical features. 
             """
             if f in cat_features:
-                print('f', f) 
                 return 0.25*(np.max(values, axis=1) - np.min(values, axis=1))
             else:
                 return np.std(values, ddof=1, axis=1) 
