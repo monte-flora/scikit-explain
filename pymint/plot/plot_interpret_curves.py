@@ -203,7 +203,7 @@ class PlotInterpretCurves(PlotStructure):
                 
         else:
             for y in ice_data:
-                ax.plot(x, y, color="k", alpha=0.85, linewidth=0.2, **kwargs)
+                ax.plot(x, y, color="k", alpha=0.85, linewidth=0.2,)
     
         return ax 
     

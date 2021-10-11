@@ -11,6 +11,33 @@ from sklearn.metrics._base import _average_binary_score
 from sklearn.utils.multiclass import type_of_target
 
 
+def gini_values_to_importance(gini_values, estimator_name, feature_names):
+    """
+    Convert Impurity-based feature importance from scikit-learn Random Forest models 
+    to a PyMint-based formatting for plotting. 
+    """
+    importances = gini_values
+    
+    inds = np.argsort(importances)[::-1]
+    
+    scores_ranked = importances[inds]
+    features_ranked = np.array(feature_names)[inds]
+    
+   
+    data={}
+    data[f"gini_rankings__{estimator_name}"] = (
+                    [f"n_vars_gini"],
+                    features_ranked,
+                )
+    data[f"gini_scores__{estimator_name}"] = (
+                    [f"n_vars_gini", "n_bootstrap"],
+                    scores_ranked.reshape(len(scores_ranked),1),
+    )
+    data = xr.Dataset(data)
+
+    return data
+    
+
 def coefficients_to_importance(coefficients, estimator_name, feature_names):
     """Convert coefficients into a importance dataset from plotting purposes"""
     ranked_indices = np.argsort(np.absolute(coefficients))[::-1]
