@@ -1750,7 +1750,7 @@ class InterpretToolkit(Attributes):
   
         for r, (method, estimator_name) in zip(data, panels):
             available_methods = [d.split('__')[0] for d in list(r.data_vars) if f'rankings__{estimator_name}' in d]
-            if f"{method}_rankings"not in available_methods:
+            if f"{method}_rankings" not in available_methods:
                 raise ValueError(f"""{method} does not match the available methods for this item({available_methods}). 
                          Ensure that the elements of data match up with those panels!
                          Also check for any possible spelling error. 

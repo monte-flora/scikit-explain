@@ -11,6 +11,76 @@ from sklearn.metrics._base import _average_binary_score
 from sklearn.utils.multiclass import type_of_target
 
 
+def method_average_ranking(data, features, methods, estimator_names, n_features=12):
+    """
+    Compute the median ranking across the results of different ranking methods. 
+    Also, include the 25-75th percentile ranking uncertainty.
+    
+    Parameters
+    ------------
+        data : list of xarray.Dataset
+            The set of predictor ranking results to average over. 
+        
+        methods : list of string 
+            The ranking methods to use from the data (see plot_importance for examples)
+            
+        estimator_names : string or list of strings
+            Name of the estimator(s).
+    
+    Returns
+    --------
+        rankings_dict_avg : dict 
+            feature : median ranking pairs 
+        rankings_sorted : np.array 
+            Sorted median rankings (lower values indicates higher rank)
+        feature_sorted : np.array 
+            The features corresponding the ranks in ``rankings_sorted``
+        xerr
+    
+    """
+    rankings_dict = {f : [] for f in features}
+    for d, method in zip(data, methods):
+        for estimator_name in estimator_names:
+            features = d[f'{method}_rankings__{estimator_name}'].values[:n_features]
+            rankings = {f:i for i, f in enumerate(features)}
+            for f in features:
+                try:
+                    rankings_dict[f].append(rankings[f])
+                except:
+                    rankings_dict[f].append(np.nan)
+    
+    max_len = np.max([len(rankings_dict[k]) for k in rankings_dict.keys()])
+    for k in rankings_dict.keys():
+        l = rankings_dict[k]
+        if len(l) < max_len:
+            delta = max_len - len(l)
+            rankings_dict[k] = l + [np.nan]*delta
+        
+    rankings_dict_avg = {f : np.nanpercentile(rankings_dict[f], 50) for f in rankings_dict.keys()}
+    
+    features = np.array(list(rankings_dict_avg.keys()))
+    rankings = np.array([rankings_dict_avg[f] for f in features ])
+    idxs = np.argsort(rankings)
+
+    rankings_sorted = rankings[idxs]
+    features_ranked = features[idxs]
+    
+    scores = np.array([rankings_dict[f] for f in features_ranked])
+
+    data={}
+    data[f"combined_rankings__{estimator_name}"] = (
+                    [f"n_vars_avg"],
+                    features_ranked,
+                )
+    data[f"combined_scores__{estimator_name}"] = (
+                    [f"n_vars_avg", "n_bootstrap"],
+                    scores,
+    )
+    data = xr.Dataset(data)
+    
+    return data
+
+
 def gini_values_to_importance(gini_values, estimator_name, feature_names):
     """
     Convert Impurity-based feature importance from scikit-learn Random Forest models 
@@ -41,7 +111,7 @@ def gini_values_to_importance(gini_values, estimator_name, feature_names):
 def coefficients_to_importance(coefficients, estimator_name, feature_names):
     """Convert coefficients into a importance dataset from plotting purposes"""
     ranked_indices = np.argsort(np.absolute(coefficients))[::-1]
-    scores_ranked = np.array(coefficients[ranked_indices])
+    scores_ranked = np.array(np.absolute(coefficients)[ranked_indices])
     features_ranked = np.array(feature_names)[ranked_indices]
 
     data={}
@@ -809,19 +879,23 @@ def find_correlated_pairs_among_top_features(
 
     """
     top_feature_indices = {f: i for i, f in enumerate(top_features)}
+    
+    _top_features = [f for f in top_features if f != 'No Permutations']
+    
+    sub_corr_matrix = corr_matrix[_top_features].loc[_top_features]
+    
     pairs = []
-    for feature in top_features:
-        try:
-            most_corr_feature = (
-                corr_matrix[feature].sort_values(ascending=False).index[1]
+    for feature in _top_features:
+        #try:
+        most_corr_feature = (
+                sub_corr_matrix[feature].sort_values(ascending=False).index[1]
             )
-        except:
-            continue
+        #except:
+        #    continue
 
-        if most_corr_feature in top_features:
-            most_corr_value = corr_matrix[feature].sort_values(ascending=False)[1]
-            if round(most_corr_value, 5) >= rho_threshold:
-                pairs.append((feature, most_corr_feature))
+        most_corr_value = sub_corr_matrix[feature].sort_values(ascending=False)[1]
+        if round(most_corr_value, 5) >= rho_threshold:
+            pairs.append((feature, most_corr_feature))
 
     pairs = list(set([tuple(sorted(t)) for t in pairs]))
     pair_indices = [

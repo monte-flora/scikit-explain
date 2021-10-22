@@ -308,18 +308,21 @@ class PlotStructure:
         """
         Convert decimals (less 0.01) to 10^e notation
         """
-        f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
-        g = lambda x, pos: "${}$".format(f._formatSciNotation("%1.10e" % x))
+        #f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
+        #g = lambda x, pos: "${}$".format(f._formatSciNotation("%1.10e" % x))
 
         if colorbar and np.absolute(np.amax(ydata)) <= 0.01:
-            colorbar.ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+            #colorbar.ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+            colorbar.ax.ticklabel_format(style='sci', )
             colorbar.ax.tick_params(axis="y", labelsize=5)
         elif ax:
             if np.absolute(np.amax(xdata)) <= 0.01:
-                ax.xaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.ticklabel_format(style='sci', )
+                #ax.xaxis.set_major_formatter(mticker.FuncFormatter(g))
                 ax.tick_params(axis="x", labelsize=5, rotation=45)
             if np.absolute(np.amax(ydata)) <= 0.01:
-                ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+                #ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.ticklabel_format(style='sci', )
                 ax.tick_params(axis="y", labelsize=5, rotation=45)
 
     def calculate_ticks(
@@ -470,19 +473,20 @@ class PlotStructure:
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
 
-    def annotate_bars(self, ax, bottom_idx, top_idx, x=0):
+    def annotate_bars(self, ax, bottom_idx, top_idx, x=0, **kwargs):
         """
         Adds a square bracket that contains two points. Used to
         connect predictors in the predictor ranking plot
         for highly correlated pairs.
         """
+        color = kwargs.get('color', "xkcd:slate gray")
         ax.annotate(
             "",
             xy=(x, bottom_idx),
             xytext=(x, top_idx),
             arrowprops=dict(
                 arrowstyle="<->,head_length=0.05,head_width=0.05",
-                ec="xkcd:slate gray",
+                ec=color,
                 connectionstyle="bar,fraction=0.2",
                 shrinkA=0.5,
                 shrinkB=0.5,
