@@ -311,6 +311,7 @@ def dependence_plot(
             alpha=alpha,
             vmin=clow,
             vmax=chigh,
+            rasterized=len(xdata) > 1000
         )
         p.set_array(cdata[xdata_nan])
     else:
@@ -321,6 +322,7 @@ def dependence_plot(
             linewidth=2,
             color=color,
             alpha=alpha,
+            rasterized=len(xdata) > 1000
         )
 
     # NOT plotting the full range. 

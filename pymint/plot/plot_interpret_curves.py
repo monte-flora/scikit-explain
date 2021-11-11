@@ -144,15 +144,16 @@ class PlotInterpretCurves(PlotStructure):
                 self.calculate_ticks(ax=lineplt_ax, nticks=nticks, center=True)
             )
 
-        if not only_one_estimator:
-            majoraxis_fontsize = self.FONT_SIZES["teensie"]
-            major_ax = self.set_major_axis_labels(
+        majoraxis_fontsize = self.FONT_SIZES["teensie"]
+        major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=None,
                 ylabel_left=left_yaxis_label,
                 ylabel_right=twin_yaxis_label,
                 **kwargs,
             )
+        
+        if not only_one_estimator:
             self.set_legend(n_panels, fig, lineplt_ax, major_ax)
             
         self.add_alphabet_label(n_panels, axes)
