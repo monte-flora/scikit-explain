@@ -80,83 +80,50 @@ def method_average_ranking(data, features, methods, estimator_names, n_features=
     
     return data
 
-
-def gini_values_to_importance(gini_values, estimator_name, feature_names):
-    """
-    Convert Impurity-based feature importance from scikit-learn Random Forest models 
-    to a PyMint-based formatting for plotting. 
-    """
-    importances = gini_values
-    
-    inds = np.argsort(importances)[::-1]
-    
-    scores_ranked = importances[inds]
-    features_ranked = np.array(feature_names)[inds]
-    
-   
-    data={}
-    data[f"gini_rankings__{estimator_name}"] = (
-                    [f"n_vars_gini"],
-                    features_ranked,
-                )
-    data[f"gini_scores__{estimator_name}"] = (
-                    [f"n_vars_gini", "n_bootstrap"],
-                    scores_ranked.reshape(len(scores_ranked),1),
-    )
-    data = xr.Dataset(data)
-
-    return data
-    
-
-def coefficients_to_importance(coefficients, estimator_name, feature_names):
+def to_pymint_importance(importances, estimator_name, feature_names, method):
     """Convert coefficients into a importance dataset from plotting purposes"""
-    ranked_indices = np.argsort(np.absolute(coefficients))[::-1]
-    scores_ranked = np.array(np.absolute(coefficients)[ranked_indices])
-    features_ranked = np.array(feature_names)[ranked_indices]
-
-    data={}
-    data[f"coefs_rankings__{estimator_name}"] = (
-                    [f"n_vars_coefs"],
-                    features_ranked,
-                )
-    data[f"coefs_scores__{estimator_name}"] = (
-                    [f"n_vars_coefs", "n_bootstrap"],
-                    scores_ranked.reshape(len(scores_ranked),1),
-    )
-    data = xr.Dataset(data)
-
-    return data
-
-
-
-def shap_values_to_importance(shap_values, estimator_name, feature_names, method='sum'):
-    """
-    Convert SHAP values into feature importance.
-    """
-    if method == 'std':
+    if method == 'sage':
+        importances_std = importances.std
+        importances = importances.values
+    elif method == 'coefs':
+        importances = np.absolute(importances)
+    if method == 'shap_std':
         # Compute the std(SHAP) 
-        shap_rank= np.std(shap_values, axis=0)
-    elif method == 'sum':
+        importances = np.std(importances, axis=0)
+    elif method == 'shap_sum':
         #Compute sum of abs values
-        shap_rank = np.sum(np.absolute(shap_values), axis=0)
-
-    ranked_indices = np.argsort(shap_rank)[::-1]
-    scores_ranked = np.array(shap_rank[ranked_indices])
+        importances = np.sum(np.absolute(importances), axis=0)
+    
+    # Sort from higher score to lower score 
+    ranked_indices = np.argsort(importances)[::-1]
+    scores_ranked = importances[ranked_indices]
+    if method == 'sage':
+        std_ranked = importances_std[ranked_indices]
+    
     features_ranked = np.array(feature_names)[ranked_indices]
 
     data={}
-    data[f"shap_rankings__{estimator_name}"] = (
-                    [f"n_vars_shap"],
+    data[f"{method}_rankings__{estimator_name}"] = (
+                    [f"n_vars_{method}"],
                     features_ranked,
                 )
-    data[f"shap_scores__{estimator_name}"] = (
-                    [f"n_vars_shap", "n_bootstrap"],
+    data[f"{method}_scores__{estimator_name}"] = (
+                    [f"n_vars_{method}", "n_bootstrap"],
                     scores_ranked.reshape(len(scores_ranked),1),
     )
+    
+    if method == 'sage':
+        data[f"sage_scores_std__{estimator_name}"] = (
+                    [f"n_vars_sage"],
+                    std_ranked,
+        )
+    
     data = xr.Dataset(data)
 
+    data.attrs['estimators used'] = estimator_name
+    data.attrs['estimator output'] = 'probability'
+    
     return data
-
 
 def flatten_nested_list(list_of_lists):
     """Turn a list of list into a single, flatten list"""
