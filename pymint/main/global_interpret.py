@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import xarray as xr
 from math import sqrt
 from scipy.spatial import cKDTree
 from scipy.interpolate import interp1d
@@ -10,8 +11,11 @@ import traceback
 from copy import copy
 from inspect import currentframe, getframeinfo
 from pandas.core.common import SettingWithCopyError
+from joblib import delayed, Parallel
+
 
 from sklearn.linear_model import LinearRegression
+from sklearn import cluster
 from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
@@ -34,13 +38,15 @@ from ..common.utils import (
     to_xarray,
     order_groups,
     determine_feature_dtype,
-    check_is_permuted
+    check_is_permuted, 
+    to_pymint_importance
 )
 
 from ..common.multiprocessing_utils import run_parallel, to_iterator
 from ..common.attributes import Attributes
 
 from .PermutationImportance import sklearn_permutation_importance
+from .PermutationImportance.utils import bootstrap_generator
 
 
 class GlobalInterpret(Attributes):
@@ -138,6 +144,36 @@ class GlobalInterpret(Attributes):
 
         self.estimator_output = estimator_output
 
+        
+    def _to_scorer(self, evaluation_fn):
+        """
+        FOR INTERNAL PURPOSES ONLY.
+        Converts a string to an evaluation function.
+        """
+        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
+        
+        if evaluation_fn == "auc":
+            evaluation_fn = roc_auc_score
+            scoring_strategy = "argmin_of_mean"
+        elif evaluation_fn == "auprc":
+            evaluation_fn = average_precision_score
+            scoring_strategy = "argmin_of_mean"
+        elif evaluation_fn == "norm_aupdc":
+            evaluation_fn = norm_aupdc
+            scoring_strategy = "argmin_of_mean"
+        elif evaluation_fn == "bss":
+            evaluation_fn = brier_skill_score
+            scoring_strategy = "argmin_of_mean"
+        elif evaluation_fn == "mse":
+            evaluation_fn = mean_squared_error
+            scoring_strategy = "argmax_of_mean"
+        else:
+            raise ValueError(
+                    f"evaluation_fn is not set! Available options are {available_scores}"
+                )
+        return evaluation_fn, scoring_strategy
+        
+        
     def calc_permutation_importance(
         self,
         n_vars=5,
@@ -159,7 +195,6 @@ class GlobalInterpret(Attributes):
         See calc_permutation_importance in IntepretToolkit for documentation.
 
         """
-        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
 
         if isinstance(evaluation_fn, str):
             evaluation_fn = evaluation_fn.lower()
@@ -176,25 +211,7 @@ class GlobalInterpret(Attributes):
             )
         
         if isinstance(evaluation_fn,str):    
-            if evaluation_fn == "auc":
-                evaluation_fn = roc_auc_score
-                scoring_strategy = "argmin_of_mean"
-            elif evaluation_fn == "auprc":
-                evaluation_fn = average_precision_score
-                scoring_strategy = "argmin_of_mean"
-            elif evaluation_fn == "norm_aupdc":
-                evaluation_fn = norm_aupdc
-                scoring_strategy = "argmin_of_mean"
-            elif evaluation_fn == "bss":
-                evaluation_fn = brier_skill_score
-                scoring_strategy = "argmin_of_mean"
-            elif evaluation_fn == "mse":
-                evaluation_fn = mean_squared_error
-                scoring_strategy = "argmax_of_mean"
-            else:
-                raise ValueError(
-                    f"evaluation_fn is not set! Available options are {available_scores}"
-                )
+            evaluation_fn, scoring_strategy = self._to_scorer(evaluation_fn)
 
         if is_str:
             if direction == 'forward':
@@ -1994,3 +2011,124 @@ class GlobalInterpret(Attributes):
             return mec_avg, best_breaks_dict, best_g
         else:
             return mec_avg, best_breaks_dict
+
+        
+
+    def scorer(self, estimator, X, y, evaluation_fn):
+        prediction = estimator.predict_proba(X)[:,1]
+        return evaluation_fn(y, prediction)
+
+    def _compute_grouped_importance(self, X, y, evaluation_fn, group, feature_subset, estimator, only, all_permuted_score):
+        scores={group : []}
+        X_permuted = X.copy()
+        for rs in self.random_states:
+            inds = rs.permutation(len(X))
+            # Jointly permute all features expect those in the feature_subset
+            
+            if only:
+                # For group only version, jointly permute all features except those in the feature subset.
+                X_permuted = np.array([X[:, i] if i in feature_subset else X[inds,i] for i in range(X.shape[1])]).T
+            else:
+                # Else, only jointly permute the features in the feature subset.
+                X_permuted = np.array([X[inds, i] if i in feature_subset else X[:,i] for i in range(X.shape[1])]).T
+            
+            group_permute_score = self.scorer(estimator, X_permuted, y, evaluation_fn)
+            
+            if only:
+                imp = group_permute_score - all_permuted_score
+            else:
+                imp = all_permuted_score - group_permute_score
+            
+            scores[group].append(imp)
+            
+        return scores
+
+    def grouped_feature_importance(self, 
+                                   evaluation_fn,
+                                   perm_method, 
+                               n_permute=1, 
+                               groups=None, 
+                               sample_size=100, 
+                               subsample=1.0,
+                               n_jobs=1, 
+                               clustering_kwargs={'n_clusters':10},
+                              ):
+        """
+        The group only permutation feature importance (GOPFI) from Au et al. 2021 
+        (see their equations 10,11). This function has a built-in method for clustering 
+        features using the sklearn.cluster.FeatureAgglomeration. It also has the ability to 
+        compute the results over multiple permutations to improve the feature importance 
+        estimate (and provide uncertainty). 
+    
+        Description of the parameters provided in InterpretToolkit. 
+    
+        """
+        parallel = Parallel(n_jobs=n_jobs)
+        only = True if perm_method == 'grouped_only' else False
+        
+        if isinstance(evaluation_fn, str):
+            evaluation_fn, scoring_strategy = self._to_scorer(evaluation_fn)
+    
+        self.random_states = bootstrap_generator(n_bootstrap=n_permute)
+    
+        # Get the feature names from the dataframe.
+        feature_names = np.array(self.X.columns)
+    
+        # Convert to numpy array
+        X = self.X.values
+    
+        subsample = subsample if subsample > 1 else int(subsample*X.shape[0])
+        inds = self.random_states[-1].choice(len(X), size=subsample, replace=False)
+    
+        # Subsample the examples for computational efficiency. 
+        X = X[inds]
+        y = self.y[inds]
+
+        if groups is None:
+            # Feature clustering is based on a subset of examples for computational efficiency. 
+            sample_size = sample_size if sample_size > 1 else int(sample_size*X.shape[0])
+            inds = np.random.choice(len(X), size=sample_size, replace=False)
+            agglo = cluster.FeatureAgglomeration(**clustering_kwargs)
+            agglo.fit(X[inds,:])
+
+            groups = {f'group {i}' : np.where(agglo.labels_== i)[0] for i in range(np.max(agglo.labels_)+1) }
+            names = {f'group {i}' : feature_names[agglo.labels_==i] for i in range(np.max(agglo.labels_)+1) }
+        else:
+            key = list(groups.keys())[0]
+            item = groups[key][0]
+            if isinstance(item, str):
+                names = copy(groups)
+                # It is the feature names and thus need to be converted to indices
+                for key, items in groups.items():
+                    N=np.where(np.isin(feature_names, items))[0]
+                    groups[key] = N
+
+        X_permuted = X.copy()
+        if only:
+            # for the group only version, we jointly permute all features and then
+            # determine the original score
+            inds = np.random.permutation(len(X))
+            X_permuted = np.array([X[inds, i] for i in range(X.shape[1])]).T
+
+            
+        results = []
+        for estimator_name, estimator in self.estimators.items():    
+            # Score after jointly permuting all features. 
+            all_permuted_score = self.scorer(estimator, X_permuted, y, evaluation_fn)
+
+            scores = parallel(delayed(self._compute_grouped_importance)(X,y,evaluation_fn, 
+                                                                    group, feature_subset, estimator, only, all_permuted_score) 
+                          for group, feature_subset in groups.items())
+            scores = merge_dict(scores)
+
+            group_names = list(groups.keys())
+            importances = np.array([scores[g] for g in group_names])
+    
+            group_rank = to_pymint_importance(importances, estimator_name=estimator_name, 
+                                      feature_names=group_names, method='group')
+    
+            results.append(group_rank)
+    
+        results = xr.merge(results, combine_attrs="override", compat="override")
+ 
+        return results, names

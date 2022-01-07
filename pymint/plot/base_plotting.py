@@ -414,12 +414,11 @@ class PlotStructure:
 
             ax.set_ylabel(yaxis_label_with_units, fontsize=fontsize)
 
-    def set_legend(self, n_panels, fig, ax, major_ax):
+    def set_legend(self, n_panels, fig, ax, major_ax, **kwargs):
         """
         Set a single legend on the bottom of a figure
         for a set of subplots.
         """
-
         handles, labels = ax.get_legend_handles_labels()
 
         if n_panels > 3:
@@ -427,6 +426,8 @@ class PlotStructure:
         else:
             bbox_to_anchor = (0.5, -0.5)
 
+        bbox_to_anchor = kwargs.get('bbox_to_anchor', bbox_to_anchor)    
+            
         # Shrink current axis's height by 10% on the bottom
         box = major_ax.get_position()
         major_ax.set_position(

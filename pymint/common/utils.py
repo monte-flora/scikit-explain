@@ -82,21 +82,34 @@ def method_average_ranking(data, features, methods, estimator_names, n_features=
 
 def to_pymint_importance(importances, estimator_name, feature_names, method):
     """Convert coefficients into a importance dataset from plotting purposes"""
+  
+    bootstrap=False
     if method == 'sage':
         importances_std = importances.std
         importances = importances.values
     elif method == 'coefs':
         importances = np.absolute(importances)
-    if method == 'shap_std':
+    elif method == 'shap_std':
         # Compute the std(SHAP) 
         importances = np.std(importances, axis=0)
     elif method == 'shap_sum':
         #Compute sum of abs values
         importances = np.sum(np.absolute(importances), axis=0)
-    
+    else:
+        if np.ndim(importances) == 2:
+            # average over bootstrapping
+            bootstrap=True
+            importances_to_save = importances.copy()
+            importances = np.mean(importances, axis=1)
+           
     # Sort from higher score to lower score 
     ranked_indices = np.argsort(importances)[::-1]
-    scores_ranked = importances[ranked_indices]
+    
+    if bootstrap:
+        scores_ranked = importances_to_save[ranked_indices, :]
+    else:
+        scores_ranked = importances[ranked_indices]
+    
     if method == 'sage':
         std_ranked = importances_std[ranked_indices]
     
@@ -107,11 +120,17 @@ def to_pymint_importance(importances, estimator_name, feature_names, method):
                     [f"n_vars_{method}"],
                     features_ranked,
                 )
+    
+    if not bootstrap:
+        scores_ranked = scores_ranked.reshape(len(scores_ranked),1)
+        importances = importances.reshape(len(importances), 1)
+        
+        
     data[f"{method}_scores__{estimator_name}"] = (
                     [f"n_vars_{method}", "n_bootstrap"],
-                    scores_ranked.reshape(len(scores_ranked),1),
-    )
-    
+                    scores_ranked,
+        )
+        
     if method == 'sage':
         data[f"sage_scores_std__{estimator_name}"] = (
                     [f"n_vars_sage"],

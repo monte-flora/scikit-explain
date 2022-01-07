@@ -335,6 +335,8 @@ class InterpretToolkit(Attributes):
                                                     random_seed=random_seed,
                                                    )
         
+        
+        
         self.attrs_dict['n_multipass_vars'] = n_vars
         self.attrs_dict['method'] = 'permutation_importance'
         self.attrs_dict['direction'] = direction
@@ -342,6 +344,164 @@ class InterpretToolkit(Attributes):
         results_ds = self._append_attributes(results_ds)
     
         return results_ds
+
+    
+    def grouped_permutation_importance(self, perm_method, 
+                                       evaluation_fn, n_permute=1, groups=None,
+                                      sample_size=100, subsample=1.0, n_jobs=1, 
+                                      clustering_kwargs={'n_clusters' : 10}):
+        """
+        The group only permutation feature importance (GOPFI) from Au et al. 2021 [1]_
+        (see their equations 10 and 11). This function has a built-in method for clustering 
+        features using the sklearn.cluster.FeatureAgglomeration. It also has the ability to 
+        compute the results over multiple permutations to improve the feature importance 
+        estimate (and provide uncertainty). 
+    
+        Original score = Jointly permute all features 
+        Permuted score = Jointly permuting all features except the considered group
+    
+        Loss metrics := Original_score - Permuted Score 
+        Skill Score metrics := Permuted score - Original Score 
+    
+    
+        Parameters
+        ----------------
+        
+        perm_method : ``"grouped"`` or ``"grouped_only"`
+        
+            If ``"grouped"``, the features within a group are jointly permuted and other features 
+            are left unpermuted. 
+            
+            If ``"grouped_only"``, only the features within a group are left unpermuted and 
+            other features are jointly permuted. 
+
+        
+        evaluation_fn : string or callable 
+            evaluation/scoring function for evaluating the loss of skill once a feature is permuted. 
+            evaluation_fn can be set to one of the following strings:
+            
+                - ``"auc"``, Area under the Curve
+                - ``"auprc"``, Area under the Precision-Recall Curve
+                - ``"bss"``, Brier Skill Score
+                - ``"mse"``, Mean Square Error
+                - ``"norm_aupdc"``,  Normalized Area under the Performance Diagram (Precision-Recall) Curve
+                
+            Otherwise, evaluation_fn can be any function of form, 
+            `evaluation_fn(targets, predictions)` and must return a scalar value
+            
+            When using a custom function, you must also set the scoring strategy (see below).
+   
+        n_permute: integer (default=1 for only one permutation per feature)
+                Number of permutations for computing confidence intervals on the feature rankings.
+    
+        groups : dict (default=None)
+                Dictionary of group names and the feature names or feature column indices. 
+                If None, then the feature groupings are determined internally based on 
+                feature clusterings. 
+            
+        sample_size : integer (default=100)
+                Number of random samples to determine the correlation for the feature clusterings
+            
+        subsample: float or integer (default=1.0 for no subsampling)
+        
+                if value is between 0-1, it is interpreted as fraction of total X to use 
+                if value > 1, interpreted as the number of X to randomly sample 
+                from the original dataset. 
+        
+        n_jobs : interger or float (default=1; no multiprocessing)
+        
+            if integer, interpreted as the number of processors to use for multiprocessing
+            if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing
+        
+        clustering_kwargs : dict (default = {'n_clusters' : 10})
+            See https://scikit-learn.org/stable/modules/generated/sklearn.cluster.FeatureAgglomeration.html 
+            for details 
+               
+        Returns
+        ----------------
+    
+        results : xarray.DataSet 
+            Permutation importance results. Includes the both multi-pass and single-pass 
+            feature rankings and the scores with the various features permuted. 
+    
+        groups : dict
+            If groups is None, then it returns the groups that were 
+            automatically created in the feature clustering. Otherwise, 
+            only results is returned. 
+    
+        References 
+        -----------
+        .. [1] Au, Q., J. Herbinger, C. Stachl, B. Bischl, and G. Casalicchio, 2021: 
+        Grouped Feature Importance and Combined Features Effect Plot. Arxiv,.
+    
+        Examples
+        ----------
+        >>> import pymint
+        >>> # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() 
+        >>> X, y = pymint.load_data() # training data 
+        >>> # Only compute for the first model
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators[0],
+        ...                             X=X,
+        ...                             y=y,
+        ...                            )
+        >>> # Group only, the features within a group are the only one's left unpermuted 
+        >>> results, groups = explainer.grouped_permutation_importance( 
+        ...                                          perm_method = 'grouped_only',
+        ...                                          evaluation_fn = 'norm_aupdc',)
+        >>> print(results)
+        <xarray.Dataset>
+            Dimensions:                        (n_vars_group: 10, n_bootstrap: 1)
+            Dimensions without coordinates: n_vars_group, n_bootstrap
+            Data variables:
+                group_rankings__Random Forest  (n_vars_group) <U7 'group 3' ... 'group 4'
+                group_scores__Random Forest    (n_vars_group, n_bootstrap) float64 0.4822...
+            Attributes:
+                estimators used:   ['Random Forest']
+                estimator output:  probability
+                estimator_output:  probability
+                groups:            {'group 0': array(['d_rad_d', 'd_rad_u'], dtype=object...
+                method:            grouped_permutation_importance
+                perm_method:       grouped_only
+                evaluation_fn:     norm_aupdc
+        >>> print(groups)
+        {'group 0': array(['d_rad_d', 'd_rad_u'], dtype=object), 
+        'group 1': array(['high_cloud', 'lat_hf', 'mid_cloud', 'sfcT_hrs_ab_frez', 'date_marker'], dtype=object),
+        'group 2': array(['dllwave_flux', 'uplwav_flux'], dtype=object),
+        'group 3': array(['dwpt2m', 'fric_vel', 'sat_irbt', 'sfc_rough', 'sfc_temp',
+       'temp2m', 'wind10m', 'urban', 'rural', 'hrrr_dT'], dtype=object), 
+       'group 4': array(['low_cloud', 'tot_cloud', 'vbd_flux', 'vdd_flux'], dtype=object), 
+       'group 5': array(['gflux', 'd_ground'], dtype=object), 
+       'group 6': array(['sfcT_hrs_bl_frez', 'tmp2m_hrs_bl_frez'], dtype=object), 
+       'group 7': array(['swave_flux'], dtype=object), 
+       'group 8': array(['sens_hf'], dtype=object), 
+       'group 9': array(['tmp2m_hrs_ab_frez'], dtype=object)
+       }
+        """
+        return_names=False
+        if groups is None:
+            return_names=True
+        
+        results_ds, groups = self.global_obj.grouped_feature_importance(
+                                   evaluation_fn=evaluation_fn, 
+                                   perm_method=perm_method,
+                               n_permute=n_permute, 
+                               groups=groups, 
+                               sample_size=sample_size, 
+                               subsample=subsample, 
+                               clustering_kwargs=clustering_kwargs,
+                               n_jobs=n_jobs)
+
+        self.attrs_dict['groups'] = groups
+        self.attrs_dict['method'] = 'grouped_permutation_importance'
+        self.attrs_dict['perm_method'] = perm_method
+        self.attrs_dict['evaluation_fn'] = evaluation_fn
+        results_ds = self._append_attributes(results_ds)
+        
+        if return_names:
+            return results_ds, groups 
+        else:
+            return results_ds
 
     def ale_variance(self, 
                      ale,
@@ -1310,7 +1470,7 @@ class InterpretToolkit(Attributes):
             kwargs['left_yaxis_label'] = 'Centered ALE (%)'
         else:
             kwargs['left_yaxis_label'] = 'Centered ALE'
-            
+        
         return self._plot_interpret_curves(
                                method = 'ale',
                                data=ale,

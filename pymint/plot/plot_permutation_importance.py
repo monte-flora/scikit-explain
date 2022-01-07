@@ -12,17 +12,18 @@ class PlotImportance(PlotStructure):
     is designed to be generic enough to handle all possible ranking methods
     computed within PyMint. 
     """
-    SINGLE_VAR_METHODS = ['multipass', 'singlepass', 'ale_variance', 'coefs', 'shap', 'gini', 'combined']
+    SINGLE_VAR_METHODS = ['multipass', 'singlepass', 'ale_variance', 'coefs', 'shap_sum', 'gini', 'combined', 'sage']
     ALL_METHODS = ['multipass', 
                    'singlepass', 
                    'perm_based', 
                    'ale_variance',
                    'ale_variance_interactions', 
                    'coefs',
-                   'shap',
+                   'shap_sum',
                    'hstat',
                    'gini',
                    'combined',
+                   'sage',
                   ]
     DISPLAY_NAMES = ['Multiple Pass', 
                    'Single Pass', 
@@ -34,6 +35,7 @@ class PlotImportance(PlotStructure):
                    'H-Statistic',
                    'Gini Impurity-Based',
                    'Method-Average Ranking',
+                   'SAGE'
                   ]
     
     DISPLAY_NAMES_DICT = {m : n for m,n in zip(ALL_METHODS, DISPLAY_NAMES)}
@@ -41,21 +43,9 @@ class PlotImportance(PlotStructure):
     def __init__(self, BASE_FONT_SIZE=12):
         super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
     
-    def is_bootstrapped(self, original_score):
-        """Check if the permutation importance results are bootstrapped"""
-        try:
-            len(original_score)
-        except:
-            bootstrapped = False
-        else:
-            bootstrapped = True
-
-        if bootstrapped:
-            original_score_mean = np.mean(original_score)
-        else:
-            original_score_mean = original_score
-
-        return bootstrapped, original_score_mean
+    def is_bootstrapped(self, scores):
+        """Check if the permutation importance results are bootstrapped""" 
+        return np.ndim(scores) > 1 
 
     def _get_axes(self, n_panels, **kwargs):
         """
@@ -158,44 +148,25 @@ class PlotImportance(PlotStructure):
             if not only_one_estimator:
                 ax.set_title(estimator_name)
      
-            sorted_var_names = list(
-                    results[f"{method}_rankings__{estimator_name}"].values
-                )
+            sorted_var_names = list(results[f"{method}_rankings__{estimator_name}"].values)
                 
             if num_vars_to_plot is None:
                 num_vars_to_plot == len(sorted_var_names) 
                 
-
             sorted_var_names = sorted_var_names[
                     : min(num_vars_to_plot, len(sorted_var_names))
                 ]
 
             sorted_var_names = sorted_var_names[::-1]
+            scores = results[f"{method}_scores__{estimator_name}"].values
 
-            scores = [
-                    results[f"{method}_scores__{estimator_name}"].values[i, :]
-                    for i in range(len(sorted_var_names))
-                ]
-
+            scores = scores[:min(num_vars_to_plot, len(sorted_var_names))]
+                        
+            # Reverse the order.
             scores = scores[::-1]
 
-            if "pass" in method:
-                # Get the original score (no permutations)
-                original_score = results[f"original_score__{estimator_name}"].values
-
-                # Get the original score (no permutations)
-                # Check if the permutation importance is bootstrapped
-                bootstrapped, original_score_mean = self.is_bootstrapped(
-                        original_score
-                    )
-
-                sorted_var_names.append("No Permutations")
-                scores.append(original_score)
-            else:
-                bootstrapped = True if np.shape(scores)[1] > 1 else False
-
-                 # Set very small values to zero. 
-                scores = np.where(np.absolute(np.round(scores,17)) < 1e-15, 0, scores)
+            # Set very small values to zero. 
+            scores = np.where(np.absolute(np.round(scores,17)) < 1e-15, 0, scores)
 
             if plot_correlated_features:
                     self._add_correlated_brackets(
@@ -216,40 +187,18 @@ class PlotImportance(PlotStructure):
                     )
                 ]
 
-            if bootstrapped:
-                if method == 'combined':
-                    scores_to_plot = np.array([np.nanpercentile(score, 50) for score in scores])
-                    ci = np.array(
-                        [
-                            np.abs(np.nanpercentile(score, 50) - np.nanpercentile(score, [25, 75]))
-                            for score in scores
-                        ]
-                    ).transpose()
-                    
-                else:
-                    scores_to_plot = np.array([np.mean(score) for score in scores])
-                    ci = np.array(
-                        [
-                            np.abs(np.mean(score) - np.percentile(score, [2.5, 97.5]))
-                            for score in scores
-                        ]
-                    ).transpose()
-                    
+            if method == 'combined':
+                scores_to_plot = np.nanpercentile(scores, 50, axis=1)
+                # Compute the confidence intervals (ci)
+                ci = np.abs( np.nanpercentile(scores, 50, axis=1) - np.nanpercentile(scores, [25, 75], axis=1))
             else:
-                if "pass" in method:
-                    scores.append(original_score_mean)
-                else:
-                    scores = [score[0] for score in scores]
-
-                
-                scores_to_plot = np.array(scores)
-                ci = np.zeros((2,len(scores_to_plot)))
-                
+                scores_to_plot = np.nanmean(scores, axis=1)
+                ci = np.abs(np.nanpercentile(scores, 50, axis=1) - np.nanpercentile(scores, [2.5, 97.5], axis=1))
+     
             # Despine
             self.despine_plt(ax)
-
-            if bootstrapped:
-                    ax.barh(
+            
+            ax.barh(
                         np.arange(len(scores_to_plot)),
                         scores_to_plot,
                         linewidth=1.75,
@@ -262,18 +211,11 @@ class PlotImportance(PlotStructure):
                         error_kw=dict(alpha=0.2, elinewidth=0.9,),
                         zorder=2,
                     )
-            else:
-                    ax.barh(
-                        np.arange(len(scores_to_plot)),
-                        scores_to_plot,
-                        linewidth=1.75,
-                        edgecolor='white',
-                        alpha=0.5,
-                        color=colors_to_plot,
-                        zorder=2,
-                    )
+     
 
-            if num_vars_to_plot > 10:
+            if num_vars_to_plot >= 20:
+                size = kwargs.get('fontsize', self.FONT_SIZES["teensie"] - 3)
+            elif num_vars_to_plot > 10:
                 size = kwargs.get('fontsize', self.FONT_SIZES["teensie"] - 2)
             else:
                 size = kwargs.get('fontsize', self.FONT_SIZES["teensie"] - 1) 
@@ -338,6 +280,8 @@ class PlotImportance(PlotStructure):
                         fontweight=fontweight[i], 
                     )
 
+            """
+            depricated. The methods used return proper importance scores. 
             if estimator_output == "probability" and "pass" in method:
                     # Add vertical line
                     ax.axvline(
@@ -357,6 +301,7 @@ class PlotImportance(PlotStructure):
                         rotation=270,
                         alpha=0.7,
                     )
+            """
 
             ax.tick_params(axis="both", which="both", length=0)
             ax.set_yticks([])
