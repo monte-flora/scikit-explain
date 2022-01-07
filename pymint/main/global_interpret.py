@@ -2125,7 +2125,7 @@ class GlobalInterpret(Attributes):
             importances = np.array([scores[g] for g in group_names])
     
             group_rank = to_pymint_importance(importances, estimator_name=estimator_name, 
-                                      feature_names=group_names, method='group')
+                                      feature_names=group_names, method=perm_method)
     
             results.append(group_rank)
     

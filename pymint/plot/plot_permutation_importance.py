@@ -12,7 +12,8 @@ class PlotImportance(PlotStructure):
     is designed to be generic enough to handle all possible ranking methods
     computed within PyMint. 
     """
-    SINGLE_VAR_METHODS = ['multipass', 'singlepass', 'ale_variance', 'coefs', 'shap_sum', 'gini', 'combined', 'sage']
+    SINGLE_VAR_METHODS = ['multipass', 'singlepass', 'ale_variance', 'coefs', 
+                          'shap_sum', 'gini', 'combined', 'sage', 'grouped', 'grouped_only']
     ALL_METHODS = ['multipass', 
                    'singlepass', 
                    'perm_based', 
@@ -24,6 +25,8 @@ class PlotImportance(PlotStructure):
                    'gini',
                    'combined',
                    'sage',
+                   'grouped', 
+                   'grouped_only',
                   ]
     DISPLAY_NAMES = ['Multiple Pass', 
                    'Single Pass', 
@@ -36,6 +39,8 @@ class PlotImportance(PlotStructure):
                    'Gini Impurity-Based',
                    'Method-Average Ranking',
                    'SAGE'
+                   'Grouped', 
+                   'Grouped Only',
                   ]
     
     DISPLAY_NAMES_DICT = {m : n for m,n in zip(ALL_METHODS, DISPLAY_NAMES)}
