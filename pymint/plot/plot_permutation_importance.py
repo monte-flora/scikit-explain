@@ -14,36 +14,23 @@ class PlotImportance(PlotStructure):
     """
     SINGLE_VAR_METHODS = ['multipass', 'singlepass', 'ale_variance', 'coefs', 
                           'shap_sum', 'gini', 'combined', 'sage', 'grouped', 'grouped_only']
-    ALL_METHODS = ['multipass', 
-                   'singlepass', 
-                   'perm_based', 
-                   'ale_variance',
-                   'ale_variance_interactions', 
-                   'coefs',
-                   'shap_sum',
-                   'hstat',
-                   'gini',
-                   'combined',
-                   'sage',
-                   'grouped', 
-                   'grouped_only',
-                  ]
-    DISPLAY_NAMES = ['Multiple Pass', 
-                   'Single Pass', 
-                   'Permutation-based Interactions', 
-                   'ALE-Based',
-                   'ALE-Based Interactions', 
-                   'Coefficients',
-                   'SHAP',
-                   'H-Statistic',
-                   'Gini Impurity-Based',
-                   'Method-Average Ranking',
-                   'SAGE'
-                   'Grouped', 
-                   'Grouped Only',
-                  ]
+
+    DISPLAY_NAMES_DICT = {'multipass': 'Multiple Pass', 
+                   'singlepass' : 'Single Pass', 
+                   'perm_based': 'Permutation-based Interactions', 
+                   'ale_variance': 'ALE-Based',
+                   'ale_variance_interactions': 'ALE-Based Interactions', 
+                   'coefs' : 'Coefficients',
+                   'shap_sum' : 'SHAP',
+                   'hstat' : 'H-Statistic',
+                   'gini' : 'Gini Impurity-Based',
+                   'combined' : 'Method-Average Ranking',
+                   'sage' : 'SAGE',
+                   'grouped': 'Grouped', 
+                   'grouped_only' : 'Grouped Only',
+                         }
     
-    DISPLAY_NAMES_DICT = {m : n for m,n in zip(ALL_METHODS, DISPLAY_NAMES)}
+   
     
     def __init__(self, BASE_FONT_SIZE=12):
         super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)

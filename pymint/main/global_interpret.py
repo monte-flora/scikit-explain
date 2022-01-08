@@ -2094,14 +2094,15 @@ class GlobalInterpret(Attributes):
             groups = {f'group {i}' : np.where(agglo.labels_== i)[0] for i in range(np.max(agglo.labels_)+1) }
             names = {f'group {i}' : feature_names[agglo.labels_==i] for i in range(np.max(agglo.labels_)+1) }
         else:
-            key = list(groups.keys())[0]
-            item = groups[key][0]
-            if isinstance(item, str):
+            contains_str = isinstance(list(groups.values())[0][0], str)
+            if contains_str:
                 names = copy(groups)
                 # It is the feature names and thus need to be converted to indices
                 for key, items in groups.items():
                     N=np.where(np.isin(feature_names, items))[0]
                     groups[key] = N
+            else:
+                names = {key : feature_names[inds] for key, inds in groups.items() }
 
         X_permuted = X.copy()
         if only:

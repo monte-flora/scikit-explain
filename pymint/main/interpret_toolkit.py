@@ -367,7 +367,7 @@ class InterpretToolkit(Attributes):
         Parameters
         ----------------
         
-        perm_method : ``"grouped"`` or ``"grouped_only"`
+        perm_method : ``"grouped"`` or ``"grouped_only"``
         
             If ``"grouped"``, the features within a group are jointly permuted and other features 
             are left unpermuted. 
