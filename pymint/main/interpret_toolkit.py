@@ -492,7 +492,10 @@ class InterpretToolkit(Attributes):
                                clustering_kwargs=clustering_kwargs,
                                n_jobs=n_jobs)
 
-        self.attrs_dict['groups'] = groups
+        
+        for k,v in groups.items():
+            self.attrs_dict[k] =list(v)
+            
         self.attrs_dict['method'] = 'grouped_permutation_importance'
         self.attrs_dict['perm_method'] = perm_method
         self.attrs_dict['evaluation_fn'] = evaluation_fn
