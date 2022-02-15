@@ -49,14 +49,14 @@ If you are experiencing issues with loading the tutorial jupyter notebooks, you 
 
 ## Install
 
-PyMint can be installed through pip, but we are working on uploading to conda-forge. 
+PyMint can be installed through pip, but we are working on uploading to conda-forge. Though versions exists prior to 0.2.6, we do recommend using them as they are unstable and have outdated syntax. 
 ```
-pip install py-mint
+pip install py-mint>=0.2.6
 ```
 
 ## Dependencies 
 
-PyMint is compatible with Python 3.6 or newer.  PyMint requires the following packages:
+PyMint is compatible with Python 3.8 or newer.  PyMint requires the following packages:
 ```
 numpy 
 pandas
