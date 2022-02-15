@@ -1,8 +1,7 @@
-from ..common.utils import to_list, is_list
+from ..common.utils import to_list, is_list, is_str
 from .base_plotting import PlotStructure
 from math import log10
 import numpy as np
-
 
 class PlotInterpretCurves(PlotStructure):
     """
@@ -65,7 +64,15 @@ class PlotInterpretCurves(PlotStructure):
         only_one_estimator = len(estimator_names)==1
         left_yaxis_label = kwargs.get("left_yaxis_label")
         ice_curves = kwargs.get("ice_curves", None)
-
+        color_bys = kwargs.get("color_by", None) 
+        
+        if color_bys is not None:
+            if is_str(color_bys):
+                # Color-code ICE plot by the same feature.
+                color_bys = [color_bys] * len(features)
+        else:
+            color_bys = [color_bys] * len(features)
+        
         # get the number of panels which will be length of feature dictionary
         n_panels = len(features)
         if n_panels > 12:
@@ -78,7 +85,7 @@ class PlotInterpretCurves(PlotStructure):
         ax_iterator = self.axes_to_iterator(n_panels, axes)
 
         # loop over each feature and add relevant plotting stuff
-        for lineplt_ax, feature in zip(ax_iterator, features):
+        for lineplt_ax, feature, color_by in zip(ax_iterator, features, color_bys):
 
             xdata = data[f"{feature}__bin_values"].values
             hist_data = data[f"{feature}"].values
@@ -92,14 +99,13 @@ class PlotInterpretCurves(PlotStructure):
 
             for i, model_name in enumerate(estimator_names):
                 if ice_curves:
-                    ice_data = ice_curves[f"{feature}__{model_name}__ice"].values
-                    ice_xdata = ice_curves[f"{feature}__bin_values"].values
-                    if to_probability:
-                        ice_data *= 100
-                    for ind_curve in ice_data:
-                        lineplt_ax.plot(
-                            ice_xdata, ind_curve, color="k", alpha=0.85, linewidth=0.2
-                        )
+                    kwargs['color_by']=color_by
+                    lineplt_ax = self.add_ice_curves(fig, 
+                                                     lineplt_ax,
+                                                     feature=feature,
+                                                     model_name=model_name,
+                                                     to_probability=to_probability,
+                                                     **kwargs)
                         
                 ydata = data[f"{feature}__{model_name}__{method}"].values.copy()
 
@@ -138,21 +144,71 @@ class PlotInterpretCurves(PlotStructure):
                 self.calculate_ticks(ax=lineplt_ax, nticks=nticks, center=True)
             )
 
-        if not only_one_estimator:
-            majoraxis_fontsize = self.FONT_SIZES["teensie"]
-            major_ax = self.set_major_axis_labels(
+        majoraxis_fontsize = self.FONT_SIZES["teensie"]
+        major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=None,
                 ylabel_left=left_yaxis_label,
                 ylabel_right=twin_yaxis_label,
                 **kwargs,
             )
+        
+        if not only_one_estimator:
             self.set_legend(n_panels, fig, lineplt_ax, major_ax)
             
         self.add_alphabet_label(n_panels, axes)
 
         return fig, axes
 
+    def add_ice_curves(self, fig, ax, 
+                       feature, 
+                       model_name, 
+                       to_probability, 
+                       **kwargs):
+        """
+        Add ICE curves and potentially color-code by another feature
+        """
+        ice_ds = kwargs.get("ice_curves", None)
+        color_by = kwargs.get("color_by", None) 
+        
+        ice_data = ice_ds[f"{feature}__{model_name}__ice"].values
+        x = ice_ds[f"{feature}__bin_values"].values
+        if to_probability:
+            ice_data *= 100
+        
+        if color_by is not None:
+            X = ice_ds['X_sampled'].values
+            feature_names = list(ice_ds['features'].values)
+            color_by_ind = feature_names.index(color_by)
+            colors_raw = X[:, color_by_ind]
+            mappable, cdata = self.get_custom_colormap(colors_raw, **kwargs)
+
+            # TODO: Add support for categorical interactions. See SHAP scatter plot code 
+            # as an example. 
+            for color_raw, y in zip(colors_raw, ice_data):
+                c = mappable.to_rgba(color_raw)
+                ax.plot(x, y, c=c, alpha=0.85, linewidth=0.3, zorder=0,)
+
+            feature = self.display_feature_names.get(color_by, color_by)
+            units = self.display_units.get(color_by, "")
+            if units == "":
+                cb_label = f"{feature}"
+            else:
+                cb_label = f"{feature} ({units})"
+
+            self.add_ice_colorbar(fig, ax, mappable, 
+                                  cb_label=cb_label, 
+                                  cdata=cdata,
+                                  fontsize=self.FONT_SIZES["teensie"],
+                                  **kwargs)
+                
+        else:
+            for y in ice_data:
+                ax.plot(x, y, color="k", alpha=0.85, linewidth=0.2,)
+    
+        return ax 
+    
+    
     def add_histogram_axis(
         self, ax, data, n_panels, bins=15, 
         min_value=None, max_value=None, density=False, **kwargs

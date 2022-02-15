@@ -10,6 +10,7 @@ import matplotlib.ticker as mticker
 from matplotlib import rcParams
 from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
+import matplotlib
 
 from ..common.utils import combine_like_features, is_outlier
 import shap
@@ -307,18 +308,21 @@ class PlotStructure:
         """
         Convert decimals (less 0.01) to 10^e notation
         """
-        f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
-        g = lambda x, pos: "${}$".format(f._formatSciNotation("%1.10e" % x))
+        #f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
+        #g = lambda x, pos: "${}$".format(f._formatSciNotation("%1.10e" % x))
 
         if colorbar and np.absolute(np.amax(ydata)) <= 0.01:
-            colorbar.ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+            #colorbar.ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+            colorbar.ax.ticklabel_format(style='sci', )
             colorbar.ax.tick_params(axis="y", labelsize=5)
         elif ax:
             if np.absolute(np.amax(xdata)) <= 0.01:
-                ax.xaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.ticklabel_format(style='sci', )
+                #ax.xaxis.set_major_formatter(mticker.FuncFormatter(g))
                 ax.tick_params(axis="x", labelsize=5, rotation=45)
             if np.absolute(np.amax(ydata)) <= 0.01:
-                ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+                #ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.ticklabel_format(style='sci', )
                 ax.tick_params(axis="y", labelsize=5, rotation=45)
 
     def calculate_ticks(
@@ -410,12 +414,11 @@ class PlotStructure:
 
             ax.set_ylabel(yaxis_label_with_units, fontsize=fontsize)
 
-    def set_legend(self, n_panels, fig, ax, major_ax):
+    def set_legend(self, n_panels, fig, ax, major_ax, **kwargs):
         """
         Set a single legend on the bottom of a figure
         for a set of subplots.
         """
-
         handles, labels = ax.get_legend_handles_labels()
 
         if n_panels > 3:
@@ -423,6 +426,8 @@ class PlotStructure:
         else:
             bbox_to_anchor = (0.5, -0.5)
 
+        bbox_to_anchor = kwargs.get('bbox_to_anchor', bbox_to_anchor)    
+            
         # Shrink current axis's height by 10% on the bottom
         box = major_ax.get_position()
         major_ax.set_position(
@@ -469,19 +474,20 @@ class PlotStructure:
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
 
-    def annotate_bars(self, ax, bottom_idx, top_idx, x=0):
+    def annotate_bars(self, ax, bottom_idx, top_idx, x=0, **kwargs):
         """
         Adds a square bracket that contains two points. Used to
         connect predictors in the predictor ranking plot
         for highly correlated pairs.
         """
+        color = kwargs.get('color', "xkcd:slate gray")
         ax.annotate(
             "",
             xy=(x, bottom_idx),
             xytext=(x, top_idx),
             arrowprops=dict(
                 arrowstyle="<->,head_length=0.05,head_width=0.05",
-                ec="xkcd:slate gray",
+                ec=color,
                 connectionstyle="bar,fraction=0.2",
                 shrinkA=0.5,
                 shrinkB=0.5,
@@ -489,6 +495,30 @@ class PlotStructure:
             ),
         )
 
+    def get_custom_colormap(self, vals, **kwargs):
+        """Get a custom colormap"""
+        cmap = kwargs.get('cmap', matplotlib.cm.PuOr)
+        bounds = np.linspace(np.nanpercentile(vals, 0),
+                     np.nanpercentile(vals, 100),
+                     10)
+
+        norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N, )
+        mappable = matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap, )
+        
+        return mappable, bounds
+        
+    def add_ice_colorbar(self, fig, ax,  mappable, cb_label, cdata, fontsize, **kwargs):
+        """Add a colorbar to the right of a panel to 
+            accompany ICE color-coded plots"""
+        cb = plt.colorbar(mappable, ax=ax, pad=0.2)
+        cb.set_label(cb_label, size=fontsize)
+        cb.ax.tick_params(labelsize=fontsize)
+        cb.set_alpha(1)
+        cb.outline.set_visible(False)
+        bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        cb.ax.set_aspect((bbox.height - 0.7) * 20)
+        self._to_sci_notation(ax=None, colorbar=cb, ydata=cdata)
+        
     def add_colorbar(
         self,
         fig,

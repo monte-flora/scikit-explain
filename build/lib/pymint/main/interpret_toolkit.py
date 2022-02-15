@@ -189,8 +189,8 @@ class InterpretToolkit(Attributes):
         return ds
     
     def permutation_importance(self, n_vars, evaluation_fn, direction='backward',
-            subsample=1.0, n_jobs=1, n_bootstrap=None, scoring_strategy=None, verbose=False, random_state=None, 
-             return_iterations=False,                 
+            subsample=1.0, n_jobs=1, n_permute=1, scoring_strategy=None, verbose=False, 
+             return_iterations=False, random_seed=1,                
                               ):
         """
         Performs single-pass and/or multi-pass permutation importance using a modified version of the
@@ -260,10 +260,10 @@ class InterpretToolkit(Attributes):
             if integer, interpreted as the number of processors to use for multiprocessing
             if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing
         
-        n_bootstrap: integer (default=None for no bootstrapping)
-            Number of bootstrap iterations for computing confidence intervals on the feature rankings. 
+        n_permute: integer (default=1 for only one permutation per feature)
+            Number of permutations for computing confidence intervals on the feature rankings. 
             
-        random_state : int, RandomState instance, default=None
+        random_seed : int, RandomState instance, default=None
         
             Pseudo-random number generator to control the permutations of each
             feature. Pass an int to get reproducible results across function calls.
@@ -292,11 +292,10 @@ class InterpretToolkit(Attributes):
         ----------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
         >>> # Only compute for the first model
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs[0],
-        ...                            estimator_names=estimator_names[0],
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators[0],
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -304,18 +303,18 @@ class InterpretToolkit(Attributes):
         ...                       n_vars=10,
         ...                       evaluation_fn = 'norm_aupdc',
         ...                       subsample=0.5,
-        ...                       n_bootstrap=20, 
+        ...                       n_permute=20, 
         ...                       )
         >>> print(perm_imp_results)
         <xarray.Dataset>
-            Dimensions:           (n_bootstrap: 20, n_vars_multipass: 10, n_vars_singlepass: 30)
-            Dimensions without coordinates: n_bootstrap, n_vars_multipass, n_vars_singlepass
+            Dimensions:           (n_permute: 20, n_vars_multipass: 10, n_vars_singlepass: 30)
+            Dimensions without coordinates: n_permute, n_vars_multipass, n_vars_singlepass
             Data variables:
                 multipass_rankings__Random Forest   (n_vars_multipass) <U17 'sfc_te...
-                multipass_scores__Random Forest     (n_vars_multipass, n_bootstrap) float64 ...
+                multipass_scores__Random Forest     (n_vars_multipass, n_permute) float64 ...
                 singlepass_rankings__Random Forest  (n_vars_singlepass) <U17 'sfc_t...
-                singlepass_scores__Random Forest    (n_vars_singlepass, n_bootstrap) float64 ...
-                original_score__Random Forest       (n_bootstrap) float64 0.9851 .....
+                singlepass_scores__Random Forest    (n_vars_singlepass, n_permute) float64 ...
+                original_score__Random Forest       (n_permute) float64 0.9851 .....
             Attributes:
                 estimator_output:  probability
                 estimators used:   ['Random Forest']
@@ -328,13 +327,15 @@ class InterpretToolkit(Attributes):
                                                     evaluation_fn=evaluation_fn,
                                                     subsample=subsample,
                                                     n_jobs=n_jobs,
-                                                    n_bootstrap=n_bootstrap,
+                                                    n_permute=n_permute,
                                                     scoring_strategy=scoring_strategy,
                                                     verbose=verbose,
                                                     direction=direction,
-                                                    random_state=random_state,
                                                     return_iterations=return_iterations,
+                                                    random_seed=random_seed,
                                                    )
+        
+        
         
         self.attrs_dict['n_multipass_vars'] = n_vars
         self.attrs_dict['method'] = 'permutation_importance'
@@ -343,6 +344,167 @@ class InterpretToolkit(Attributes):
         results_ds = self._append_attributes(results_ds)
     
         return results_ds
+
+    
+    def grouped_permutation_importance(self, perm_method, 
+                                       evaluation_fn, n_permute=1, groups=None,
+                                      sample_size=100, subsample=1.0, n_jobs=1, 
+                                      clustering_kwargs={'n_clusters' : 10}):
+        """
+        The group only permutation feature importance (GOPFI) from Au et al. 2021 [1]_
+        (see their equations 10 and 11). This function has a built-in method for clustering 
+        features using the sklearn.cluster.FeatureAgglomeration. It also has the ability to 
+        compute the results over multiple permutations to improve the feature importance 
+        estimate (and provide uncertainty). 
+    
+        Original score = Jointly permute all features 
+        Permuted score = Jointly permuting all features except the considered group
+    
+        Loss metrics := Original_score - Permuted Score 
+        Skill Score metrics := Permuted score - Original Score 
+    
+    
+        Parameters
+        ----------------
+        
+        perm_method : ``"grouped"`` or ``"grouped_only"``
+        
+            If ``"grouped"``, the features within a group are jointly permuted and other features 
+            are left unpermuted. 
+            
+            If ``"grouped_only"``, only the features within a group are left unpermuted and 
+            other features are jointly permuted. 
+
+        
+        evaluation_fn : string or callable 
+            evaluation/scoring function for evaluating the loss of skill once a feature is permuted. 
+            evaluation_fn can be set to one of the following strings:
+            
+                - ``"auc"``, Area under the Curve
+                - ``"auprc"``, Area under the Precision-Recall Curve
+                - ``"bss"``, Brier Skill Score
+                - ``"mse"``, Mean Square Error
+                - ``"norm_aupdc"``,  Normalized Area under the Performance Diagram (Precision-Recall) Curve
+                
+            Otherwise, evaluation_fn can be any function of form, 
+            `evaluation_fn(targets, predictions)` and must return a scalar value
+            
+            When using a custom function, you must also set the scoring strategy (see below).
+   
+        n_permute: integer (default=1 for only one permutation per feature)
+                Number of permutations for computing confidence intervals on the feature rankings.
+    
+        groups : dict (default=None)
+                Dictionary of group names and the feature names or feature column indices. 
+                If None, then the feature groupings are determined internally based on 
+                feature clusterings. 
+            
+        sample_size : integer (default=100)
+                Number of random samples to determine the correlation for the feature clusterings
+            
+        subsample: float or integer (default=1.0 for no subsampling)
+        
+                if value is between 0-1, it is interpreted as fraction of total X to use 
+                if value > 1, interpreted as the number of X to randomly sample 
+                from the original dataset. 
+        
+        n_jobs : interger or float (default=1; no multiprocessing)
+        
+            if integer, interpreted as the number of processors to use for multiprocessing
+            if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing
+        
+        clustering_kwargs : dict (default = {'n_clusters' : 10})
+            See https://scikit-learn.org/stable/modules/generated/sklearn.cluster.FeatureAgglomeration.html 
+            for details 
+               
+        Returns
+        ----------------
+    
+        results : xarray.DataSet 
+            Permutation importance results. Includes the both multi-pass and single-pass 
+            feature rankings and the scores with the various features permuted. 
+    
+        groups : dict
+            If groups is None, then it returns the groups that were 
+            automatically created in the feature clustering. Otherwise, 
+            only results is returned. 
+    
+        References 
+        -----------
+        .. [1] Au, Q., J. Herbinger, C. Stachl, B. Bischl, and G. Casalicchio, 2021: 
+        Grouped Feature Importance and Combined Features Effect Plot. Arxiv,.
+    
+        Examples
+        ----------
+        >>> import pymint
+        >>> # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() 
+        >>> X, y = pymint.load_data() # training data 
+        >>> # Only compute for the first model
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators[0],
+        ...                             X=X,
+        ...                             y=y,
+        ...                            )
+        >>> # Group only, the features within a group are the only one's left unpermuted 
+        >>> results, groups = explainer.grouped_permutation_importance( 
+        ...                                          perm_method = 'grouped_only',
+        ...                                          evaluation_fn = 'norm_aupdc',)
+        >>> print(results)
+        <xarray.Dataset>
+            Dimensions:                        (n_vars_group: 10, n_bootstrap: 1)
+            Dimensions without coordinates: n_vars_group, n_bootstrap
+            Data variables:
+                group_rankings__Random Forest  (n_vars_group) <U7 'group 3' ... 'group 4'
+                group_scores__Random Forest    (n_vars_group, n_bootstrap) float64 0.4822...
+            Attributes:
+                estimators used:   ['Random Forest']
+                estimator output:  probability
+                estimator_output:  probability
+                groups:            {'group 0': array(['d_rad_d', 'd_rad_u'], dtype=object...
+                method:            grouped_permutation_importance
+                perm_method:       grouped_only
+                evaluation_fn:     norm_aupdc
+        >>> print(groups)
+        {'group 0': array(['d_rad_d', 'd_rad_u'], dtype=object), 
+        'group 1': array(['high_cloud', 'lat_hf', 'mid_cloud', 'sfcT_hrs_ab_frez', 'date_marker'], dtype=object),
+        'group 2': array(['dllwave_flux', 'uplwav_flux'], dtype=object),
+        'group 3': array(['dwpt2m', 'fric_vel', 'sat_irbt', 'sfc_rough', 'sfc_temp',
+       'temp2m', 'wind10m', 'urban', 'rural', 'hrrr_dT'], dtype=object), 
+       'group 4': array(['low_cloud', 'tot_cloud', 'vbd_flux', 'vdd_flux'], dtype=object), 
+       'group 5': array(['gflux', 'd_ground'], dtype=object), 
+       'group 6': array(['sfcT_hrs_bl_frez', 'tmp2m_hrs_bl_frez'], dtype=object), 
+       'group 7': array(['swave_flux'], dtype=object), 
+       'group 8': array(['sens_hf'], dtype=object), 
+       'group 9': array(['tmp2m_hrs_ab_frez'], dtype=object)
+       }
+        """
+        return_names=False
+        if groups is None:
+            return_names=True
+        
+        results_ds, groups = self.global_obj.grouped_feature_importance(
+                                   evaluation_fn=evaluation_fn, 
+                                   perm_method=perm_method,
+                               n_permute=n_permute, 
+                               groups=groups, 
+                               sample_size=sample_size, 
+                               subsample=subsample, 
+                               clustering_kwargs=clustering_kwargs,
+                               n_jobs=n_jobs)
+
+        
+        for k,v in groups.items():
+            self.attrs_dict[k] =list(v)
+            
+        self.attrs_dict['method'] = 'grouped_permutation_importance'
+        self.attrs_dict['perm_method'] = perm_method
+        self.attrs_dict['evaluation_fn'] = evaluation_fn
+        results_ds = self._append_attributes(results_ds)
+        
+        if return_names:
+            return results_ds, groups 
+        else:
+            return results_ds
 
     def ale_variance(self, 
                      ale,
@@ -403,10 +565,9 @@ class InterpretToolkit(Attributes):
         >>> import pymint
         >>> import itertools
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -566,10 +727,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -668,10 +828,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -708,7 +867,7 @@ class InterpretToolkit(Attributes):
         return results_ds
     
     
-    def ice(self, features, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1):
+    def ice(self, features, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1, random_seed=1,):
         """
         Compute the indiviudal conditional expectations (ICE) [7]_.
 
@@ -754,10 +913,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models()
+        >>> estimators = pymint.load_models()
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -767,13 +925,17 @@ class InterpretToolkit(Attributes):
         if is_str(features):
             if features == 'all':
                 features = self.feature_names
+            else:
+                features = [features]
                 
         results_ds = self.global_obj._run_interpret_curves(method="ice",
                             features=features,
                             n_bins=n_bins,
                             n_jobs=n_jobs,
                             subsample=subsample,
-                            n_bootstrap=n_bootstrap)
+                            n_bootstrap=n_bootstrap, 
+                            random_seed=random_seed
+                                                       )
         
         dimension = '2D' if isinstance(list(features)[0], tuple) else '1D'
         self.attrs_dict['method'] = 'ice'
@@ -786,7 +948,7 @@ class InterpretToolkit(Attributes):
 
         return results_ds
 
-    def pd(self, features, n_bins=25, n_jobs=1, subsample=1.0, n_bootstrap=1):
+    def pd(self, features, n_bins=25, n_jobs=1, subsample=1.0, n_bootstrap=1, random_seed=42,):
         """
         Computes the 1D or 2D centered partial dependence (PD) [8]_.
         
@@ -830,10 +992,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -850,7 +1011,8 @@ class InterpretToolkit(Attributes):
                             n_bins=n_bins,
                             n_jobs=n_jobs,
                             subsample=subsample,
-                            n_bootstrap=n_bootstrap)
+                            n_bootstrap=n_bootstrap, 
+                            random_seed=random_seed)
         
         dimension = '2D' if isinstance( list(features)[0] , tuple) else '1D'
         self.attrs_dict['method'] = 'pd'
@@ -862,7 +1024,7 @@ class InterpretToolkit(Attributes):
         
         return results_ds
 
-    def ale(self, features=None, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1):
+    def ale(self, features=None, n_bins=30, n_jobs=1, subsample=1.0, n_bootstrap=1, random_seed=42, ):
         """
         Compute the 1D or 2D centered accumulated local effects (ALE) [9]_ [10]_.
         For categorical features, simply set the type of those features in the 
@@ -917,13 +1079,12 @@ class InterpretToolkit(Attributes):
         Examples
         ---------
         >>> import pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() # pre-fit estimators within pymint
         >>> X, y = pymint.load_data() # training data 
         >>> # Set the type for categorical features and InterpretToolkit with compute the 
         >>> # categorical ALE. 
         >>> X = X.astype({'urban': 'category', 'rural':'category'})
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -932,15 +1093,18 @@ class InterpretToolkit(Attributes):
         if is_str(features):
             if features == 'all':
                 features = self.feature_names
-            if features == 'all_2d':
+            elif features == 'all_2d':
                 features = list(itertools.combinations(self.feature_names, r=2))
+            else:
+                features = [features]
             
         results_ds = self.global_obj._run_interpret_curves(method="ale",
                             features=features,                            
                             n_bins=n_bins,
                             n_jobs=n_jobs,
                             subsample=subsample,
-                            n_bootstrap=n_bootstrap)
+                            n_bootstrap=n_bootstrap, 
+                            random_seed=random_seed)
         
         dimension = '2D' if isinstance( list(features)[0] , tuple) else '1D'
         self.attrs_dict['method'] = 'ale'
@@ -997,10 +1161,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models()
+        >>> estimators = pymint.load_models()
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1061,10 +1224,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1193,10 +1355,9 @@ class InterpretToolkit(Attributes):
         Examples
         ---------
         >>> import pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() # pre-fit estimators within pymint
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1275,8 +1436,6 @@ class InterpretToolkit(Attributes):
             E.g., 
             figsize, hist_color,  
         
-        
-        
         Returns
         --------
         
@@ -1287,10 +1446,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1315,7 +1473,7 @@ class InterpretToolkit(Attributes):
             kwargs['left_yaxis_label'] = 'Centered ALE (%)'
         else:
             kwargs['left_yaxis_label'] = 'Centered ALE'
-            
+        
         return self._plot_interpret_curves(
                                method = 'ale',
                                data=ale,
@@ -1329,9 +1487,10 @@ class InterpretToolkit(Attributes):
 
     def local_contributions(self, 
                            method='shap', 
-                           background_dataset=None, 
                            performance_based=False,
-                           n_samples=100 ):
+                           n_samples=100, 
+                           shap_kwargs={'algorithm' : 'auto'},
+                           ):
         """
         Computes the individual feature contributions to a predicted outcome for
         a series of examples either based on tree interpreter (only Tree-based methods) 
@@ -1347,12 +1506,6 @@ class InterpretToolkit(Attributes):
             to first use the Tree-based explainer and if that fails, then the 
             Kernel-based explainer. 
 
-        background_dataset : array of shape (n_samples, n_features)
-            A representative (often a K-means or random sample) subset of the 
-            data used to train the ML estimator. Used for the background dataset
-            to compute the expected values for the SHAP calculations. 
-            Only required for non-tree based estimators. 
-
         performance_based : boolean (default=False)
             If True, will average feature contributions over the best and worst
             performing of the given X. The number of examples to average over
@@ -1360,6 +1513,20 @@ class InterpretToolkit(Attributes):
 
         n_samples : interger (default=100)
             Number of samples to compute average over if performance_based = True
+
+        shap_kwargs : dict
+            Arguments passed to the shap.Explainer object. See 
+            https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
+            for details. The main two arguments supported in PyMint is the masker and 
+            algorithm options. By default, the masker option uses 
+            masker = shap.maskers.Partition(X, max_samples=100, clustering="correlation") for
+            hierarchical clustering by correlations. You can also provide a background dataset
+            e.g., background_dataset = shap.sample(X, 100).reset_index(drop=True). The algorithm 
+            option is set to "auto" by default. 
+            
+            - masker
+            - algorithm 
+
 
         Returns
         --------
@@ -1375,13 +1542,12 @@ class InterpretToolkit(Attributes):
         >>> import pymint
         >>> import shap
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
         >>> # Only give the X you want contributions for. 
         >>> # In this case, we are using a single example. 
         >>> single_example = X.iloc[[0]]
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=single_example,
         ...                            )
         >>> # Create a background dataset; randomly sample 100 X
@@ -1391,8 +1557,7 @@ class InterpretToolkit(Attributes):
 
         >>> # For the performance-based contributions, 
         >>> # provide the full set of X and y values.
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                            y=y,
         ...                            )
@@ -1402,9 +1567,9 @@ class InterpretToolkit(Attributes):
 
         """
         results_df = self.local_obj._get_local_prediction(method=method,
-                                            background_dataset=background_dataset,
                                             performance_based=performance_based,
-                                            n_samples=n_samples,)
+                                            n_samples=n_samples, 
+                                            shap_kwargs=shap_kwargs)
 
         # Add metadata
         self.attrs_dict['method'] = method
@@ -1457,13 +1622,12 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> import shap
-        >>> estimator_objs, estimator_names = pymint.load_models() # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() # pre-fit estimators within pymint
         >>> X, y = pymint.load_data() # training data 
         >>> # Only give the X you want contributions for. 
         >>> # In this case, we are using a single example. 
         >>> single_example = X.iloc[[0]]
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=single_example,
         ...                            )
         >>> # Create a background dataset; randomly sample 100 X
@@ -1496,7 +1660,7 @@ class InterpretToolkit(Attributes):
                                            display_feature_names=display_feature_names,
                                            **kwargs)
 
-    def shap(self, background_dataset=None):
+    def shap(self, shap_kwargs={'masker' : None, 'algorithm' : 'auto'}):
         """
         Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_. The calculations starts
         with the Tree-based explainer and then defaults to the Kernel-based explainer for
@@ -1535,10 +1699,9 @@ class InterpretToolkit(Attributes):
         >>> import pymint
         >>> import shap
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1546,13 +1709,11 @@ class InterpretToolkit(Attributes):
         >>> background_dataset = shap.sample(X, 100)
         >>> shap_results = explainer.shap(background_dataset)
         """
-
-        self.local_obj.background_dataset = background_dataset
         results = {}
         
         for estimator_name, estimator in self.estimators.items():
             shap_values, bias = self.local_obj._get_shap_values(estimator=estimator,
-                                                 X=self.X,)
+                                                 X=self.X, shap_kwargs=shap_kwargs,)
             results[estimator_name] = (shap_values, bias)
         
         return results
@@ -1606,10 +1767,9 @@ class InterpretToolkit(Attributes):
         >>> import pymint
         >>> import shap
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1708,10 +1868,9 @@ class InterpretToolkit(Attributes):
         -------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1754,7 +1913,7 @@ class InterpretToolkit(Attributes):
   
         for r, (method, estimator_name) in zip(data, panels):
             available_methods = [d.split('__')[0] for d in list(r.data_vars) if f'rankings__{estimator_name}' in d]
-            if f"{method}_rankings"not in available_methods:
+            if f"{method}_rankings" not in available_methods:
                 raise ValueError(f"""{method} does not match the available methods for this item({available_methods}). 
                          Ensure that the elements of data match up with those panels!
                          Also check for any possible spelling error. 
@@ -1881,10 +2040,9 @@ class InterpretToolkit(Attributes):
         ---------
         >>> import pymint
         >>> # pre-fit estimators within pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() 
+        >>> estimators = pymint.load_models() 
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -1977,10 +2135,9 @@ class InterpretToolkit(Attributes):
         Examples
         -------
         >>> import pymint
-        >>> estimator_objs, estimator_names = pymint.load_models() # pre-fit estimators within pymint
+        >>> estimators = pymint.load_models() # pre-fit estimators within pymint
         >>> X, y = pymint.load_data() # training data 
-        >>> explainer = pymint.InterpretToolkit(estimators=estimator_objs,
-        ...                            estimator_names=estimator_names,
+        >>> explainer = pymint.InterpretToolkit(estimators=estimators
         ...                             X=X,
         ...                             y=y,
         ...                            )

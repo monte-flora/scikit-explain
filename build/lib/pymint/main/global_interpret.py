@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import xarray as xr
 from math import sqrt
 from scipy.spatial import cKDTree
 from scipy.interpolate import interp1d
@@ -8,8 +9,13 @@ from functools import reduce
 from operator import add
 import traceback
 from copy import copy
+from inspect import currentframe, getframeinfo
+from pandas.core.common import SettingWithCopyError
+from joblib import delayed, Parallel
+
 
 from sklearn.linear_model import LinearRegression
+from sklearn import cluster
 from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
@@ -32,13 +38,15 @@ from ..common.utils import (
     to_xarray,
     order_groups,
     determine_feature_dtype,
-    check_is_permuted
+    check_is_permuted, 
+    to_pymint_importance
 )
 
 from ..common.multiprocessing_utils import run_parallel, to_iterator
 from ..common.attributes import Attributes
 
 from .PermutationImportance import sklearn_permutation_importance
+from .PermutationImportance.utils import bootstrap_generator
 
 
 class GlobalInterpret(Attributes):
@@ -136,18 +144,48 @@ class GlobalInterpret(Attributes):
 
         self.estimator_output = estimator_output
 
+        
+    def _to_scorer(self, evaluation_fn):
+        """
+        FOR INTERNAL PURPOSES ONLY.
+        Converts a string to an evaluation function.
+        """
+        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
+        
+        if evaluation_fn == "auc":
+            evaluation_fn = roc_auc_score
+            scoring_strategy = "argmin_of_mean"
+        elif evaluation_fn == "auprc":
+            evaluation_fn = average_precision_score
+            scoring_strategy = "argmin_of_mean"
+        elif evaluation_fn == "norm_aupdc":
+            evaluation_fn = norm_aupdc
+            scoring_strategy = "argmin_of_mean"
+        elif evaluation_fn == "bss":
+            evaluation_fn = brier_skill_score
+            scoring_strategy = "argmin_of_mean"
+        elif evaluation_fn == "mse":
+            evaluation_fn = mean_squared_error
+            scoring_strategy = "argmax_of_mean"
+        else:
+            raise ValueError(
+                    f"evaluation_fn is not set! Available options are {available_scores}"
+                )
+        return evaluation_fn, scoring_strategy
+        
+        
     def calc_permutation_importance(
         self,
         n_vars=5,
         evaluation_fn="auprc",
         subsample=1.0,
         n_jobs=1,
-        n_bootstrap=None,
+        n_permute=1,
         scoring_strategy=None,
         direction='backward',
         verbose=False,
-        random_state=None,
-        return_iterations=True
+        return_iterations=True,
+        random_seed=1, 
     ):
 
         """
@@ -157,7 +195,6 @@ class GlobalInterpret(Attributes):
         See calc_permutation_importance in IntepretToolkit for documentation.
 
         """
-        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
 
         if isinstance(evaluation_fn, str):
             evaluation_fn = evaluation_fn.lower()
@@ -174,25 +211,7 @@ class GlobalInterpret(Attributes):
             )
         
         if isinstance(evaluation_fn,str):    
-            if evaluation_fn == "auc":
-                evaluation_fn = roc_auc_score
-                scoring_strategy = "argmin_of_mean"
-            elif evaluation_fn == "auprc":
-                evaluation_fn = average_precision_score
-                scoring_strategy = "argmin_of_mean"
-            elif evaluation_fn == "norm_aupdc":
-                evaluation_fn = norm_aupdc
-                scoring_strategy = "argmin_of_mean"
-            elif evaluation_fn == "bss":
-                evaluation_fn = brier_skill_score
-                scoring_strategy = "argmin_of_mean"
-            elif evaluation_fn == "mse":
-                evaluation_fn = mean_squared_error
-                scoring_strategy = "argmax_of_mean"
-            else:
-                raise ValueError(
-                    f"evaluation_fn is not set! Available options are {available_scores}"
-                )
+            evaluation_fn, scoring_strategy = self._to_scorer(evaluation_fn)
 
         if is_str:
             if direction == 'forward':
@@ -200,11 +219,6 @@ class GlobalInterpret(Attributes):
                     scoring_strategy = scoring_strategy.replace('max', 'min') 
                 else:
                     scoring_strategy = scoring_strategy.replace('min', 'max') 
-                    
-         
-                
-        if subsample != 1.0 and n_bootstrap is None:
-            n_bootstrap = 1
 
         y = pd.DataFrame(data=self.y, columns=["Test"])
 
@@ -221,10 +235,10 @@ class GlobalInterpret(Attributes):
                 subsample=subsample,
                 nimportant_vars=n_vars,
                 njobs=n_jobs,
-                nbootstrap=n_bootstrap,
+                n_permute=n_permute,
                 verbose=verbose,
                 direction=direction,
-                random_state=random_state,
+                random_seed=random_seed,
             )
 
             pi_dict[estimator_name] = pi_result
@@ -246,11 +260,11 @@ class GlobalInterpret(Attributes):
                     top_features,
                 )
                 data[f"{pass_method}_scores__{estimator_name}"] = (
-                    [f"n_vars_{pass_method}", "n_bootstrap"],
+                    [f"n_vars_{pass_method}", "n_permute"],
                     scores,
                 )
             data[f"original_score__{estimator_name}"] = (
-                ["n_bootstrap"],
+                ["n_permute"],
                 pi_dict[estimator_name].original_score,
             )
 
@@ -270,7 +284,7 @@ class GlobalInterpret(Attributes):
                     temp_features.append(top_features[1])
                     
                 data[f"second_place_scores__{estimator_name}"] = (
-                    [f"n_vars_second_place", "n_bootstrap"],
+                    [f"n_vars_second_place", "n_permute"],
                     temp_scores,
                 )
                 data[f"second_place_rankings__{estimator_name}"] = (
@@ -292,6 +306,7 @@ class GlobalInterpret(Attributes):
         subsample=1.0,
         n_bootstrap=1,
         feature_encoder=None,
+        random_seed=42, 
     ):
 
         """
@@ -334,6 +349,7 @@ class GlobalInterpret(Attributes):
         results_ds : xarray.Dataset 
         
         """
+        self.random_seed = random_seed
         # Check if features is a string
         if is_str(features) or isinstance(features, tuple):
             features = [features]
@@ -401,7 +417,8 @@ class GlobalInterpret(Attributes):
         return results_ds
 
     def _store_results(
-        self, method, estimator_name, features, ydata, xdata, hist_data, categorical=False
+        self, method, estimator_name, features, ydata, xdata, hist_data, 
+        ice_X=None, categorical=False
     ):
         """
         FOR INTERNAL PURPOSES ONLY.
@@ -444,10 +461,14 @@ class GlobalInterpret(Attributes):
             results[f"{feature2[2:]}__bin_values"] = ([f"n_bins{feature2[2:]}"], xdata2)
             results[f"{feature2[2:]}"] = (["n_X"], hist_data2)
 
+        if ice_X is not None:
+            results["X_sampled"] = (["n_samples", "n_features"], ice_X)
+            results["features"] = (["n_features"], ice_X.columns)
+            
         return results
 
     def compute_individual_cond_expect(
-        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
+        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1, 
     ):
         """
         Compute the Individual Conditional Expectations (see https://christophm.github.io/interpretable-ml-book/ice.html)
@@ -475,11 +496,13 @@ class GlobalInterpret(Attributes):
         
         
         Returns
-        ------------
+        --------
         
         results : dict 
         
         """
+        random_state = np.random.RandomState(self.random_seed)
+        
         # Retrieve the estimator object from the estimators dict attribute
         estimator = self.estimators[estimator_name]
 
@@ -493,8 +516,8 @@ class GlobalInterpret(Attributes):
         if float(subsample) != 1.0:
             n_X = len(self.X)
             size = int(n_X * subsample) if subsample <= 1.0 else subsample
-            idx = np.random.choice(n_X, size=size)
-            X = self.X.iloc[idx, :]
+            idxs = random_state.choice(n_X, size=size, replace=False)
+            X = self.X.iloc[idxs, :]
             X.reset_index(drop=True, inplace=True)
         else:
             X = self.X.copy()
@@ -538,6 +561,7 @@ class GlobalInterpret(Attributes):
             ydata=ice_values,
             xdata=grid,
             hist_data=feature_values,
+            ice_X=X,
         )
 
         return results
@@ -605,7 +629,7 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.X, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap, seed=self.random_seed,
             )
         else:
             bootstrap_indices = [self.X.index.to_list()]
@@ -708,7 +732,7 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.X, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap, seed=self.random_seed,
             )
         else:
             bootstrap_indices = [self.X.index.to_list()]
@@ -874,7 +898,7 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.X, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap, seed=self.random_seed,
             )
         else:
             bootstrap_indices = [self.X.index.to_list()]
@@ -1109,9 +1133,6 @@ class GlobalInterpret(Attributes):
             results : nested dictionary
 
         """
-        from inspect import currentframe, getframeinfo
-        from pandas.core.common import SettingWithCopyError
-
         pd.options.mode.chained_assignment = "raise"
 
         if feature_encoder is None:
@@ -1129,7 +1150,7 @@ class GlobalInterpret(Attributes):
         # get the bootstrap samples
         if n_bootstrap > 1 or float(subsample) != 1.0:
             bootstrap_indices = compute_bootstrap_indices(
-                self.X, subsample=subsample, n_bootstrap=n_bootstrap
+                self.X, subsample=subsample, n_bootstrap=n_bootstrap, seed=self.random_seed,
             )
         else:
             bootstrap_indices = [self.X.index.to_list()]
@@ -1186,13 +1207,13 @@ class GlobalInterpret(Attributes):
                     ],
                     axis=1,
                 )
+                X_coded = np.array(X_coded[self.feature_names], dtype=float)
+
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat = estimator.predict_proba(X_coded[self.feature_names])[
-                        :, 1
-                    ]
+                    y_hat = estimator.predict_proba(X_coded)[:,1]
                 else:
-                    y_hat = estimator.predict(X_coded[self.feature_names])
+                    y_hat = estimator.predict(X_coded)
 
                 # encode the categorical feature
                 X_plus_coded = pd.concat(
@@ -1202,15 +1223,14 @@ class GlobalInterpret(Attributes):
                     ],
                     axis=1,
                 )
+  
+                X_plus_coded = np.array(X_plus_coded[ind_plus][self.feature_names], dtype=float)
+                
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat_plus = estimator.predict_proba(
-                        X_plus_coded[ind_plus][self.feature_names]
-                    )[:, 1]
+                    y_hat_plus = estimator.predict_proba(X_plus_coded)[:, 1]
                 else:
-                    y_hat_plus = estimator.predict(
-                        X_plus_coded[ind_plus][self.feature_names]
-                    )
+                    y_hat_plus = estimator.predict(X_plus_coded)
 
                 # encode the categorical feature
                 X_neg_coded = pd.concat(
@@ -1220,15 +1240,14 @@ class GlobalInterpret(Attributes):
                     ],
                     axis=1,
                 )
+                
+                X_neg_coded = np.array(X_neg_coded[ind_neg][self.feature_names], dtype=float)
+                
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat_neg = estimator.predict_proba(
-                        X_neg_coded[ind_neg][self.feature_names]
-                    )[:, 1]
+                    y_hat_neg = estimator.predict_proba(X_neg_coded)[:, 1]
                 else:
-                    y_hat_neg = estimator.predict(
-                        X_neg_coded[ind_neg][self.feature_names]
-                    )
+                    y_hat_neg = estimator.predict(X_neg_coded)
 
             except Exception as ex:
                 raise Exception(
@@ -1260,6 +1279,7 @@ class GlobalInterpret(Attributes):
                     ),
                 ]
             )
+                       
             res_df = delta_df.groupby([feature]).mean()
             res_df.loc[:, "ale"] = res_df.loc[:, "eff"].cumsum()
 
@@ -1271,7 +1291,7 @@ class GlobalInterpret(Attributes):
             ale_temp = res_df["ale"] - sum(res_df["ale"] * groups_props)
             ale.append(ale_temp)
 
-        ale = np.array(ale)
+        ale = np.array(ale, dtype=float)
 
         results = self._store_results(
             method="ale",
@@ -1434,17 +1454,13 @@ class GlobalInterpret(Attributes):
         feature_names = list(self.X.columns)
         data = self.data
 
-        if "Run Date" in feature_names:
-            feature_names.remove("Run Date")
-
         # Get the interpolated ALE curves
-        ale_main_effects = {}
+        main_effect_funcs = {}
         for f in feature_names:
-            ale_y = np.mean(data[f"{f}__{estimator_name}__ale"].values, axis=0)
-            ale_x = data[f"{f}__bin_values"].values
-            
-            ale_main_effects[f] = interp1d(
-                ale_x, ale_y, fill_value="extrapolate", kind="linear"
+            ale = np.mean(data[f"{f}__{estimator_name}__ale"].values, axis=0)
+            x = data[f"{f}__bin_values"].values
+            main_effect_funcs[f] = interp1d(
+                x, ale, fill_value="extrapolate", kind="linear",
             )
 
         # get the bootstrap samples
@@ -1469,12 +1485,11 @@ class GlobalInterpret(Attributes):
             # Get the ALE value for each feature per X
             main_effects = np.array(
                 [
-                    ale_main_effects[f](np.array(X[:,i], dtype=np.float64))
+                   main_effect_funcs[f](np.array(X[:,i], dtype=np.float64))
                     for i, f in enumerate(feature_names)
                 ]
             )
 
-            
             # Sum the ALE values per X and add on the average value
             main_effects = np.sum(main_effects.T, axis=1) + avg_prediction
 
@@ -1510,16 +1525,28 @@ class GlobalInterpret(Attributes):
         results_ds : xarray.Dataset
 
         """
+        feature_names = list([f for f in data.data_vars if "__" not in f])
+        feature_names.sort()
+        
+        features, cat_features = determine_feature_dtype(self.X, feature_names)
+        
+        def _std(values, f, cat_features):
+            """
+            Using a different formula for computing standard deviation for 
+            categorical features. 
+            """
+            if f in cat_features:
+                return 0.25*(np.max(values, axis=1) - np.min(values, axis=1))
+            else:
+                return np.std(values, ddof=1, axis=1) 
+        
         results = {}
         for estimator_name in estimator_names:
-            feature_names = list([f for f in data.data_vars if "__" not in f])
-            feature_names.sort()
-
             # Compute the std over the bin axis [shape = (n_features, n_bootstrap)]
             # Input shape : (n_bootstrap, n_bins) 
             ale_std = np.array(
                 [
-                    np.std(data[f"{f}__{estimator_name}__ale"].values, ddof=1, axis=1)
+                    _std(data[f"{f}__{estimator_name}__ale"].values, f, cat_features)
                     for f in feature_names
                 ]
             )
@@ -1847,7 +1874,8 @@ class GlobalInterpret(Attributes):
 
 
     def compute_main_effect_complexity(self, estimator_name, ale_ds,  
-                            features, max_segments=10, approx_error=0.05):
+                            features, post_process=False, max_segments=10, approx_error=0.05, 
+                                      debug=False):
         """
         Compute the Main Effect Complexity (MEC; Molnar et al. 2019). 
         MEC is the number of linear segements required to approximate 
@@ -1896,26 +1924,30 @@ class GlobalInterpret(Attributes):
         mec = np.zeros((len(features)))
         var = np.zeros((len(features)))
     
+        # Based on line 6 from Algorithm 2: Main Effect Complexity (MEC) in Molnar et al. 2019 
+        # we ignore categorical features (set the slopes to zero). 
+        categorical_features = [self.X[f].dtype.name == "category" for f in self.feature_names]
         best_breaks_dict = {}
-    
+        best_g={}
         for j, f in enumerate(features):
-            ale_y = np.mean(ale_ds[f'{f}__{estimator_name}__ale'].values,axis=0)
-            ale_x = ale_ds[f'{f}__bin_values'].values
+            ale = np.mean(ale_ds[f'{f}__{estimator_name}__ale'].values,axis=0)
+            x = ale_ds[f'{f}__bin_values'].values.reshape(-1, 1)
     
-            b_max=len(ale_x)
+            b_max=len(x)
             # Approximate ALE with linear estimator
             lr = LinearRegression()
-            lr.fit(ale_x.reshape(-1, 1), ale_y)
-            g = lr.predict(ale_x.reshape(-1, 1))
+            lr.fit(x.reshape(-1, 1), ale)
+            g = lr.predict(x)
+    
+            best_g[f] = g
     
             coef = lr.coef_[0]
-            best_score = r2_score(g, ale_y)
-    
+            best_score = r2_score(g, ale)
+
             # Increase num. of segements until approximation is good enough. 
             k = 1
             best_breaks=[]
-            while k < max_segments and (r2_score(g, ale_y) < (1-approx_error)):
-                #print('k: ', k)
+            while k < max_segments and (r2_score(g, ale) < (1-approx_error)):
                 # Find intervals Z_k through exhaustive search along ALE curve breakpoints
                 for b in range(1, b_max-1):
                     if b not in best_breaks:
@@ -1924,43 +1956,180 @@ class GlobalInterpret(Attributes):
                         temp_breaks.sort()
 
                         idxs_set = [range(0,temp_breaks[0]+1)] + \
-                               [range(temp_breaks[i]+1, temp_breaks[i+1]+1) for i in range(len(temp_breaks)-1)] +\
-                               [range(temp_breaks[-1]+1, b_max)]
+                               [range(temp_breaks[i], temp_breaks[i+1]+1) for i in range(len(temp_breaks)-1)] +\
+                               [range(temp_breaks[-1], b_max)]
 
-                        estimator_set = [LinearRegression() for _ in range(len(idxs_set))]
-                        estimator_fit_set = [estimator_set[i].fit(ale_x[idxs].reshape(-1, 1), ale_y[idxs])
+                        estimator_set = [LinearRegression(normalize=True) for _ in range(len(idxs_set))]
+                        
+                        estimator_fit_set_tmp = [estimator_set[i].fit(x[idxs,:], ale[idxs])
                                              for i, idxs in enumerate(idxs_set)
                             ]
+
+                        # For categorical features, set the slope to zero (but keep the intercept).
+                        if f in categorical_features:
+                            estimator_fit_set=[]
+                            for e in estimator_fit_set_tmp:
+                                e.coef_ = np.array([0.])
+                                estimator_fit_set.append(e) 
+                        else:
+                            estimator_fit_set = [e for e in estimator_fit_set_tmp]
+                  
+                     
                         predict_set = [
-                            estimator_fit_set[i].predict(ale_x[idxs].reshape(-1, 1))
+                            estimator_fit_set[i].predict(x[idxs,:])
                                 for i, idxs in enumerate(idxs_set)
                         ]
+                        
+                        # Combine the predictions from the different breaks into 
+                        # a single piece-wise function (line 7 for Molnar et al. 2019)
                         for i, idxs in enumerate(idxs_set):
                             g[idxs] = predict_set[i]
-             
-                        #coef = [estimator_fit_set[i].coef_[0] for i in range(len(idxs_set))]
-            
-                        current_score = r2_score(g, ale_y)
+
+                        current_score = r2_score(g, ale)
                         if current_score > best_score:
                             best_score = current_score
                             best_break = b 
-            
-                        #coef = [estimator_fit_set[i].coef_[0] for i in range(len(idxs_set))]
-                        # Greedily set slopes to zero while R^2 > 1 - error
-                        # Basically, the ALE curve is approximated quite well 
-                        # by a linear estimator
-                        #if r2_score(g, ale_y) < (1 - approx_error): 
-                        #    coef = [estimator_fit_set[i].coef_[0] for i in range(len(idxs_set))]
-                        #else:
-                        #    coef = [0]
+                            # Is approx good enough? Then stop iterating
+                            if best_score > 1-approx_error:
+                                best_g[f] = g
+                                break
+                           
                 best_breaks.append(best_break)
                 k+=1
-    
+
             # Sum of non-zero coefficients minus first intercept 
             best_breaks_dict[f] = best_breaks
-            mec[j] = k #- 1
-            var[j] = np.mean(ale_y**2)
+            mec[j] = k #+ add
+            var[j] = np.var(ale)
     
-        mec_avg = (1/np.sum(var)) * np.sum(var*mec)
+            print(f, k, f'{np.var(ale):.06f}')
     
-        return mec_avg, best_breaks_dict
+        mec_avg = np.average(mec, weights=var) 
+        
+ 
+        if debug:
+            return mec_avg, best_breaks_dict, best_g
+        else:
+            return mec_avg, best_breaks_dict
+
+        
+
+    def scorer(self, estimator, X, y, evaluation_fn):
+        prediction = estimator.predict_proba(X)[:,1]
+        return evaluation_fn(y, prediction)
+
+    def _compute_grouped_importance(self, X, y, evaluation_fn, group, feature_subset, estimator, only, all_permuted_score):
+        scores={group : []}
+        X_permuted = X.copy()
+        for rs in self.random_states:
+            inds = rs.permutation(len(X))
+            # Jointly permute all features expect those in the feature_subset
+            
+            if only:
+                # For group only version, jointly permute all features except those in the feature subset.
+                X_permuted = np.array([X[:, i] if i in feature_subset else X[inds,i] for i in range(X.shape[1])]).T
+            else:
+                # Else, only jointly permute the features in the feature subset.
+                X_permuted = np.array([X[inds, i] if i in feature_subset else X[:,i] for i in range(X.shape[1])]).T
+            
+            group_permute_score = self.scorer(estimator, X_permuted, y, evaluation_fn)
+            
+            if only:
+                imp = group_permute_score - all_permuted_score
+            else:
+                imp = all_permuted_score - group_permute_score
+            
+            scores[group].append(imp)
+            
+        return scores
+
+    def grouped_feature_importance(self, 
+                                   evaluation_fn,
+                                   perm_method, 
+                               n_permute=1, 
+                               groups=None, 
+                               sample_size=100, 
+                               subsample=1.0,
+                               n_jobs=1, 
+                               clustering_kwargs={'n_clusters':10},
+                              ):
+        """
+        The group only permutation feature importance (GOPFI) from Au et al. 2021 
+        (see their equations 10,11). This function has a built-in method for clustering 
+        features using the sklearn.cluster.FeatureAgglomeration. It also has the ability to 
+        compute the results over multiple permutations to improve the feature importance 
+        estimate (and provide uncertainty). 
+    
+        Description of the parameters provided in InterpretToolkit. 
+    
+        """
+        parallel = Parallel(n_jobs=n_jobs)
+        only = True if perm_method == 'grouped_only' else False
+        
+        if isinstance(evaluation_fn, str):
+            evaluation_fn, scoring_strategy = self._to_scorer(evaluation_fn)
+    
+        self.random_states = bootstrap_generator(n_bootstrap=n_permute)
+    
+        # Get the feature names from the dataframe.
+        feature_names = np.array(self.X.columns)
+    
+        # Convert to numpy array
+        X = self.X.values
+    
+        subsample = subsample if subsample > 1 else int(subsample*X.shape[0])
+        inds = self.random_states[-1].choice(len(X), size=subsample, replace=False)
+    
+        # Subsample the examples for computational efficiency. 
+        X = X[inds]
+        y = self.y[inds]
+
+        if groups is None:
+            # Feature clustering is based on a subset of examples for computational efficiency. 
+            sample_size = sample_size if sample_size > 1 else int(sample_size*X.shape[0])
+            inds = np.random.choice(len(X), size=sample_size, replace=False)
+            agglo = cluster.FeatureAgglomeration(**clustering_kwargs)
+            agglo.fit(X[inds,:])
+
+            groups = {f'group {i}' : np.where(agglo.labels_== i)[0] for i in range(np.max(agglo.labels_)+1) }
+            names = {f'group {i}' : feature_names[agglo.labels_==i] for i in range(np.max(agglo.labels_)+1) }
+        else:
+            contains_str = isinstance(list(groups.values())[0][0], str)
+            if contains_str:
+                names = copy(groups)
+                # It is the feature names and thus need to be converted to indices
+                for key, items in groups.items():
+                    N=np.where(np.isin(feature_names, items))[0]
+                    groups[key] = N
+            else:
+                names = {key : feature_names[inds] for key, inds in groups.items() }
+
+        X_permuted = X.copy()
+        if only:
+            # for the group only version, we jointly permute all features and then
+            # determine the original score
+            inds = np.random.permutation(len(X))
+            X_permuted = np.array([X[inds, i] for i in range(X.shape[1])]).T
+
+            
+        results = []
+        for estimator_name, estimator in self.estimators.items():    
+            # Score after jointly permuting all features. 
+            all_permuted_score = self.scorer(estimator, X_permuted, y, evaluation_fn)
+
+            scores = parallel(delayed(self._compute_grouped_importance)(X,y,evaluation_fn, 
+                                                                    group, feature_subset, estimator, only, all_permuted_score) 
+                          for group, feature_subset in groups.items())
+            scores = merge_dict(scores)
+
+            group_names = list(groups.keys())
+            importances = np.array([scores[g] for g in group_names])
+    
+            group_rank = to_pymint_importance(importances, estimator_name=estimator_name, 
+                                      feature_names=group_names, method=perm_method)
+    
+            results.append(group_rank)
+    
+        results = xr.merge(results, combine_attrs="override", compat="override")
+ 
+        return results, names

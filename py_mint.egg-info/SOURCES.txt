@@ -1,3 +1,4 @@
+LICENSE
 README.md
 setup.py
 py_mint.egg-info/PKG-INFO
@@ -31,6 +32,8 @@ pymint/main/PermutationImportance/sequential_selection.py
 pymint/main/PermutationImportance/sklearn_api.py
 pymint/main/PermutationImportance/utils.py
 pymint/plot/__init__.py
+pymint/plot/_box_and_whisker.py
+pymint/plot/_kde_2d.py
 pymint/plot/base_plotting.py
 pymint/plot/dependence.py
 pymint/plot/plot_2D.py

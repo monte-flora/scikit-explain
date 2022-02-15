@@ -4,7 +4,7 @@ import collections
 from ..common.utils import find_correlated_pairs_among_top_features, is_correlated
 from ..common.utils import is_list
 from .base_plotting import PlotStructure
-
+import random
 
 class PlotImportance(PlotStructure):
     """
@@ -12,46 +12,32 @@ class PlotImportance(PlotStructure):
     is designed to be generic enough to handle all possible ranking methods
     computed within PyMint. 
     """
-    SINGLE_VAR_METHODS = ['multipass', 'singlepass', 'ale_variance', 'coefs', 'shap']
-    ALL_METHODS = ['multipass', 
-                   'singlepass', 
-                   'perm_based', 
-                   'ale_variance',
-                   'ale_variance_interactions', 
-                   'coefs',
-                   'shap',
-                   'hstat', 
-                  ]
-    DISPLAY_NAMES = ['Multiple Pass', 
-                   'Single Pass', 
-                   'Permutation-based Interactions', 
-                   'ALE-Based',
-                   'ALE-Based Interactions', 
-                   'Coefficients',
-                   'SHAP',
-                   'H-Statistic'
-                  ]
+    SINGLE_VAR_METHODS = ['multipass', 'singlepass', 'ale_variance', 'coefs', 
+                          'shap_sum', 'gini', 'combined', 'sage', 'grouped', 'grouped_only']
+
+    DISPLAY_NAMES_DICT = {'multipass': 'Multiple Pass', 
+                   'singlepass' : 'Single Pass', 
+                   'perm_based': 'Permutation-based Interactions', 
+                   'ale_variance': 'ALE-Based',
+                   'ale_variance_interactions': 'ALE-Based Interactions', 
+                   'coefs' : 'Coefficients',
+                   'shap_sum' : 'SHAP',
+                   'hstat' : 'H-Statistic',
+                   'gini' : 'Gini Impurity-Based',
+                   'combined' : 'Method-Average Ranking',
+                   'sage' : 'SAGE',
+                   'grouped': 'Grouped', 
+                   'grouped_only' : 'Grouped Only',
+                         }
     
-    DISPLAY_NAMES_DICT = {m : n for m,n in zip(ALL_METHODS, DISPLAY_NAMES)}
+   
     
     def __init__(self, BASE_FONT_SIZE=12):
         super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
     
-    def is_bootstrapped(self, original_score):
-        """Check if the permutation importance results are bootstrapped"""
-        try:
-            len(original_score)
-        except:
-            bootstrapped = False
-        else:
-            bootstrapped = True
-
-        if bootstrapped:
-            original_score_mean = np.mean(original_score)
-        else:
-            original_score_mean = original_score
-
-        return bootstrapped, original_score_mean
+    def is_bootstrapped(self, scores):
+        """Check if the permutation importance results are bootstrapped""" 
+        return np.ndim(scores) > 1 
 
     def _get_axes(self, n_panels, **kwargs):
         """
@@ -124,7 +110,7 @@ class PlotImportance(PlotStructure):
         p_values = kwargs.get('p_values', None)
         colinear_predictors = kwargs.get('colinear_predictors', None)
         rho_threshold = kwargs.get('rho_threshold', 0.8)
-
+        
         only_one_method = all([m[0]==panels[0][0] for m in panels])
         only_one_estimator = all([m[1]==panels[0][1] for m in panels])
         
@@ -154,44 +140,25 @@ class PlotImportance(PlotStructure):
             if not only_one_estimator:
                 ax.set_title(estimator_name)
      
-            sorted_var_names = list(
-                    results[f"{method}_rankings__{estimator_name}"].values
-                )
+            sorted_var_names = list(results[f"{method}_rankings__{estimator_name}"].values)
                 
             if num_vars_to_plot is None:
                 num_vars_to_plot == len(sorted_var_names) 
                 
-
             sorted_var_names = sorted_var_names[
                     : min(num_vars_to_plot, len(sorted_var_names))
                 ]
 
             sorted_var_names = sorted_var_names[::-1]
+            scores = results[f"{method}_scores__{estimator_name}"].values
 
-            scores = [
-                    results[f"{method}_scores__{estimator_name}"].values[i, :]
-                    for i in range(len(sorted_var_names))
-                ]
-
+            scores = scores[:min(num_vars_to_plot, len(sorted_var_names))]
+                        
+            # Reverse the order.
             scores = scores[::-1]
 
-            if "pass" in method:
-                # Get the original score (no permutations)
-                original_score = results[f"original_score__{estimator_name}"].values
-
-                # Get the original score (no permutations)
-                # Check if the permutation importance is bootstrapped
-                bootstrapped, original_score_mean = self.is_bootstrapped(
-                        original_score
-                    )
-
-                sorted_var_names.append("No Permutations")
-                scores.append(original_score)
-            else:
-                bootstrapped = True if np.shape(scores)[1] > 1 else False
-
-                 # Set very small values to zero. 
-                scores = np.where(np.absolute(np.round(scores,17)) < 1e-15, 0, scores)
+            # Set very small values to zero. 
+            scores = np.where(np.absolute(np.round(scores,17)) < 1e-15, 0, scores)
 
             if plot_correlated_features:
                     self._add_correlated_brackets(
@@ -212,53 +179,38 @@ class PlotImportance(PlotStructure):
                     )
                 ]
 
-            if bootstrapped:
-                scores_to_plot = np.array([np.mean(score) for score in scores])
-                ci = np.array(
-                        [
-                            np.abs(np.mean(score) - np.percentile(score, [2.5, 97.5]))
-                            for score in scores
-                        ]
-                    ).transpose()
-
+            if method == 'combined':
+                scores_to_plot = np.nanpercentile(scores, 50, axis=1)
+                # Compute the confidence intervals (ci)
+                ci = np.abs( np.nanpercentile(scores, 50, axis=1) - np.nanpercentile(scores, [25, 75], axis=1))
             else:
-                if "pass" in method:
-                    scores.append(original_score_mean)
-                else:
-                    scores = [score[0] for score in scores]
-
-                scores_to_plot = np.array(scores)
-
+                scores_to_plot = np.nanmean(scores, axis=1)
+                ci = np.abs(np.nanpercentile(scores, 50, axis=1) - np.nanpercentile(scores, [2.5, 97.5], axis=1))
+     
             # Despine
             self.despine_plt(ax)
-
-            if bootstrapped:
-                    ax.barh(
+            
+            ax.barh(
                         np.arange(len(scores_to_plot)),
                         scores_to_plot,
-                        linewidth=1,
-                        alpha=0.8,
+                        linewidth=1.75,
+                        edgecolor='white',
+                        alpha=0.5,
                         color=colors_to_plot,
                         xerr=ci,
-                        capsize=2.5,
-                        ecolor="grey",
-                        error_kw=dict(alpha=0.4),
+                        capsize=3.,
+                        ecolor="k",
+                        error_kw=dict(alpha=0.2, elinewidth=0.9,),
                         zorder=2,
                     )
-            else:
-                    ax.barh(
-                        np.arange(len(scores_to_plot)),
-                        scores_to_plot,
-                        alpha=0.8,
-                        linewidth=1,
-                        color=colors_to_plot,
-                        zorder=2,
-                    )
+     
 
-            if num_vars_to_plot > 10:
-                size = kwargs.get('fontsize', self.FONT_SIZES["teensie"] - 1)
+            if num_vars_to_plot >= 20:
+                size = kwargs.get('fontsize', self.FONT_SIZES["teensie"] - 3)
+            elif num_vars_to_plot > 10:
+                size = kwargs.get('fontsize', self.FONT_SIZES["teensie"] - 2)
             else:
-                size = kwargs.get('fontsize', self.FONT_SIZES["teensie"]) 
+                size = kwargs.get('fontsize', self.FONT_SIZES["teensie"] - 1) 
 
             # Put the variable names _into_ the plot
             if estimator_output == "probability" and method not in ['perm_based', 'coefs']:
@@ -283,17 +235,17 @@ class PlotImportance(PlotStructure):
                 colors = ['k'] +['k']*len(variable_names_to_plot)
             else:
                 # Bold text if value is insignificant. 
-                colors = ['k']+['xkcd:bright blue' if v else 'k' for v in p_values[idx]]
+                colors = ['k']+['xkcd:bright blue' if v else 'k' for v in p_values[i]]
                 
             if colinear_predictors is None:
-                style = ['normal'] +['normal']*len(variable_names_to_plot)
+                fontweight = ['light'] +['light']*len(variable_names_to_plot)
             else:
                 # Italicize text if the VIF > threshold (indicates a multicolinear predictor)
-                style = ['normal']+['italic' if v else 'normal' for v in colinear_predictors[idx]]
+                fontweight = ['light']+['bold' if v else 'light' for v in colinear_predictors[i]]
             
             # Reverse the order since the variable names are reversed. 
             colors = colors[::-1]
-            style = style[::-1]
+            fontweight = fontweight[::-1]
                 
             for i in range(len(variable_names_to_plot)):
                 color = "k"
@@ -317,9 +269,11 @@ class PlotImportance(PlotStructure):
                         size=size,
                         alpha=0.8,
                         color=color,
-                        style=style[i], 
+                        fontweight=fontweight[i], 
                     )
 
+            """
+            depricated. The methods used return proper importance scores. 
             if estimator_output == "probability" and "pass" in method:
                     # Add vertical line
                     ax.axvline(
@@ -339,19 +293,20 @@ class PlotImportance(PlotStructure):
                         rotation=270,
                         alpha=0.7,
                     )
+            """
 
             ax.tick_params(axis="both", which="both", length=0)
             ax.set_yticks([])
                 
             if estimator_output == "probability" and "pass" in method:
-                upper_limit = min(1.1 * np.nanmax(scores_to_plot), 1.0)
+                upper_limit = min(1.1 * np.nanmax(scores_to_plot+ci[1,:]), 1.0)
                 ax.set_xlim([0, upper_limit])
             elif ("perm_based" in method) or ('coefs' in method):
-                upper_limit = max(1.1 * np.nanmax(scores_to_plot), 0.01)
-                lower_limit = min(1.1 * np.nanmin(scores_to_plot), -0.01)
+                upper_limit = max(1.1 * np.nanmax(scores_to_plot+ci[1,:]), 0.01)
+                lower_limit = min(1.1 * np.nanmin(scores_to_plot-ci[0,:]), -0.01)
                 ax.set_xlim([lower_limit, upper_limit])    
             else:
-                upper_limit = 1.1 * np.nanmax(scores_to_plot)
+                upper_limit = 1.1 * np.nanmax(scores_to_plot+ci[1,:])
                 ax.set_xlim([0, upper_limit])
 
             if xticks is not None:
@@ -428,16 +383,22 @@ class PlotImportance(PlotStructure):
         """
         Add bracket connecting features above a given correlation threshold.
         """
+        get_colors = lambda n: list(map(lambda i: "#" + "%06x" % random.randint(0, 0xFFFFFF),range(n)))
+        colors = get_colors(5) # sample return:  ['#8af5da', '#fbc08c', '#b741d0', '#e599f1', '#bbcb59', '#a2a6c0']
+        
         _, pair_indices = find_correlated_pairs_among_top_features(
             corr_matrix,
             top_features,
             rho_threshold=rho_threshold,
         )
+        colors =  get_colors(len(pair_indices))
+        
+        
         x = 0.0001
         dx = 0.0002
         bottom_indices = []
         top_indices = []
-        for p in pair_indices:
+        for p, color in zip(pair_indices, colors):
             if p[0] > p[1]:
                 bottom_idx = p[1]
                 top_idx = p[0]
@@ -454,7 +415,7 @@ class PlotImportance(PlotStructure):
             bottom_indices.append(bottom_idx)
             top_indices.append(top_idx)
 
-            self.annotate_bars(ax, bottom_idx=bottom_idx, top_idx=top_idx, x=x)
+            self.annotate_bars(ax, bottom_idx=bottom_idx, top_idx=top_idx, x=x, color=color)
             x += dx
 
     # You can fill this in by using a dictionary with {var_name: legible_name}

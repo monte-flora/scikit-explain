@@ -1,11 +1,12 @@
 numpy
 pandas
-scikit-learn
+scikit-learn>=1.0.0
 matplotlib
 shap>=0.30.0
 xarray>=0.16.0
 tqdm
 statsmodels
+seaborn>=0.11.0
 
 [interactive]
 jupyter
