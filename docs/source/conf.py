@@ -42,7 +42,6 @@ extensions = ['sphinx.ext.autodoc',
                "sphinx.ext.intersphinx",
                 "sphinx.ext.mathjax",
                 "sphinx.ext.viewcode",
-               "stanford_theme"
              ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -72,10 +71,10 @@ html_tile=project
 # on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
-if not on_rtd:  # only import and set the theme if we're building docs locally
-    import stanford_theme
-    html_theme = 'stanford_theme'
-    html_theme_path = [stanford_theme.get_html_theme_path()]
+#if not on_rtd:  # only import and set the theme if we're building docs locally
+#   import stanford_theme
+#    html_theme = 'stanford_theme'
+#    html_theme_path = [stanford_theme.get_html_theme_path()]
 
 # otherwise, readthedocs.org uses their theme by default, so no need to specify it
 

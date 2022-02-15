@@ -25,20 +25,19 @@ DESCRIPTION = (
 URL = "https://github.com/monte-flora/py-mint/"
 EMAIL = "monte.flora@noaa.gov"
 AUTHOR = "Montgomery Flora"
-REQUIRES_PYTHON = ">=3.6.0"
-VERSION = "0.2.4"
+REQUIRES_PYTHON = ">=3.8.0"
+VERSION = "0.2.5"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     "numpy",
     "pandas",
-    "scikit-learn",
+    "scikit-learn>=1.0.0",
     "matplotlib",
     "shap>=0.30.0",
     "xarray>=0.16.0",
     "tqdm", 
     "statsmodels",
-    "stanford_theme",
     "seaborn>=0.11.0",
 ]
 
@@ -146,7 +145,7 @@ setup(
         # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.8",
     ],
     # $ setup.py publish support.
     cmdclass={
