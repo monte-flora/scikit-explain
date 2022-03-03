@@ -141,7 +141,7 @@ class PlotInterpretCurves(PlotStructure):
             
             nticks = 5 if n_panels < 10 else 3
             lineplt_ax.set_yticks(
-                self.calculate_ticks(ax=lineplt_ax, nticks=nticks, center=True)
+                self.calculate_ticks(ax=lineplt_ax, nticks=nticks, center=False)
             )
 
         majoraxis_fontsize = self.FONT_SIZES["teensie"]

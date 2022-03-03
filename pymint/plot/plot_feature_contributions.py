@@ -542,7 +542,7 @@ class PlotFeatureContributions(PlotStructure):
                 ax.axhline(
                     y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed"
                 )
-                ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=True))
+                ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=False))
                 ax.tick_params(axis="both", labelsize=8)
                 vertices = ax.collections[0].get_offsets()
                 self._to_sci_notation(
