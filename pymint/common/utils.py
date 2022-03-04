@@ -80,7 +80,70 @@ def method_average_ranking(data, features, methods, estimator_names, n_features=
     
     return data
 
-def to_pymint_importance(importances, estimator_name, feature_names, method):
+def non_increasing(L):
+    # Check for decreasing scores. 
+    return all(x>=y for x, y in zip(L, L[1:]))
+
+def compute_importance(results, orientation='negative'):
+    """
+    Compute the importance scores from the permutation importance results.
+    The importance score varies depending on the orientation of the 
+    loss metric and whether it is multipass or singlepass. 
+    
+    
+    Parameters
+    --------------
+    results : InterpretToolkit.permutation_importance results 
+              xr.Dataset
+    orientation : 'positive' or 'negative'
+        To compute proper importance scores, it is easier to convert 
+        all metrics to imitate loss metric behavior (i.e., lower values are better).
+        If 'positive', then scores are converted internally (1-score). Otherwise, 
+        by default, scores are treated as being negatively oriented. 
+    
+    
+    Returns
+    --------------
+    results : xarray.Dataset
+        scores for each estimator and multi/singlepass are
+        converted to proper importance scores. 
+    """
+    estimators = results.attrs['estimators used']
+    for estimator in estimators:
+        orig_score = results[f'original_score__{estimator}'].values
+        for mode in ['singlepass', 'multipass']:
+            permute_scores = results[f'{mode}_scores__{estimator}'].values            
+            
+            decreasing = non_increasing(np.mean(permute_scores, axis=1))
+            
+            if decreasing:
+                if orientation == 'negative':
+                    # Singlepass MSE 
+                    imp = permute_scores - orig_score 
+                else:    
+                    # Backward Multipass on AUC/AUPDC (permuted_score - (1-orig_score)).
+                    # Most positively-oriented metrics top off at 1. 
+                    top = np.max(permute_scores)
+                    imp = permute_scores - (top-orig_score)
+            else:
+                if orientation == 'negative':
+                    # Multipass MSE
+                    top = np.max(permute_scores)
+                    imp = (top+orig_score) - permute_scores
+                else:
+                    # Singlepass AUC/NAUPDC
+                    imp = orig_score - permute_scores
+            
+            # Normalize the importance score so that range is [0,1]
+            imp = imp / (np.percentile(imp, 99) - np.percentile(imp,1))
+            
+            results[f'{mode}_scores__{estimator}'] = ([f'n_vars_{mode}', 'n_bootstrap'], imp)
+            
+            
+    return results 
+
+
+def to_pymint_importance(importances, estimator_name, feature_names, method, normalize=True):
     """Convert coefficients into a importance dataset from plotting purposes"""
   
     bootstrap=False
@@ -125,7 +188,10 @@ def to_pymint_importance(importances, estimator_name, feature_names, method):
         scores_ranked = scores_ranked.reshape(len(scores_ranked),1)
         importances = importances.reshape(len(importances), 1)
         
-        
+    if normalize:
+        # Normalize the importance score so that range is [0,1]
+        scores_ranked = scores_ranked / (np.percentile(scores_ranked, 99) - np.percentile(scores_ranked,1))
+    
     data[f"{method}_scores__{estimator_name}"] = (
                     [f"n_vars_{method}", "n_bootstrap"],
                     scores_ranked,

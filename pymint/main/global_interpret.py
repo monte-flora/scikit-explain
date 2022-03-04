@@ -39,7 +39,7 @@ from ..common.utils import (
     order_groups,
     determine_feature_dtype,
     check_is_permuted, 
-    to_pymint_importance
+    to_pymint_importance, 
 )
 
 from ..common.multiprocessing_utils import run_parallel, to_iterator
@@ -295,7 +295,12 @@ class GlobalInterpret(Attributes):
 
         results_ds = to_xarray(data)
 
-        return results_ds
+        # Determine the orientation of the loss metric used.
+        # If 'max' in strategy, then 'negative' and 
+        # if 'min', then 'positive'
+        orientation = 'positive' if 'min' in scoring_strategy else 'negative' 
+        
+        return results_ds, orientation
 
     def _run_interpret_curves(
         self,

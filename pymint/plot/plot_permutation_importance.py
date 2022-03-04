@@ -130,6 +130,10 @@ class PlotImportance(PlotStructure):
         ax_iterator = self.axes_to_iterator(n_panels, axes)
 
         for i, (panel, ax) in enumerate(zip(panels, ax_iterator)):
+            
+            # Set the facecolor.
+            ax.set_facecolor(kwargs.get('facecolor', (0.95,0.95,0.95)))
+            
             method, estimator_name = panel
             results = data[i]
             if xlabels is not None:
@@ -190,6 +194,8 @@ class PlotImportance(PlotStructure):
             # Despine
             self.despine_plt(ax)
             
+            elinewidth = 0.9 if n_panels <= 3 else 0.5
+            
             ax.barh(
                         np.arange(len(scores_to_plot)),
                         scores_to_plot,
@@ -200,7 +206,7 @@ class PlotImportance(PlotStructure):
                         xerr=ci,
                         capsize=3.,
                         ecolor="k",
-                        error_kw=dict(alpha=0.2, elinewidth=0.9,),
+                        error_kw=dict(alpha=0.2, elinewidth=elinewidth,),
                         zorder=2,
                     )
      
@@ -272,55 +278,22 @@ class PlotImportance(PlotStructure):
                         fontweight=fontweight[i], 
                     )
 
-            """
-            depricated. The methods used return proper importance scores. 
-            if estimator_output == "probability" and "pass" in method:
-                    # Add vertical line
-                    ax.axvline(
-                        original_score_mean,
-                        linestyle="dashed",
-                        color="grey",
-                        linewidth=0.7,
-                        alpha=0.7,
-                    )
-                    ax.text(
-                        original_score_mean,
-                        len(variable_names_to_plot) / 2,
-                        "Original Score",
-                        va="center",
-                        ha="left",
-                        size=self.FONT_SIZES["teensie"],
-                        rotation=270,
-                        alpha=0.7,
-                    )
-            """
-
             ax.tick_params(axis="both", which="both", length=0)
             ax.set_yticks([])
-                
-            if estimator_output == "probability" and "pass" in method:
-                upper_limit = min(1.1 * np.nanmax(scores_to_plot+ci[1,:]), 1.0)
-                ax.set_xlim([0, upper_limit])
-            elif ("perm_based" in method) or ('coefs' in method):
-                upper_limit = max(1.1 * np.nanmax(scores_to_plot+ci[1,:]), 0.01)
-                lower_limit = min(1.1 * np.nanmin(scores_to_plot-ci[0,:]), -0.01)
-                ax.set_xlim([lower_limit, upper_limit])    
-            else:
-                upper_limit = 1.1 * np.nanmax(scores_to_plot+ci[1,:])
-                ax.set_xlim([0, upper_limit])
 
             if xticks is not None:
                 ax.set_xticks(xticks)
             else:
                 self.set_n_ticks(ax, option="x")  
-
-            # make the horizontal plot go with the highest value at the top
-            # ax.invert_yaxis()
-            vals = ax.get_xticks()
-            for tick in vals:
-                ax.axvline(
-                        x=tick, linestyle="dashed", alpha=0.4, color="#eeeeee", zorder=1
-                    )
+            
+            ax.grid(axis='x', linestyle='dashed', alpha=0.1) 
+            
+            # Adds some vertical dashed lines for context. 
+            #vals = ax.get_xticks()
+            #for tick in vals:
+            #    ax.axvline(
+            #            x=tick, linestyle="dashed", alpha=0.1, color="k", zorder=0, lw=0.8,
+            #       )
   
         xlabel = self.DISPLAY_NAMES_DICT.get(method, method) if (only_one_method and xlabels is None) else ''
         major_ax = self.set_major_axis_labels(
@@ -371,11 +344,7 @@ class PlotImportance(PlotStructure):
                                 rotation=270, 
                                 **kwargs)
         
-        if estimator_output == "probability":
-            pos = (0.9, 0.09)
-        else:
-            pos = (0.9, 0.9)
-        self.add_alphabet_label(n_panels, axes, pos=pos)
+        self.add_alphabet_label(n_panels, axes, pos=kwargs.get('alphabet_pos', (0.9, 0.09)))
 
         return fig, axes
         

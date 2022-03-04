@@ -30,6 +30,7 @@ from ..common.utils import (
     is_list,
     is_dataset,
     is_dataframe,
+    compute_importance
     )
 
 class InterpretToolkit(Attributes):
@@ -323,7 +324,7 @@ class InterpretToolkit(Attributes):
                 direction:         backward
                 evaluation_fn:     norm_aupdc
         """
-        results_ds = self.global_obj.calc_permutation_importance(n_vars=n_vars,
+        results_ds, orientation = self.global_obj.calc_permutation_importance(n_vars=n_vars,
                                                     evaluation_fn=evaluation_fn,
                                                     subsample=subsample,
                                                     n_jobs=n_jobs,
@@ -334,15 +335,16 @@ class InterpretToolkit(Attributes):
                                                     return_iterations=return_iterations,
                                                     random_seed=random_seed,
                                                    )
-        
-        
-        
+
         self.attrs_dict['n_multipass_vars'] = n_vars
         self.attrs_dict['method'] = 'permutation_importance'
         self.attrs_dict['direction'] = direction
         self.attrs_dict['evaluation_fn'] = evaluation_fn
         results_ds = self._append_attributes(results_ds)
     
+        # Convert the permutation scores to proper importance scores. 
+        results_ds = compute_importance(results_ds, orientation)
+        
         return results_ds
 
     
