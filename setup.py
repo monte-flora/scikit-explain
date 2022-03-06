@@ -17,16 +17,15 @@ from distutils.version import LooseVersion
 
 
 # Package meta-data.
-NAME = "py-mint"
+NAME = "scikit-explain"
 DESCRIPTION = (
-    "PyMint (Python-based Model INTerpretations) is a user-friendly python package"
-    + " for computing and plotting machine learning interpretation output."
+    "A user-friendly python package for computing and plotting machine learning explainability output."
 )
-URL = "https://github.com/monte-flora/py-mint/"
+URL = "https://github.com/monte-flora/scikit-explain/"
 EMAIL = "monte.flora@noaa.gov"
 AUTHOR = "Montgomery Flora"
 REQUIRES_PYTHON = ">=3.8.0"
-VERSION = "0.2.6"
+VERSION = "0.0.1"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -128,13 +127,13 @@ setup(
     python_requires=REQUIRES_PYTHON,
     url=URL,
     packages=[
-                "pymint",
-                "pymint.common", 
-                "pymint.main", 
-                "pymint.main.PermutationImportance",
-                "pymint.plot", 
+                "skexplain",
+                "skexplain.common", 
+                "skexplain.main", 
+                "skexplain.main.PermutationImportance",
+                "skexplain.plot", 
                 ],
-    package_data = {'pymint' : ['common/data/*', 'common/models/*']},
+    package_data = {'skexplain' : ['common/data/*', 'common/models/*']},
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     setup_requires=["wheel"],
