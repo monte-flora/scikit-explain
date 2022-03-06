@@ -3,12 +3,13 @@ import unittest
 from sklearn.ensemble import RandomForestRegressor
 import os,sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import sklearn
+#sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import skexplain
+
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        estimators = sklearn.load_models()
-        X, y = sklearn.load_data()
+        estimators = skexplain.load_models()
+        X, y = skexplain.load_data()
         X = X.astype({'urban': 'category', 'rural':'category'})
         
         self.X = X
@@ -20,7 +21,7 @@ class TestInitializeInterpretToolkit(TestInterpretToolkit):
     def test_estimator_has_been_fit(self):
         # estimators must be fit! 
         with self.assertRaises(Exception) as ex:
-            sklearn.InterpretToolkit(
+            skexplain.InterpretToolkit(
                 estimators=('Random Forest', RandomForestRegressor()),
                 X=self.X,
                 y=self.y
@@ -31,7 +32,7 @@ class TestInitializeInterpretToolkit(TestInterpretToolkit):
     def test_X_and_feature_names(self):
         # Feature names must be provided if X is an numpy.array. 
         with self.assertRaises(Exception) as ex:
-            sklearn.InterpretToolkit(
+            skexplain.InterpretToolkit(
                 estimators=self.estimators[0],
                 X=self.X.values,
                 y=self.y,
@@ -44,7 +45,7 @@ class TestInitializeInterpretToolkit(TestInterpretToolkit):
         estimator_output='regression'
         available_options = ["raw", "probability"]
         with self.assertRaises(Exception) as ex:
-            sklearn.InterpretToolkit(
+            skexplain.InterpretToolkit(
                 estimators=self.estimators[0],
                 X=self.X,
                 y=self.y,

@@ -11,7 +11,8 @@ before_install:
   - pip install --upgrade pip
   - pip install --upgrade pytest-cov codecov coverage 
 install:
-  - pip install -r requirements.txt
+  - python setup.py develop
+  - pip install .[test]
   - pip install pylint scikit-learn==0.23.2 ipython 
 script:
   - pytest -s tests --cov='.'

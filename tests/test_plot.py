@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import pymint
+#sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import skexplain
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        estimators = pymint.load_models()
-        X_clf, y_clf = pymint.load_data()
+        estimators = skexplain.load_models()
+        X_clf, y_clf = skexplain.load_data()
         X_clf = X_clf.astype({'urban': 'category', 'rural':'category'})
         
         self.X_clf = X_clf
@@ -43,7 +43,7 @@ class Test1DPlotting(TestInterpretToolkit):
     def test_1d_plot(self):
         # Make sure the plot data is correct. 
         feature='X_1'
-        explainer = pymint.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y

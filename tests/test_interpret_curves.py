@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import sklearn
+#sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import skexplain
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        self.estimators = sklearn.load_models()
-        X_clf, y_clf = sklearn.load_data()
+        self.estimators = skexplain.load_models()
+        X_clf, y_clf = skexplain.load_data()
         X_clf = X_clf.astype({'urban': 'category', 'rural':'category'})
         
         self.X_clf = X_clf
@@ -40,7 +40,7 @@ class TestInterpretToolkit(unittest.TestCase):
 class TestInterpretCurves(TestInterpretToolkit):
     def test_bad_feature_names_exception(self):
         feature='bad_feature'
-        explainer = sklearn.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=self.estimators[0],
                 X=self.X_clf,
                 y=self.y_clf
@@ -53,7 +53,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         
     
     def test_too_many_bins(self):
-        explainer = sklearn.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=self.estimators[0],
                 X=self.X_clf,
                 y=self.y_clf
@@ -75,7 +75,7 @@ class TestInterpretCurves(TestInterpretToolkit):
     def test_results_shape(self):
         # Bootstrap has correct shape
         feature='X_1'
-        explainer = sklearn.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -87,7 +87,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         
     def test_xdata(self):
         # Bin values are correct. 
-        explainer = sklearn.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -107,7 +107,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         # ALE is correct for a simple case 
         # The coefficient of the ALE curves must 
         # match that of the actual coefficient. 
-        explainer = sklearn.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -124,7 +124,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         # PD is correct for a simple case 
         # The coefficient of the PD curves must 
         # match that of the actual coefficient. 
-        explainer = sklearn.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
