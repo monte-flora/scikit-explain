@@ -17,6 +17,7 @@ scikit-explain is a user-friendly Python module for machine learning explainabil
   * [Single- and Multi-pass Permutation Importance](https://permutationimportance.readthedocs.io/en/latest/methods.html#permutation-importance) ([Brieman et al. 2001](https://link.springer.com/article/10.1023/A:1010933404324)], [Lakshmanan et al. 2015](https://journals.ametsoc.org/view/journals/atot/32/6/jtech-d-13-00205_1.xml?rskey=hlSyXu&result=2))
   * [SHAP](https://christophm.github.io/interpretable-ml-book/shap.html) 
   * First-order PD/ALE Variance ([Greenwell et al. 2018](https://arxiv.org/abs/1805.04755))    
+  * Grouped permutation importance ([Au et al. 2021](https://arxiv.org/abs/2104.11688))
 
 * Feature Effects/Attributions: 
   * [Partial Dependence](https://christophm.github.io/interpretable-ml-book/pdp.html) (PD), 

@@ -8,12 +8,12 @@ from sklearn.metrics import roc_auc_score
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import pymint
+import skexplain
 
 class TestInterpretToolkit(unittest.TestCase):
     def setUp(self):
-        estimators = pymint.load_models()
-        X, y = pymint.load_data()
+        estimators = skexplain.load_models()
+        X, y = skexplain.load_data()
         X = X.astype({'urban': 'category', 'rural':'category'})
         
         self.X = X
@@ -43,7 +43,7 @@ class TestInterpretToolkit(unittest.TestCase):
 class TestRankings(TestInterpretToolkit):
     def test_bad_evaluation_fn(self):
         # Make sure the metrics are correct
-        explainer = pymint.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -59,7 +59,7 @@ class TestRankings(TestInterpretToolkit):
      
     def test_custom_evaluation_fn(self):
         # scoring_strategy exception for custom evaluation funcs 
-        explainer = pymint.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -79,7 +79,7 @@ class TestRankings(TestInterpretToolkit):
         
     def test_shape(self):
         # Shape is correct (with bootstrapping) 
-        explainer = pymint.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -100,7 +100,7 @@ class TestRankings(TestInterpretToolkit):
         
     def test_correct_rankings(self):
         # rankings are correct for simple case (for multi-pass, single-pass, and ale_variance)
-        explainer = pymint.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -125,7 +125,7 @@ class TestRankings(TestInterpretToolkit):
                         )
 
     def test_ale_variance(self):
-        explainer = pymint.InterpretToolkit(
+        explainer = skexplain.InterpretToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
