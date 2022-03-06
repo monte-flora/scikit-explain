@@ -2,6 +2,7 @@ PyMint Documentation
 ==================================
 
 scikit-explain is a user-friendly Python module for machine learning explainability. Current explainability products includes
+
 * Feature importance: 
   * Single- and Multi-pass Permutation Importance (:ref:`Brieman et al. 2001 <https://link.springer.com/article/10.1023/A:1010933404324>`_ , :ref:`Lakshmanan et al. 2015 <https://journals.ametsoc.org/view/journals/atot/32/6/jtech-d-13-00205_1.xml?rskey=hlSyXu&result=2>`_)
   * :ref:`SHAP <https://christophm.github.io/interpretable-ml-book/shap.html>`_ 
