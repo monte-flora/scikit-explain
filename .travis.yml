@@ -4,14 +4,14 @@ os:
 python:
   - '3.8'
   - '3.9'
+  - '3.10' 
 before_install: 
   - python --version
-  - pip install --upgrade pip
-  - pip install --upgrade pytest-cov codecov coverage 
+  - python3 -m pip install --upgrade pytest-cov codecov coverage 
 install:
   - python setup.py develop
-  - pip install .[test]
-  - pip install pylint ipython 
+  - python3 -m pip install .[test]
+  - python3 -m pip install pylint ipython 
 script:
   - pytest -s tests --cov='.'
 
