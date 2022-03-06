@@ -11,7 +11,7 @@ before_install:
 install:
   - python setup.py develop
   - pip install .[test]
-  - pip install pylint scikit-learn==0.23.2 ipython 
+  - pip install pylint ipython 
 script:
   - pytest -s tests --cov='.'
 

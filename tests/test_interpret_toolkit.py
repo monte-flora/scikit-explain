@@ -3,7 +3,6 @@ import unittest
 from sklearn.ensemble import RandomForestRegressor
 import os,sys
 
-#sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import skexplain
 
 class TestInterpretToolkit(unittest.TestCase):
