@@ -35,7 +35,8 @@ REQUIRED = [
     "matplotlib",
     "shap>=0.30.0",
     "xarray>=0.16.0",
-    "tqdm", 
+    "tqdm",
+    "ipywidgets",
     "statsmodels",
     "seaborn>=0.11.0",
 ]
