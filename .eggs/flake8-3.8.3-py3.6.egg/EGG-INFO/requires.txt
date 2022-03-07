@@ -1,4 +1,0 @@
-importlib-metadata
-mccabe<0.7.0,>=0.6.0
-pycodestyle<2.7.0,>=2.6.0a1
-pyflakes<2.3.0,>=2.2.0
