@@ -31,6 +31,7 @@ class PlotInterpretCurves(PlotStructure):
         display_units={},
         to_probability=False,
         line_colors=None,
+        add_hist=True, 
         **kwargs,
     ):
         """
@@ -80,22 +81,30 @@ class PlotInterpretCurves(PlotStructure):
         
         kwargs = self.get_fig_props(n_panels, **kwargs)
         
-        # create subplots, one for each feature
-        fig, axes = self.create_subplots(n_panels=n_panels, **kwargs)
+        # create subplots, one for each feature 
+        if kwargs.get('ax') is not None:
+            axes = kwargs.get('ax')
+            fig = axes.get_figure()
+            n_panels = 1
+            kwargs.pop('ax') 
+        else:    
+            fig, axes = self.create_subplots(n_panels=n_panels, **kwargs)
+        
         ax_iterator = self.axes_to_iterator(n_panels, axes)
 
         # loop over each feature and add relevant plotting stuff
         for lineplt_ax, feature, color_by in zip(ax_iterator, features, color_bys):
-
+            
             xdata = data[f"{feature}__bin_values"].values
-            hist_data = data[f"{feature}"].values
+            if add_hist:
+                hist_data = data[f"{feature}"].values
            
-            # add histogram
-            hist_ax = self.make_twin_ax(lineplt_ax)
-            twin_yaxis_label = self.add_histogram_axis(
-                hist_ax, hist_data, min_value=xdata[0], max_value=xdata[-1], 
-                n_panels=n_panels, **kwargs
-            )
+                # add histogram
+                hist_ax = self.make_twin_ax(lineplt_ax)
+                twin_yaxis_label = self.add_histogram_axis(
+                    hist_ax, hist_data, min_value=xdata[0], max_value=xdata[-1], 
+                    n_panels=n_panels, **kwargs
+                )
 
             for i, model_name in enumerate(estimator_names):
                 if ice_curves:
@@ -145,7 +154,8 @@ class PlotInterpretCurves(PlotStructure):
             )
 
         majoraxis_fontsize = self.FONT_SIZES["teensie"]
-        major_ax = self.set_major_axis_labels(
+        if fig is not None and add_hist:
+            major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=None,
                 ylabel_left=left_yaxis_label,
@@ -153,11 +163,11 @@ class PlotInterpretCurves(PlotStructure):
                 **kwargs,
             )
         
-        if not only_one_estimator:
+        if not only_one_estimator and fig is not None:
             self.set_legend(n_panels, fig, lineplt_ax, major_ax)
             
         self.add_alphabet_label(n_panels, axes)
-
+        
         return fig, axes
 
     def add_ice_curves(self, fig, ax, 

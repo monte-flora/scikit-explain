@@ -505,15 +505,23 @@ class PlotFeatureContributions(PlotStructure):
                 figsize = (8, 5)
             else:
                 figsize = (10, 8)
-
-            fig, axes = self.create_subplots(
-                n_panels=n_panels,
-                sharex=False,
-                sharey=False,
-                figsize=figsize,
-                wspace=0.4,
-                hspace=0.5,
-            )
+            
+            using_internal_ax=True
+            if kwargs.get('ax') is not None:
+                using_internal_ax=False
+                axes = kwargs.get('ax')
+                fig = axes.get_figure()
+                n_panels = 1
+                kwargs.pop('ax') 
+            else:    
+                fig, axes = self.create_subplots(
+                    n_panels=n_panels,
+                    sharex=False,
+                    sharey=False,
+                    figsize=figsize,
+                    wspace=0.4,
+                    hspace=0.5,
+                )
 
             ax_iterator = self.axes_to_iterator(n_panels, axes)
 
@@ -548,14 +556,15 @@ class PlotFeatureContributions(PlotStructure):
                 self._to_sci_notation(
                     ax=ax, ydata=vertices[:, 1], xdata=vertices[:, 0], colorbar=False
                 )
-
-            major_ax = self.set_major_axis_labels(
-                fig,
-                xlabel=None,
-                ylabel_left=left_yaxis_label,
-                labelpad=25,
-                **kwargs,
-            )
+    
+            if using_internal_ax:
+                major_ax = self.set_major_axis_labels(
+                    fig,
+                    xlabel=None,
+                    ylabel_left=left_yaxis_label,
+                    labelpad=25,
+                    **kwargs,
+                )
 
             self.add_alphabet_label(n_panels, axes)
 

@@ -1016,9 +1016,11 @@ class ExplainToolkit(Attributes):
         if is_str(features):
             if features == 'all':
                 features = self.feature_names
-            if features == 'all_2d':
+            elif features == 'all_2d':
                 features = list(itertools.combinations(self.feature_names, r=2))
-         
+            else:
+                features = [features]
+       
         results_ds = self.global_obj._run_interpret_curves(method="pd",
                             features=features,
                             n_bins=n_bins,
@@ -1277,7 +1279,7 @@ class ExplainToolkit(Attributes):
         return results_ds
     
     
-    def _plot_interpret_curves(self, method, data, estimator_names, features=None, 
+    def _plot_interpret_curves(self, method, data, estimator_names, add_hist, features=None, 
                                display_feature_names={}, display_units={}, 
                                to_probability=False, **kwargs):
         """
@@ -1310,6 +1312,7 @@ class ExplainToolkit(Attributes):
             plot_obj = PlotInterpretCurves(BASE_FONT_SIZE=base_font_size)
             return plot_obj.plot_1d_curve(method=method,
                                           data=data,
+                                          add_hist=add_hist, 
                                           estimator_names=estimator_names,
                                           features=features,
                                           display_feature_names=display_feature_names,
@@ -1317,7 +1320,7 @@ class ExplainToolkit(Attributes):
                                           to_probability = to_probability,
                                           **kwargs)
 
-    def plot_pd(self, pd=None, features=None, estimator_names=None, 
+    def plot_pd(self, pd=None, features=None, estimator_names=None, add_hist=True, 
                 display_feature_names={}, display_units={}, 
                 line_colors=None, to_probability=False, **kwargs):
         """
@@ -1337,7 +1340,10 @@ class ExplainToolkit(Attributes):
         estimator_names : string, list of strings (default is None)
             If using multiple estimators, you can pass a single (or subset of) estimator name(s) 
             to plot for.
-            
+        
+        add_hist : True/False (default=True)
+            If True, adds the histogram of a feature's values behind the interpret curves. 
+        
         display_feature_names : dict 
             For plotting purposes. Dictionary that maps the feature names 
             in the pandas.DataFrame to display-friendly versions.
@@ -1399,6 +1405,7 @@ class ExplainToolkit(Attributes):
                                method='pd',
                                data=pd,
                                features=features,
+                               add_hist=add_hist, 
                                estimator_names=estimator_names,
                                display_feature_names=display_feature_names,
                                display_units=display_units,
@@ -1406,7 +1413,7 @@ class ExplainToolkit(Attributes):
                                line_colors=line_colors,            
                                **kwargs)
 
-    def plot_ale(self, ale=None, features=None, estimator_names=None, 
+    def plot_ale(self, ale=None, features=None, estimator_names=None, add_hist=True,
                  display_feature_names={}, display_units={}, 
                  line_colors=None, to_probability=False, **kwargs):
         """
@@ -1426,6 +1433,9 @@ class ExplainToolkit(Attributes):
         estimator_names : string, list of strings (default is None)
             If using multiple estimators, you can pass a single (or subset of) estimator name(s) 
             to plot for. 
+        
+        add_hist : True/False (default=True)
+            If True, adds the histogram of a feature's values behind the interpret curves. 
         
         display_feature_names : dict 
             For plotting purposes. Dictionary that maps the feature names 
@@ -1490,6 +1500,7 @@ class ExplainToolkit(Attributes):
         return self._plot_interpret_curves(
                                method = 'ale',
                                data=ale,
+                               add_hist=add_hist,
                                features=features,
                                estimator_names=estimator_names,
                                display_feature_names=display_feature_names,

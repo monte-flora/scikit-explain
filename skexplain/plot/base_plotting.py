@@ -121,7 +121,11 @@ class PlotStructure:
             sharey=sharey,
             figsize=figsize,
             dpi=300,
+            
         )
+        
+        fig.patch.set_facecolor('white')
+        
         plt.subplots_adjust(wspace=wspace, hspace=hspace)
 
         if delete:
@@ -143,7 +147,7 @@ class PlotStructure:
         n_columns = kwargs.get("n_columns", 3)
 
         fig = plt.figure(figsize=figsize, dpi=300)
-
+        fig.patch.set_facecolor('white')
         extra_row = 0 if (n_panels % n_columns) == 0 else 1
 
         nrows = ratio * (int(n_panels / n_columns) + extra_row)

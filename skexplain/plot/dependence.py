@@ -187,7 +187,6 @@ def dependence_plot(
     xdata_nan = np.isnan(xdata)
     xdata_notnan = np.invert(xdata_nan)
     
-    
     ####
     if target_values is not None and interaction_index is not None:
         # Binary classification
@@ -227,6 +226,7 @@ def dependence_plot(
             vmin=clow,
             vmax=chigh,
             rasterized=len(xdata) > 500,
+            label = 'SHAP',
         )
         p.set_array(cdata[xdata_notnan])
         
@@ -242,6 +242,7 @@ def dependence_plot(
             vmin=np.min(target_values),
             vmax=np.max(target_values),
             rasterized=len(xdata) > 500,
+            label = 'SHAP',
         )
         
     elif target_values is not None and interaction_index is not None:
@@ -267,6 +268,7 @@ def dependence_plot(
                 vmax=chigh,
                 rasterized=len(xdata) > 500,
                 marker=marker,
+                label = 'SHAP',
                 )
         
     else:
@@ -279,6 +281,7 @@ def dependence_plot(
             alpha=alpha,
             rasterized=len(xdata) > 500,
             marker=marker,
+            label = 'SHAP',
         )
 
     if interaction_index != feature_ind and interaction_index is not None:

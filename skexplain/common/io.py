@@ -1,13 +1,17 @@
 import xarray as xr 
 import pandas as pd
 import pickle
+from collections import ChainMap
+
+from .utils import is_list, is_all_dict
+
 
 def load_pickle(fnames):
     """
     Load data from a list of pickle files as dict
     where the key are provided by the user
     """
-    if not isinstance(fnames, list):
+    if not is_list(fnames):
         fnames = [fnames]
 
     data = []
