@@ -3,7 +3,7 @@ import math
 import shap
 
 from .base_plotting import PlotStructure
-from ..common.utils import combine_like_features
+from ..common.contrib_utils import combine_like_features
 import matplotlib.pyplot as plt
 from .dependence import dependence_plot
 from matplotlib.lines import Line2D

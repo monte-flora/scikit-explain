@@ -5,9 +5,11 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
+sys.path.append(os.path.dirname(os.getcwd()))
+
 import skexplain
 
-class TestInterpretToolkit(unittest.TestCase):
+class TestExplainToolkit(unittest.TestCase):
     def setUp(self):
         estimators = skexplain.load_models()
         X_clf, y_clf = skexplain.load_data()
@@ -37,12 +39,12 @@ class TestInterpretToolkit(unittest.TestCase):
         self.lr_estimator_name = 'Linear Regression'
         self.weights=weights
         
-class Test1DPlotting(TestInterpretToolkit):
+class Test1DPlotting(TestExplainToolkit):
 
     def test_1d_plot(self):
         # Make sure the plot data is correct. 
         feature='X_1'
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -60,17 +62,17 @@ class Test1DPlotting(TestInterpretToolkit):
         # the y values should be the effect
         np.testing.assert_array_equal(eff_plt_data[:, 1], ydata)
 
-class Test2DPlotting(TestInterpretToolkit):
+class Test2DPlotting(TestExplainToolkit):
     def test_2d_plot(self):
         pass
         
-class TestRankPlots(TestInterpretToolkit):
+class TestRankPlots(TestExplainToolkit):
     
     # Make sure the ranking is plotted correctly
     def test_rank_plot(self):
         pass
     
-class TestContributionPlots(TestInterpretToolkit):
+class TestContributionPlots(TestExplainToolkit):
     
     # Make sure the ranking is plotted correctly
     def test_contrib_plot(self):

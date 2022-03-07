@@ -5,9 +5,11 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
+sys.path.append(os.path.dirname(os.getcwd()))
+
 import skexplain
 
-class TestInterpretToolkit(unittest.TestCase):
+class TestExplainToolkit(unittest.TestCase):
     def setUp(self):
         self.estimators = skexplain.load_models()
         X_clf, y_clf = skexplain.load_data()
@@ -36,10 +38,10 @@ class TestInterpretToolkit(unittest.TestCase):
         self.lr_estimator_name = 'Linear Regression'
         self.weights=weights
         
-class TestInterpretCurves(TestInterpretToolkit):
+class TestInterpretCurves(TestExplainToolkit):
     def test_bad_feature_names_exception(self):
         feature='bad_feature'
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=self.estimators[0],
                 X=self.X_clf,
                 y=self.y_clf
@@ -52,7 +54,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         
     
     def test_too_many_bins(self):
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=self.estimators[0],
                 X=self.X_clf,
                 y=self.y_clf
@@ -74,7 +76,7 @@ class TestInterpretCurves(TestInterpretToolkit):
     def test_results_shape(self):
         # Bootstrap has correct shape
         feature='X_1'
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -86,7 +88,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         
     def test_xdata(self):
         # Bin values are correct. 
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -106,7 +108,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         # ALE is correct for a simple case 
         # The coefficient of the ALE curves must 
         # match that of the actual coefficient. 
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -123,7 +125,7 @@ class TestInterpretCurves(TestInterpretToolkit):
         # PD is correct for a simple case 
         # The coefficient of the PD curves must 
         # match that of the actual coefficient. 
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y

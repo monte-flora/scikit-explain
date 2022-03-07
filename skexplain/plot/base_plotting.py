@@ -12,7 +12,8 @@ from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
 import matplotlib
 
-from ..common.utils import combine_like_features, is_outlier
+from ..common.utils import is_outlier
+from ..common.contrib_utils import combine_like_features
 import shap
 
 

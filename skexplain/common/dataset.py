@@ -43,7 +43,7 @@ def load_data():
     ]
 
     # Import the training dataset
-    data_filename = join(path, "data", "data_for_mintpy.csv")
+    data_filename = join(path, "data", "road_surface_data.csv")
 
     # Load the examples the models were trained on.
     TARGET_COLUMN = "cat_rt"

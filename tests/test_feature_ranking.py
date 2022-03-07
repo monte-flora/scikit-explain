@@ -1,14 +1,18 @@
-# Unit test for the accumulated local effect code in MintPy
+# Unit test for the feature ranking code in scikit-explain
 import unittest
 import os, sys
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import roc_auc_score
+import shap
+
+sys.path.append(os.path.dirname(os.getcwd()))
 
 import skexplain
+from skexplain.common.importance_utils import to_skexplain_importance
 
-class TestInterpretToolkit(unittest.TestCase):
+class TestExplainToolkit(unittest.TestCase):
     def setUp(self):
         estimators = skexplain.load_models()
         X, y = skexplain.load_data()
@@ -26,6 +30,7 @@ class TestInterpretToolkit(unittest.TestCase):
         weights = [2.0, 1.5, 1.2, 0.7, 0.2]
         X = np.stack([random_state.uniform(-1,1, size=n_X) for _ in range(n_vars)], axis=-1)
         feature_names = [f'X_{i+1}' for i in range(n_vars)]
+        self.feature_names = feature_names
         X = pd.DataFrame(X, columns=feature_names)
         y = X.dot(weights)
         
@@ -38,10 +43,10 @@ class TestInterpretToolkit(unittest.TestCase):
         self.lr_estimator_name = 'Linear Regression'
         self.weights=weights
         
-class TestRankings(TestInterpretToolkit):
+class TestRankings(TestExplainToolkit):
     def test_bad_evaluation_fn(self):
         # Make sure the metrics are correct
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -57,7 +62,7 @@ class TestRankings(TestInterpretToolkit):
      
     def test_custom_evaluation_fn(self):
         # scoring_strategy exception for custom evaluation funcs 
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -77,7 +82,7 @@ class TestRankings(TestInterpretToolkit):
         
     def test_shape(self):
         # Shape is correct (with bootstrapping) 
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -98,32 +103,53 @@ class TestRankings(TestInterpretToolkit):
         
     def test_correct_rankings(self):
         # rankings are correct for simple case (for multi-pass, single-pass, and ale_variance)
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
             )
-        results = explainer.permutation_importance(n_vars=len(self.X.columns), 
-                                                  evaluation_fn='mse',
-                                                 n_permute=10)
-        
+
         ale = explainer.ale(features=self.X.columns, n_bins=10)
         ale_var_results = explainer.ale_variance(ale, estimator_names=self.lr_estimator_name)
 
+        # TODO: coefficients
+        shap_results = explainer.shap(shap_kwargs={'masker' : 
+                                      shap.maskers.Partition(self.X, max_samples=100, clustering="correlation"), 
+                                     'algorithm' : 'permutation'})
+        
+        # Implicit test of the to_sklearn_importance method. 
+        shap_imp = to_skexplain_importance(shap_results[f'shap_values__{self.lr_estimator_name}'].values, 
+                                           estimator_name=self.lr_estimator_name,
+                                           feature_names = self.feature_names, method='shap_sum')
+        
         true_rankings = np.array( ['X_1', 'X_2', 'X_3', 'X_4', 'X_5'])
 
-        np.testing.assert_array_equal( results[f'multipass_rankings__{self.lr_estimator_name}'].values,
+        # Check the single-pass and multi-pass permutation importance (both forward and backward)
+        for direction in ['backward', 'forward']:
+            results = explainer.permutation_importance(n_vars=len(self.X.columns), 
+                                                  evaluation_fn='mse',
+                                                 n_permute=10, direction=direction)
+        
+            np.testing.assert_array_equal( results[f'multipass_rankings__{self.lr_estimator_name}'].values,
                           true_rankings
                         )
-        np.testing.assert_array_equal( results[f'singlepass_rankings__{self.lr_estimator_name}'].values,
+            np.testing.assert_array_equal( results[f'singlepass_rankings__{self.lr_estimator_name}'].values,
                           true_rankings
                         )
+            
+        # Check the ALE variance. 
         np.testing.assert_array_equal( ale_var_results[f'ale_variance_rankings__{self.lr_estimator_name}'].values,
                          true_rankings
                         )
 
+        # Check the SHAP. 
+        np.testing.assert_array_equal( shap_imp[f'shap_sum_rankings__{self.lr_estimator_name}'].values,
+                         true_rankings
+                        )
+        
+ 
     def test_ale_variance(self):
-        explainer = skexplain.InterpretToolkit(
+        explainer = skexplain.ExplainToolkit(
                 estimators=(self.lr_estimator_name, self.lr),
                 X=self.X,
                 y=self.y
@@ -137,7 +163,7 @@ class TestRankings(TestInterpretToolkit):
             
         except_msg_1 = """
                                  ale must be an xarray.Dataset, 
-                                 perferably generated by InterpretToolkit.ale 
+                                 perferably generated by ExplainToolkit.ale 
                                  to be formatted correctly
                                  """
         self.assertEqual(ex_1.exception.args[0], except_msg_1)
@@ -149,5 +175,12 @@ class TestRankings(TestInterpretToolkit):
         
         self.assertEqual(ex_2.exception.args[0], except_msg_2)
 
+    def test_grouped_importance(self):
+        pass
+    
+    def test_to_skexplain_importance(self):
+        pass
+    
+        
 if __name__ == "__main__":
     unittest.main()

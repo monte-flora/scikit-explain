@@ -1,8 +1,8 @@
 import numpy as np
 import collections
 
-from ..common.utils import find_correlated_pairs_among_top_features, is_correlated
-from ..common.utils import is_list
+from ..common.importance_utils import find_correlated_pairs_among_top_features
+from ..common.utils import is_list, is_correlated
 from .base_plotting import PlotStructure
 import random
 
@@ -15,22 +15,20 @@ class PlotImportance(PlotStructure):
     SINGLE_VAR_METHODS = ['multipass', 'singlepass', 'ale_variance', 'coefs', 
                           'shap_sum', 'gini', 'combined', 'sage', 'grouped', 'grouped_only']
 
-    DISPLAY_NAMES_DICT = {'multipass': 'Multiple Pass', 
-                   'singlepass' : 'Single Pass', 
-                   'perm_based': 'Permutation-based Interactions', 
-                   'ale_variance': 'ALE-Based',
-                   'ale_variance_interactions': 'ALE-Based Interactions', 
-                   'coefs' : 'Coefficients',
-                   'shap_sum' : 'SHAP',
-                   'hstat' : 'H-Statistic',
-                   'gini' : 'Gini Impurity-Based',
+    DISPLAY_NAMES_DICT = {'multipass': 'Multi-Pass Importance Scores', 
+                   'singlepass' : 'Single-Pass Importance Scores', 
+                   'perm_based': 'Permutation-based Interactions Importance Scores', 
+                   'ale_variance': 'ALE-Based Importance Scores',
+                   'ale_variance_interactions': 'ALE-Based Interactions Importance Scores', 
+                   'coefs' : 'Coef. Importance Scores',
+                   'shap_sum' : 'SHAP Importance Scores',
+                   'hstat' : 'H-Stat Importance Scores',
+                   'gini' : 'Gini Importance Scores',
                    'combined' : 'Method-Average Ranking',
-                   'sage' : 'SAGE',
-                   'grouped': 'Grouped', 
-                   'grouped_only' : 'Grouped Only',
+                   'sage' : 'SAGE Importance Scores',
+                   'grouped': 'Grouped Importance Scores', 
+                   'grouped_only' : 'Grouped Only Importance Scores',
                          }
-    
-   
     
     def __init__(self, BASE_FONT_SIZE=12):
         super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)

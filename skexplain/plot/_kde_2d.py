@@ -7,7 +7,7 @@ import scipy
 import itertools
 import numpy as np
 import matplotlib as mpl
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import gaussian_filter
 from .base_plotting import PlotStructure
 
 gray4 = (189/255., 189/255., 189/255.)
