@@ -62,7 +62,7 @@ scikit-explain is compatible with Python 3.8 or newer.  scikit-explain requires 
 numpy
 scipy
 pandas
-scikit-explain
+scikit-learn
 matplotlib
 shap>=0.30.0
 xarray>=0.16.0
@@ -72,9 +72,7 @@ seaborn>=0.11.0
 ```
 
 ### Initializing scikit-explain
-The interface of scikit-explain is the ```InterpretToolkit```, which houses the computations and plotting methods
-for all the explainability methods contained within. Once initialized ```InterpretToolkit``` can 
-compute a variety of explainability methods and plot them. See the tutorial notebooks for examples. 
+The interface of scikit-explain is ```ExplainToolkit```, which houses all of the explainability methods and their corresponding plotting methods. See the tutorial notebooks for examples. 
 
 ```python
 import skexplain
@@ -84,7 +82,7 @@ import skexplain
 estimators = skexplain.load_models()
 X,y = skexplain.load_data()
 
-explainer = skexplain.InterpretToolkit(estimators=estimators,X=X,y=y,)
+explainer = skexplain.ExplainToolkit(estimators=estimators,X=X,y=y,)
 ```
 ## Permutation Importance
 
@@ -134,10 +132,14 @@ To explain specific examples, you can use SHAP values. scikit-explain uses the s
 ```python
 import shap
 single_example = examples.iloc[[0]]
-explainer = skexplain.InterpretToolkit(estimators=estimators[0], X=single_example,)
+explainer = skexplain.ExplainToolkit(estimators=estimators[0], X=single_example,)
 
-background_dataset = shap.sample(examples, 100)
-results = explainer.local_contributions(method='shap', background_dataset=background_dataset)
+
+shap_kwargs={'masker' : 
+              shap.maskers.Partition(X, max_samples=100, clustering="correlation"), 
+              'algorithm' : 'permutation'}
+
+results = explainer.local_contributions(method='shap', shap_kwargs=shap_kwargs)
 fig = explainer.plot_contributions(results)
 ```
 <p align="center">
@@ -145,10 +147,9 @@ fig = explainer.plot_contributions(results)
 </p>
 
 ```python
-explainer = skexplain.InterpretToolkit(estimators=estimators[0],X=X, y=y)
+explainer = skexplain.ExplainToolkit(estimators=estimators[0],X=X, y=y)
 
-background_dataset = shap.sample(examples, 100)
-results = explainer.local_contributions(method='shap', background_dataset=background_dataset, performance_based=True,)
+results = explainer.local_contributions(method='shap', shap_kwargs=shap_kwargs, performance_based=True,)
 fig = myInterpreter.plot_contributions(results)
 ```
 
@@ -157,12 +158,10 @@ fig = myInterpreter.plot_contributions(results)
 </p>
 
 ```python
-explainer = skexplain.InterpretToolkit(estimators=estimators[0],X=X, y=y)
+explainer = skexplain.ExplainToolkit(estimators=estimators[0],X=X, y=y)
                                 
-background_dataset = shap.sample(examples, 100)
-results = explainer.shap(background_dataset=background_dataset)
-shap_values, bias = results['Random Forest']
-explainer.plot_shap(plot_type = 'summary', shap_values=shap_values,) 
+results = explainer.shap(shap_kwargs=shap_kwargs)
+explainer.plot_shap(plot_type = 'summary', shap_values=results,) 
 ```
 
 <p align="center">
