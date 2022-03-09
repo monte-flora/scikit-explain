@@ -20,13 +20,8 @@ jobs:
         python --version 
         python -m pip install --upgrade pip
         python3 -m pip install --upgrade pytest-cov codecov coverage
-        
-    - name: Install the package 
-      run: |
-        python setup.py develop
-        python3 -m pip install .[test]
-        python3 -m pip install pylint ipython 
-        
+        python -m pip install -r requirements.txt
+    
     - name: Run the test scripts 
       run: |
         pytest -s tests --cov='.'
