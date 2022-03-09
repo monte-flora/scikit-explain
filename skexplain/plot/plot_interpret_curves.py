@@ -30,8 +30,8 @@ class PlotInterpretCurves(PlotStructure):
         display_feature_names={},
         display_units={},
         to_probability=False,
-        line_colors=None,
         add_hist=True, 
+        line_kws={},
         **kwargs,
     ):
         """
@@ -56,6 +56,9 @@ class PlotInterpretCurves(PlotStructure):
         """
         self.display_feature_names = display_feature_names
         self.display_units = display_units
+        
+        line_colors = line_kws.get('line_colors', None)
+            
         if line_colors is None:
             line_colors = self.line_colors
 
@@ -82,11 +85,13 @@ class PlotInterpretCurves(PlotStructure):
         kwargs = self.get_fig_props(n_panels, **kwargs)
         
         # create subplots, one for each feature 
+        using_internal_ax = True
         if kwargs.get('ax') is not None:
             axes = kwargs.get('ax')
             fig = axes.get_figure()
             n_panels = 1
             kwargs.pop('ax') 
+            using_internal_ax = False
         else:    
             fig, axes = self.create_subplots(n_panels=n_panels, **kwargs)
         
@@ -122,22 +127,26 @@ class PlotInterpretCurves(PlotStructure):
                     ydata *= 100.0
 
                 # depending on number of bootstrap examples, do CI plot or just mean
+                if 'color' not in line_kws.keys():
+                    line_kws['color'] = line_colors[i]
+                
                 if ydata.shape[0] > 1:
+                    if 'facecolor' not in line_kws.keys():
+                        line_kws['facecolor'] = line_colors[i]
                     self.confidence_interval_plot(
                         lineplt_ax,
                         xdata,
                         ydata,
-                        color=self.line_colors[i],
-                        facecolor=self.line_colors[i],
                         label=model_name,
+                        **line_kws, 
                     )
                 else:
                     self.line_plot(
                         lineplt_ax,
                         xdata,
                         ydata[0, :],
-                        color=line_colors[i],
                         label=model_name.replace("Classifier", ""),
+                        **line_kws,
                     )
 
             self.set_n_ticks(lineplt_ax)
@@ -163,10 +172,11 @@ class PlotInterpretCurves(PlotStructure):
                 **kwargs,
             )
         
-        if not only_one_estimator and fig is not None:
+        if not only_one_estimator and fig is not None and not using_internal_ax:
             self.set_legend(n_panels, fig, lineplt_ax, major_ax)
-            
-        self.add_alphabet_label(n_panels, axes)
+        
+        if using_internal_ax:
+            self.add_alphabet_label(n_panels, axes)
         
         return fig, axes
 
@@ -253,41 +263,42 @@ class PlotInterpretCurves(PlotStructure):
             ax.set_yticks([10 ** i for i in range(0, n_ticks + 1, step)])
             return "Frequency"
 
-    def line_plot(self, ax, xdata, ydata, label, **kwargs):
+    def line_plot(self, ax, xdata, ydata, label, **line_kws):
         """
         Plots a curve of data
         """
-
-        linewidth = kwargs.get("linewidth", 1.25)
-        linestyle = kwargs.get("linestyle", "-")
-
-        if "color" not in kwargs:
-            kwargs["color"] = "xkcd:darkish blue"
-
+        line_kws['linewidth'] = line_kws.get("linewidth", 1.25)
+        line_kws['linestyle'] = line_kws.get("linestyle", "-")
+        line_kws['alpha'] = line_kws.get("alpha", 0.8)
+        
+        if 'line_colors' in line_kws.keys():
+            line_kws.pop('line_colors')
+        
         ax.plot(
             xdata,
             ydata,
-            linewidth=linewidth,
-            linestyle=linestyle,
             label=label,
-            alpha=0.8,
-            **kwargs,
             zorder=2,
+            **line_kws,
         )
 
-    def confidence_interval_plot(self, ax, xdata, ydata, label, **kwargs):
+    def confidence_interval_plot(self, ax, xdata, ydata, label, **line_kws):
         """
         Plot a line plot with an optional confidence interval polygon
         """
-
-        facecolor = kwargs.get("facecolor", "r")
-        color = kwargs.get("color", "blue")
+        facecolor = line_kws.get("facecolor", "r")
 
         # get mean curve
         mean_ydata = np.mean(ydata, axis=0)
 
         # plot mean curve
-        self.line_plot(ax, xdata, mean_ydata, color=color, label=label)
+        line_kws = line_kws.copy()
+        if 'facecolor' in list(line_kws.keys()):
+            line_kws.pop('facecolor')
+        if 'line_colors' in line_kws.keys():
+            line_kws.pop('line_colors')
+        
+        self.line_plot(ax, xdata, mean_ydata,  label=label, **line_kws)
 
         # get confidence interval bounds
         lower_bound, upper_bound = np.percentile(ydata, [2.5, 97.5], axis=0)

@@ -533,29 +533,24 @@ class PlotFeatureContributions(PlotStructure):
                     display_feature_names=display_feature_names_list,
                     interaction_index=interaction_index,
                     target_values=target_values,
-                    color="#1E88E5",
-                    axis_color="#333333",
-                    cmap=None,
-                    dot_size=5,
-                    x_jitter=0,
-                    alpha=1,
                     ax=ax,
                     fig=fig,
                     **kwargs,
                 )
-
-                self.set_n_ticks(ax)
-                self.set_minor_ticks(ax)
-                self.set_axis_label(ax, xaxis_label="".join(feature), yaxis_label="")
-                ax.axhline(
-                    y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed"
-                )
-                ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=False))
-                ax.tick_params(axis="both", labelsize=8)
-                vertices = ax.collections[0].get_offsets()
-                self._to_sci_notation(
+                
+                if using_internal_ax:
+                    self.set_n_ticks(ax)
+                    self.set_minor_ticks(ax)
+                    self.set_axis_label(ax, xaxis_label="".join(feature), yaxis_label="")
+                    ax.axhline(
+                        y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed"
+                    )
+                    ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=False))
+                    ax.tick_params(axis="both", labelsize=8)
+                    vertices = ax.collections[0].get_offsets()
+                    self._to_sci_notation(
                     ax=ax, ydata=vertices[:, 1], xdata=vertices[:, 0], colorbar=False
-                )
+                    )
     
             if using_internal_ax:
                 major_ax = self.set_major_axis_labels(
@@ -566,6 +561,6 @@ class PlotFeatureContributions(PlotStructure):
                     **kwargs,
                 )
 
-            self.add_alphabet_label(n_panels, axes)
+                self.add_alphabet_label(n_panels, axes)
 
             return fig, axes

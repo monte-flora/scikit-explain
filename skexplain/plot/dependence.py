@@ -50,15 +50,6 @@ def dependence_plot(
     display_feature_names=None,
     interaction_index="auto",
     target_values=None,
-    color="#1E88E5",
-    axis_color="#333333",
-    cmap=None,
-    dot_size=5,
-    x_jitter=0,
-    alpha=0.8,
-    title=None,
-    xmin=None,
-    xmax=None,
     ax=None,
     fig=None,
     **kwargs
@@ -116,9 +107,17 @@ def dependence_plot(
     """
     marker = kwargs.get('marker', 'o')
     unnormalize = kwargs.get("unnormalize", None)
-    cmap = colors.red_blue
+    cmap = kwargs.get('cmap', colors.red_blue)
     feature_names = list(X.columns)
  
+    color = kwargs.get("color", "#1E88E5")
+    axis_color=kwargs.get('axis_color', "#333333")
+    dot_size = kwargs.get('s', 5)
+    x_jitter=kwargs.get('x_jitter', 0)
+    xmin = kwargs.get('xmin', None)
+    xmax = kwargs.get('xmax', None) 
+    alpha = kwargs.get('alpha', 0.8) 
+
     histdata = kwargs.get('histdata', None) 
     target = kwargs.get('target', None)
 
@@ -227,6 +226,7 @@ def dependence_plot(
             vmax=chigh,
             rasterized=len(xdata) > 500,
             label = 'SHAP',
+            zorder=0
         )
         p.set_array(cdata[xdata_notnan])
         
@@ -243,6 +243,7 @@ def dependence_plot(
             vmax=np.max(target_values),
             rasterized=len(xdata) > 500,
             label = 'SHAP',
+            zorder=0
         )
         
     elif target_values is not None and interaction_index is not None:
@@ -269,6 +270,7 @@ def dependence_plot(
                 rasterized=len(xdata) > 500,
                 marker=marker,
                 label = 'SHAP',
+                zorder=0,
                 )
         
     else:
@@ -282,6 +284,7 @@ def dependence_plot(
             rasterized=len(xdata) > 500,
             marker=marker,
             label = 'SHAP',
+            zorder=0
         )
 
     if interaction_index != feature_ind and interaction_index is not None:
@@ -314,7 +317,8 @@ def dependence_plot(
             alpha=alpha,
             vmin=clow,
             vmax=chigh,
-            rasterized=len(xdata) > 1000
+            rasterized=len(xdata) > 1000,
+            zorder=0
         )
         p.set_array(cdata[xdata_nan])
     else:
@@ -325,9 +329,10 @@ def dependence_plot(
             linewidth=2,
             color=color,
             alpha=alpha,
-            rasterized=len(xdata) > 1000
+            rasterized=len(xdata) > 1000,
+            zorder=0
         )
-
+ 
     # NOT plotting the full range. 
     #xmin = np.nanpercentile(xdata, 1.0)
     #xmax = np.nanpercentile(xdata, 99.0)

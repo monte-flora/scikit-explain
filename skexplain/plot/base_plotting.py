@@ -234,6 +234,7 @@ class PlotStructure:
         """
         fontsize = kwargs.get("fontsize", self.FONT_SIZES["normal"])
         labelpad = kwargs.get("labelpad", 15)
+        ylabel_right_color = kwargs.get("ylabel_right_color", 'k')
 
         # add a big axis, hide frame
         ax = fig.add_subplot(111, frameon=False)
@@ -254,7 +255,8 @@ class PlotStructure:
             )
 
             ax_right.yaxis.set_label_position("right")
-            ax_right.set_ylabel(ylabel_right, labelpad=2 * labelpad, fontsize=fontsize)
+            ax_right.set_ylabel(ylabel_right, labelpad=2 * labelpad, fontsize=fontsize, 
+                                color=ylabel_right_color)
 
         ax.set_title(title)     
             
@@ -336,20 +338,28 @@ class PlotStructure:
         ax=None,
         upperbound=None,
         lowerbound=None,
-        round_to=1,
+        round_to=5,
         center=False,
     ):
         """
         Calculate the y-axis ticks marks for the line plots
         """
         if ax is not None:
-            upperbound = round(ax.get_ybound()[1], round_to)
-            lowerbound = round(ax.get_ybound()[0], round_to)
+            upperbound = round(ax.get_ybound()[1], 5)
+            lowerbound = round(ax.get_ybound()[0], 5)
 
-        max_value = max(abs(upperbound), abs(lowerbound))
-        if max_value > 10:
+        max_value = max(abs(upperbound), abs(lowerbound))  
+        if 0 < max_value < 1:
+            if max_value < 0.1:
+                round_to = 3
+            else:
+                round_to = 5
+        
+        elif 5 < max_value < 10:
+            round_to = 2
+        else:
             round_to = 0
-
+        
         def round_to_a_base(a_number, base=5):
             return base * round(a_number / base)
 
@@ -361,11 +371,13 @@ class PlotStructure:
             values = np.round(values, round_to)
         else:
             dy = upperbound - lowerbound
-            fit = np.floor(dy / (nticks - 1)) + 1
-            dy_new = (nticks - 1) * fit
-            values = np.linspace(lowerbound, lowerbound + dy_new, nticks)
-            values = np.round(values, round_to)
-
+            # deprecated 8 March 2022 by Monte. 
+            if round_to > 2:
+                fit = np.floor(dy / (nticks - 1)) + 1
+                dy = (nticks - 1) * fit
+            values = np.linspace(lowerbound, lowerbound + dy, nticks)
+            values = np.round(values, round_to)  
+            
         return values
 
     def set_tick_labels(
@@ -424,7 +436,12 @@ class PlotStructure:
         Set a single legend on the bottom of a figure
         for a set of subplots.
         """
-        handles, labels = ax.get_legend_handles_labels()
+        fontsize = kwargs.get('fontsize', 'medium') 
+        ncol = kwargs.get('ncol', 3)
+        handles = kwargs.get('handles', None)
+        labels = kwargs.get('labels', None)
+        if handles is None and labels is None:
+            handles, labels = ax.get_legend_handles_labels()
 
         if n_panels > 3:
             bbox_to_anchor = (0.5, -0.35)
@@ -447,7 +464,9 @@ class PlotStructure:
             bbox_to_anchor=bbox_to_anchor,
             fancybox=True,
             shadow=True,
-            ncol=3,
+            ncol=ncol,
+            fontsize=fontsize,
+            
         )
 
     def set_minor_ticks(self, ax):
@@ -470,6 +489,26 @@ class PlotStructure:
             ax.xaxis.set_major_locator(MaxNLocator(5))
             ax.xaxis.set_major_locator(MaxNLocator(4))
 
+    def make_twin_ax(self, ax):
+        """
+        Create a twin axis on an existing axis with a shared x-axis
+        """
+        # align the twinx axis
+        twin_ax = ax.twinx()
+
+        # Turn twin_ax grid off.
+        twin_ax.grid(False)
+
+        # Set ax's patch invisible
+        ax.patch.set_visible(False)
+        # Set axtwin's patch visible and colorize it in grey
+        twin_ax.patch.set_visible(True)
+
+        # move ax in front
+        ax.set_zorder(twin_ax.get_zorder() + 1)
+
+        return twin_ax        
+            
     def despine_plt(self, ax):
         """
         remove all four spines of plot

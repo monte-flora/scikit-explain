@@ -1281,7 +1281,7 @@ class ExplainToolkit(Attributes):
     
     def _plot_interpret_curves(self, method, data, estimator_names, add_hist, features=None, 
                                display_feature_names={}, display_units={}, 
-                               to_probability=False, **kwargs):
+                               to_probability=False, line_kws={}, **kwargs):
         """
         FOR INTERNAL USE ONLY. 
         
@@ -1318,11 +1318,12 @@ class ExplainToolkit(Attributes):
                                           display_feature_names=display_feature_names,
                                           display_units=display_units,
                                           to_probability = to_probability,
+                                          line_kws=line_kws, 
                                           **kwargs)
 
     def plot_pd(self, pd=None, features=None, estimator_names=None, add_hist=True, 
                 display_feature_names={}, display_units={}, 
-                line_colors=None, to_probability=False, **kwargs):
+                 to_probability=None, line_kws={}, **kwargs):
         """
         Runs the 1D and 2D partial dependence plotting. 
       
@@ -1393,9 +1394,11 @@ class ExplainToolkit(Attributes):
             if is_str(estimator_names):
                 estimator_names = [estimator_names]
                 
-        if pd.attrs['estimator_output'] == 'probability':
+        if to_probability is None and pd.attrs['estimator_output'] == 'probability':
             to_probability=True
-            
+        elif to_probability is None:
+            to_probability=False
+
         if to_probability:
             kwargs['left_yaxis_label'] = 'Centered PD (%)'
         else:
@@ -1410,12 +1413,12 @@ class ExplainToolkit(Attributes):
                                display_feature_names=display_feature_names,
                                display_units=display_units,
                                to_probability=to_probability,
-                               line_colors=line_colors,            
+                               line_kws=line_kws, 
                                **kwargs)
 
     def plot_ale(self, ale=None, features=None, estimator_names=None, add_hist=True,
                  display_feature_names={}, display_units={}, 
-                 line_colors=None, to_probability=False, **kwargs):
+                 to_probability=None, line_kws={}, **kwargs):
         """
         Runs the 1D and 2D accumulated local effects plotting.
         
@@ -1489,9 +1492,11 @@ class ExplainToolkit(Attributes):
             if is_str(estimator_names):
                 estimator_names = [estimator_names]
         
-        if ale.attrs['estimator_output'] == 'probability':
+        if to_probability is None and ale.attrs['estimator_output'] == 'probability':
             to_probability=True
-        
+        elif to_probability is None:
+            to_probability=False
+            
         if to_probability:
             kwargs['left_yaxis_label'] = 'Centered ALE (%)'
         else:
@@ -1506,7 +1511,7 @@ class ExplainToolkit(Attributes):
                                display_feature_names=display_feature_names,
                                display_units=display_units,
                                to_probability=to_probability,
-                               line_colors=line_colors,
+                               line_kws=line_kws, 
                                **kwargs)
 
     def local_contributions(self, 
@@ -1746,6 +1751,7 @@ class ExplainToolkit(Attributes):
             
             dataset[f'shap_values__{estimator_name}'] = (['n_examples', 'n_features'], shap_values)
             dataset[f'bias__{estimator_name}'] = (['n_examples'], bias.astype(np.float64))
+            
         dataset['X'] = (['n_examples', 'n_features'], self.X.values)
         
         # Y may not be given. Need to check! 
@@ -1834,7 +1840,6 @@ class ExplainToolkit(Attributes):
         if plot_type not in ['summary', 'dependence']:
             raise ValueError("Invalid plot_type! Must be 'summary' or 'dependence'")
         
-        
         if isinstance(shap_values, xr.Dataset):
             key = f'shap_values__{estimator_name}'
             if key not in shap_values.data_vars:
@@ -1847,8 +1852,13 @@ class ExplainToolkit(Attributes):
             if np.ndim(shap_values) != 2:
                 raise ValueError('shap_values must be 2D array-like data!') 
                 
+        to_probability=False
+        if self.estimator_output == 'probability':
+            to_probability = kwargs.get('to_probability', None)
+            if to_probability is None:
+                to_probability=True
         
-        to_probability = True if self.estimator_output == 'probability' else False 
+        ###to_probability = True if self.estimator_output == 'probability' else False 
         if to_probability:
             shap_values_copy = np.copy(shap_values)
             shap_values_copy *= 100.
@@ -2176,6 +2186,16 @@ class ExplainToolkit(Attributes):
             
             setattr(s, 'estimator_names', estimator_names)
             setattr(s, 'estimators used', estimator_names) 
+            
+            # in the case of shap_values.
+            if 'X' in results.data_vars:
+                feature_names = results.attrs['features']
+                X = pd.DataFrame(results['X'].values, columns=feature_names)
+                setattr(s, 'X', X)
+                setattr(s, 'feature_names', feature_names)
+            
+            if 'y' in results.data_vars:
+                setattr(s, 'y', results['y'])
             
         return results
 
