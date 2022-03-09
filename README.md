@@ -3,9 +3,6 @@
 </p>
 
 
-<a href="https://app.travis-ci.com/monte-flora/scikit-explain"><img src="https://app.travis-ci.com/monte-flora/scikit-explain.svg?branch=master"></a>
-
-
 ![Unit Tests](https://github.com/monte-flora/scikit-explain/actions/workflows/continuous_intergration.yml/badge.svg)
 [![codecov](https://codecov.io/gh/monte-flora/s/branch/master/graph/badge.svg?token=GG9NRQOZ0N)](https://codecov.io/gh/monte-flora/scikit-explain)
 [![Updates](https://pyup.io/repos/github/monte-flora/scikit-explain/shield.svg)](https://pyup.io/repos/github/monte-flora/scikit-explain/)
