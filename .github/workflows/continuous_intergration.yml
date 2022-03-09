@@ -1,0 +1,36 @@
+name: Continuous Integration 
+
+on : [push]
+
+jobs:
+  build: 
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
+    steps: 
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python --version 
+        python -m pip install --upgrade pip
+        python3 -m pip install --upgrade pytest-cov codecov coverage
+        
+    - name: Install the package 
+      run: |
+        python setup.py develop
+        python3 -m pip install .[test]
+        python3 -m pip install pylint ipython 
+        
+    - name: Run the test scripts 
+      run: |
+        pytest -s tests --cov='.'
+    
+    -name: Upload to codecoverage
+      run: | 
+        codecov -t 6f003a89-f2c5-4586-845f-79c0e5410aa5 
+        bash <(curl -s https://codecov.io/bash)
