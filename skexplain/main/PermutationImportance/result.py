@@ -79,10 +79,9 @@ class ImportanceResult(object):
         """Returns the singlepass results as a dictionary with keys of variable
         names and values of ``(rank, score)``."""
         return self.results[0]
-    
+
     def retrieve_all_iterations(self):
-        """Returns the singlepass results for all multipass iterations
-        """
+        """Returns the singlepass results for all multipass iterations"""
         return self.results
 
     def retrieve_multipass(self):

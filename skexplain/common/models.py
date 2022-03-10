@@ -6,6 +6,7 @@ from joblib import load
 
 path = os.path.dirname(os.path.realpath(__file__))
 
+
 def load_models():
     """Loads models trained on the road surface temperature dataset from Handler et al. (2020)"""
 

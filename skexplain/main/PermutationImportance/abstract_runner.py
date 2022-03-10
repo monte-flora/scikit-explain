@@ -22,8 +22,9 @@ from .result import ImportanceResult
 from .scoring_strategies import verify_scoring_strategy
 from .utils import add_ranks_to_dict, get_data_subset, bootstrap_generator
 
-#from ...common.multiprocessing_utils import run_parallel
-#from ...common.utils import merge_dict
+# from ...common.multiprocessing_utils import run_parallel
+# from ...common.utils import merge_dict
+
 
 def abstract_variable_importance(
     training_data,
@@ -34,11 +35,11 @@ def abstract_variable_importance(
     variable_names=None,
     nimportant_vars=None,
     method=None,
-    perm_method='forwards',
+    perm_method="forwards",
     njobs=1,
     verbose=False,
-    random_seed=1, 
-    **kwargs
+    random_seed=1,
+    **kwargs,
 ):
     """Performs an abstract variable importance over data given a particular
     set of functions for scoring, determining optimal variables, and selecting
@@ -88,31 +89,33 @@ def abstract_variable_importance(
     # Compute the original score over all the data
     original_score = scoring_fn(training_data, scoring_data)
     result_obj = ImportanceResult(method, variable_names, original_score)
-    
-    # This random state generator is for the predictors left permuted. 
+
+    # This random state generator is for the predictors left permuted.
     # As predictors are left permuted, they are left different permuted states
-    # with each multi-pass iterations. This hopefully ensures that the permuted 
-    # variables are not left in poor permutations to bias the results. 
-    random_states = bootstrap_generator(n_bootstrap=nimportant_vars, seed=156) 
-    
+    # with each multi-pass iterations. This hopefully ensures that the permuted
+    # variables are not left in poor permutations to bias the results.
+    random_states = bootstrap_generator(n_bootstrap=nimportant_vars, seed=156)
+
     for i, _ in enumerate(range(nimportant_vars)):
         if verbose:
             print(f"Multi-pass iteration {i+1} out of {nimportant_vars}...")
-        
+
         selection_iter = selection_strategy(
-                training_data,
-                scoring_data,
-                num_vars,
-                important_vars,
-                random_states[i],
-                **kwargs
-            )
+            training_data,
+            scoring_data,
+            num_vars,
+            important_vars,
+            random_states[i],
+            **kwargs,
+        )
 
         if njobs == 1:
             result = _singlethread_iteration(selection_iter, scoring_fn)
         else:
-            result = _multithread_iteration(selection_iter, scoring_fn, njobs, num_vars-i)
-            
+            result = _multithread_iteration(
+                selection_iter, scoring_fn, njobs, num_vars - i
+            )
+
         next_result = add_ranks_to_dict(result, variable_names, scoring_strategy)
         best_var = min(next_result.keys(), key=lambda key: next_result[key][0])
         best_index = np.flatnonzero(variable_names == best_var)[0]
@@ -139,6 +142,7 @@ def _singlethread_iteration(selection_iterator, scoring_fn):
         result[var] = score
     return result
 
+
 def _multithread_iteration(selection_iterator, scoring_fn, njobs, n_vars):
     """Handles a single pass of the abstract variable importance algorithm using
     multithreading
@@ -156,8 +160,7 @@ def _multithread_iteration(selection_iterator, scoring_fn, njobs, n_vars):
         result[index] = score
     return result
 
-    
-    '''
+    """
     def worker(var, training_data, scoring_data):
         result = {}
         score = scoring_fn(training_data, scoring_data, var_idx=var)
@@ -172,4 +175,4 @@ def _multithread_iteration(selection_iterator, scoring_fn, njobs, n_vars):
                 total=n_vars,
                          )
     return merge_dict(result)
-    '''
+    """

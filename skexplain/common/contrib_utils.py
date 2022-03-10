@@ -1,11 +1,10 @@
-#=========================================================
+# =========================================================
 # Libraries for the feature contribution computations.
-#=========================================================
+# =========================================================
 import pandas as pd
 
-def get_indices_based_on_performance(
-    estimator, X, y, estimator_output, n_samples=None
-):
+
+def get_indices_based_on_performance(estimator, X, y, estimator_output, n_samples=None):
     """
      Determines the best hits, worst false alarms, worst misses, and best
      correct negatives using the data provided during initialization.
@@ -21,9 +20,10 @@ def get_indices_based_on_performance(
           listed above
     """
     if len(y) < 1:
-        raise ValueError("y is empty! User likely did not initialize ExplainToolkit with 'y'")
-    
-    
+        raise ValueError(
+            "y is empty! User likely did not initialize ExplainToolkit with 'y'"
+        )
+
     # default is to use all X
     if n_samples is None:
         n_samples = X.shape[0]
@@ -49,23 +49,19 @@ def get_indices_based_on_performance(
         event_X_sorted_indices = event_X.sort_values(
             by="diff", ascending=True
         ).index.values
-        
+
         nonevent_X_sorted_indices = nonevent_X.sort_values(
             by="diff", ascending=False
         ).index.values
 
         best_hit_indices = event_X_sorted_indices[:n_samples].astype(int)
-        worst_miss_indices = event_X_sorted_indices[-n_samples:][::-1].astype(
+        worst_miss_indices = event_X_sorted_indices[-n_samples:][::-1].astype(int)
+
+        best_corr_neg_indices = nonevent_X_sorted_indices[:n_samples].astype(int)
+        worst_false_alarm_indices = nonevent_X_sorted_indices[-n_samples:][::-1].astype(
             int
         )
 
-        best_corr_neg_indices = nonevent_X_sorted_indices[:n_samples].astype(
-            int
-        )
-        worst_false_alarm_indices = nonevent_X_sorted_indices[-n_samples:][
-            ::-1
-        ].astype(int)
-        
         sorted_dict = {
             "Best Hits": best_hit_indices,
             "Worst Misses": worst_miss_indices,

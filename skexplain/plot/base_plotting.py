@@ -22,8 +22,8 @@ class PlotStructure:
     Plot handles figure and subplot generation
     """
 
-    def __init__(self, BASE_FONT_SIZE = 12):
-    
+    def __init__(self, BASE_FONT_SIZE=12):
+
         # Setting the font style to serif
         rcParams["font.family"] = "serif"
 
@@ -45,37 +45,42 @@ class PlotStructure:
 
         plt.rc("font", size=self.FONT_SIZES["normal"])  # controls default text sizes
         plt.rc("axes", titlesize=self.FONT_SIZES["tiny"])  # fontsize of the axes title
-        plt.rc("axes", labelsize=self.FONT_SIZES["normal"])  # fontsize of the x and y labels
         plt.rc(
-        "xtick", labelsize=self.FONT_SIZES["teensie"]
+            "axes", labelsize=self.FONT_SIZES["normal"]
+        )  # fontsize of the x and y labels
+        plt.rc(
+            "xtick", labelsize=self.FONT_SIZES["teensie"]
         )  # fontsize of the x-axis tick marks
         plt.rc(
-        "ytick", labelsize=self.FONT_SIZES["teensie"]
+            "ytick", labelsize=self.FONT_SIZES["teensie"]
         )  # fontsize of the y-axis tick marks
         plt.rc("legend", fontsize=self.FONT_SIZES["teensie"])  # legend fontsize
-        plt.rc("figure", titlesize=self.FONT_SIZES["big"])  # fontsize of the figure title
+        plt.rc(
+            "figure", titlesize=self.FONT_SIZES["big"]
+        )  # fontsize of the figure title
 
     def get_fig_props(self, n_panels, **kwargs):
         """Determine appropriate figure properties"""
         width_slope = 0.875
         height_slope = 0.45
-        intercept = (3.0 - width_slope)
-        figsize = (min((n_panels*width_slope)+intercept,19) , 
-                   min((n_panels*height_slope)+intercept,12)
-                  )
-        
-        wspace=(-0.03*n_panels)+0.85
-        hspace=(0.0175*n_panels)+0.3
-        
-        n_columns = kwargs.get('n_columns', 3)
-        wspace = wspace+0.25 if n_columns > 3 else wspace
-        
+        intercept = 3.0 - width_slope
+        figsize = (
+            min((n_panels * width_slope) + intercept, 19),
+            min((n_panels * height_slope) + intercept, 12),
+        )
+
+        wspace = (-0.03 * n_panels) + 0.85
+        hspace = (0.0175 * n_panels) + 0.3
+
+        n_columns = kwargs.get("n_columns", 3)
+        wspace = wspace + 0.25 if n_columns > 3 else wspace
+
         kwargs["figsize"] = kwargs.get("figsize", figsize)
         kwargs["wspace"] = kwargs.get("wspace", wspace)
         kwargs["hspace"] = kwargs.get("hspace", hspace)
-        
-        return kwargs    
-        
+
+        return kwargs
+
     def create_subplots(self, n_panels, **kwargs):
         """
         Create a series of subplots (MxN) based on the
@@ -121,11 +126,10 @@ class PlotStructure:
             sharey=sharey,
             figsize=figsize,
             dpi=300,
-            
         )
-        
-        fig.patch.set_facecolor('white')
-        
+
+        fig.patch.set_facecolor("white")
+
         plt.subplots_adjust(wspace=wspace, hspace=hspace)
 
         if delete:
@@ -147,7 +151,7 @@ class PlotStructure:
         n_columns = kwargs.get("n_columns", 3)
 
         fig = plt.figure(figsize=figsize, dpi=300)
-        fig.patch.set_facecolor('white')
+        fig.patch.set_facecolor("white")
         extra_row = 0 if (n_panels % n_columns) == 0 else 1
 
         nrows = ratio * (int(n_panels / n_columns) + extra_row)
@@ -218,7 +222,7 @@ class PlotStructure:
         return fig, main_axes, top_axes, rhs_axes, n_rows
 
     def axes_to_iterator(self, n_panels, axes):
-        """Turns axes list into iterable """
+        """Turns axes list into iterable"""
         if isinstance(axes, list):
             return axes
         else:
@@ -226,7 +230,13 @@ class PlotStructure:
             return ax_iterator
 
     def set_major_axis_labels(
-        self, fig, xlabel=None, ylabel_left=None, ylabel_right=None, title=None, **kwargs
+        self,
+        fig,
+        xlabel=None,
+        ylabel_left=None,
+        ylabel_right=None,
+        title=None,
+        **kwargs,
     ):
         """
         Generate a single X- and Y-axis labels for
@@ -234,7 +244,7 @@ class PlotStructure:
         """
         fontsize = kwargs.get("fontsize", self.FONT_SIZES["normal"])
         labelpad = kwargs.get("labelpad", 15)
-        ylabel_right_color = kwargs.get("ylabel_right_color", 'k')
+        ylabel_right_color = kwargs.get("ylabel_right_color", "k")
 
         # add a big axis, hide frame
         ax = fig.add_subplot(111, frameon=False)
@@ -255,11 +265,15 @@ class PlotStructure:
             )
 
             ax_right.yaxis.set_label_position("right")
-            ax_right.set_ylabel(ylabel_right, labelpad=2 * labelpad, fontsize=fontsize, 
-                                color=ylabel_right_color)
+            ax_right.set_ylabel(
+                ylabel_right,
+                labelpad=2 * labelpad,
+                fontsize=fontsize,
+                color=ylabel_right_color,
+            )
 
-        ax.set_title(title)     
-            
+        ax.set_title(title)
+
         return ax
 
     def set_row_labels(self, labels, axes, pos=-1, pad=1.15, rotation=270, **kwargs):
@@ -294,9 +308,10 @@ class PlotStructure:
         A alphabet character to each subpanel.
         """
         fontsize = kwargs.get("fontsize", 10)
-        alphabet_list = [chr(x) for x in range(ord("a"), ord("z") + 1)] + \
-            [f"{chr(x)}{chr(x)}" for x in range(ord("a"), ord("z") + 1)]
-       
+        alphabet_list = [chr(x) for x in range(ord("a"), ord("z") + 1)] + [
+            f"{chr(x)}{chr(x)}" for x in range(ord("a"), ord("z") + 1)
+        ]
+
         ax_iterator = self.axes_to_iterator(n_panels, axes)
 
         for i, ax in enumerate(ax_iterator):
@@ -315,21 +330,27 @@ class PlotStructure:
         """
         Convert decimals (less 0.01) to 10^e notation
         """
-        #f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
-        #g = lambda x, pos: "${}$".format(f._formatSciNotation("%1.10e" % x))
+        # f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
+        # g = lambda x, pos: "${}$".format(f._formatSciNotation("%1.10e" % x))
 
         if colorbar and np.absolute(np.amax(ydata)) <= 0.01:
-            #colorbar.ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
-            colorbar.ax.ticklabel_format(style='sci', )
+            # colorbar.ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+            colorbar.ax.ticklabel_format(
+                style="sci",
+            )
             colorbar.ax.tick_params(axis="y", labelsize=5)
         elif ax:
             if np.absolute(np.amax(xdata)) <= 0.01:
-                ax.ticklabel_format(style='sci', )
-                #ax.xaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.ticklabel_format(
+                    style="sci",
+                )
+                # ax.xaxis.set_major_formatter(mticker.FuncFormatter(g))
                 ax.tick_params(axis="x", labelsize=5, rotation=45)
             if np.absolute(np.amax(ydata)) <= 0.01:
-                #ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
-                ax.ticklabel_format(style='sci', )
+                # ax.yaxis.set_major_formatter(mticker.FuncFormatter(g))
+                ax.ticklabel_format(
+                    style="sci",
+                )
                 ax.tick_params(axis="y", labelsize=5, rotation=45)
 
     def calculate_ticks(
@@ -348,18 +369,18 @@ class PlotStructure:
             upperbound = round(ax.get_ybound()[1], 5)
             lowerbound = round(ax.get_ybound()[0], 5)
 
-        max_value = max(abs(upperbound), abs(lowerbound))  
+        max_value = max(abs(upperbound), abs(lowerbound))
         if 0 < max_value < 1:
             if max_value < 0.1:
                 round_to = 3
             else:
                 round_to = 5
-        
+
         elif 5 < max_value < 10:
             round_to = 2
         else:
             round_to = 0
-        
+
         def round_to_a_base(a_number, base=5):
             return base * round(a_number / base)
 
@@ -371,13 +392,13 @@ class PlotStructure:
             values = np.round(values, round_to)
         else:
             dy = upperbound - lowerbound
-            # deprecated 8 March 2022 by Monte. 
+            # deprecated 8 March 2022 by Monte.
             if round_to > 2:
                 fit = np.floor(dy / (nticks - 1)) + 1
                 dy = (nticks - 1) * fit
             values = np.linspace(lowerbound, lowerbound + dy, nticks)
-            values = np.round(values, round_to)  
-            
+            values = np.round(values, round_to)
+
         return values
 
     def set_tick_labels(
@@ -436,10 +457,10 @@ class PlotStructure:
         Set a single legend on the bottom of a figure
         for a set of subplots.
         """
-        fontsize = kwargs.get('fontsize', 'medium') 
-        ncol = kwargs.get('ncol', 3)
-        handles = kwargs.get('handles', None)
-        labels = kwargs.get('labels', None)
+        fontsize = kwargs.get("fontsize", "medium")
+        ncol = kwargs.get("ncol", 3)
+        handles = kwargs.get("handles", None)
+        labels = kwargs.get("labels", None)
         if handles is None and labels is None:
             handles, labels = ax.get_legend_handles_labels()
 
@@ -448,8 +469,8 @@ class PlotStructure:
         else:
             bbox_to_anchor = (0.5, -0.5)
 
-        bbox_to_anchor = kwargs.get('bbox_to_anchor', bbox_to_anchor)    
-            
+        bbox_to_anchor = kwargs.get("bbox_to_anchor", bbox_to_anchor)
+
         # Shrink current axis's height by 10% on the bottom
         box = major_ax.get_position()
         major_ax.set_position(
@@ -466,7 +487,6 @@ class PlotStructure:
             shadow=True,
             ncol=ncol,
             fontsize=fontsize,
-            
         )
 
     def set_minor_ticks(self, ax):
@@ -507,8 +527,8 @@ class PlotStructure:
         # move ax in front
         ax.set_zorder(twin_ax.get_zorder() + 1)
 
-        return twin_ax        
-            
+        return twin_ax
+
     def despine_plt(self, ax):
         """
         remove all four spines of plot
@@ -524,7 +544,7 @@ class PlotStructure:
         connect predictors in the predictor ranking plot
         for highly correlated pairs.
         """
-        color = kwargs.get('color', "xkcd:slate gray")
+        color = kwargs.get("color", "xkcd:slate gray")
         ax.annotate(
             "",
             xy=(x, bottom_idx),
@@ -541,19 +561,23 @@ class PlotStructure:
 
     def get_custom_colormap(self, vals, **kwargs):
         """Get a custom colormap"""
-        cmap = kwargs.get('cmap', matplotlib.cm.PuOr)
-        bounds = np.linspace(np.nanpercentile(vals, 0),
-                     np.nanpercentile(vals, 100),
-                     10)
+        cmap = kwargs.get("cmap", matplotlib.cm.PuOr)
+        bounds = np.linspace(np.nanpercentile(vals, 0), np.nanpercentile(vals, 100), 10)
 
-        norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N, )
-        mappable = matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap, )
-        
+        norm = matplotlib.colors.BoundaryNorm(
+            bounds,
+            cmap.N,
+        )
+        mappable = matplotlib.cm.ScalarMappable(
+            norm=norm,
+            cmap=cmap,
+        )
+
         return mappable, bounds
-        
-    def add_ice_colorbar(self, fig, ax,  mappable, cb_label, cdata, fontsize, **kwargs):
-        """Add a colorbar to the right of a panel to 
-            accompany ICE color-coded plots"""
+
+    def add_ice_colorbar(self, fig, ax, mappable, cb_label, cdata, fontsize, **kwargs):
+        """Add a colorbar to the right of a panel to
+        accompany ICE color-coded plots"""
         cb = plt.colorbar(mappable, ax=ax, pad=0.2)
         cb.set_label(cb_label, size=fontsize)
         cb.ax.tick_params(labelsize=fontsize)
@@ -562,7 +586,7 @@ class PlotStructure:
         bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
         cb.ax.set_aspect((bbox.height - 0.7) * 20)
         self._to_sci_notation(ax=None, colorbar=cb, ydata=cdata)
-        
+
     def add_colorbar(
         self,
         fig,
@@ -573,7 +597,7 @@ class PlotStructure:
         cax=None,
         **kwargs,
     ):
-        """ Adds a colorbar to the right of a panel"""
+        """Adds a colorbar to the right of a panel"""
         # Add a colobar
         orientation = kwargs.get("orientation", "vertical")
         pad = kwargs.get("pad", 0.1)
@@ -607,5 +631,5 @@ class PlotStructure:
         # cbar.ax.set_aspect((bbox.height - 0.7) * 20)
 
     def save_figure(self, fname, fig=None, bbox_inches="tight", dpi=300, aformat="png"):
-        """ Saves the current figure """
+        """Saves the current figure"""
         plt.savefig(fname=fname, bbox_inches=bbox_inches, dpi=dpi, format=aformat)

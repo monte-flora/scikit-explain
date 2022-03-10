@@ -45,4 +45,4 @@ from .sequential_selection import *
 from .result import ImportanceResult
 from . import sklearn_api
 
-__version__ = '1.2.1.5'
+__version__ = "1.2.1.5"

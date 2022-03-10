@@ -27,12 +27,12 @@ class MidpointNormalize(colors.Normalize):
 class PlotInterpret2D(PlotStructure):
     """
     PlotInterpret2D handles the 2D explainability graphics, which include
-    the 2D ALE and PD. 
+    the 2D ALE and PD.
     """
-    
+
     def __init__(self, BASE_FONT_SIZE=12):
         super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
-    
+
     def add_histogram_axis(
         self,
         ax,
@@ -129,10 +129,10 @@ class PlotInterpret2D(PlotStructure):
         """
         Generic function for 2-D PDP/ALE
         """
-        contours = kwargs.get('contours', False)
-        kde_curves = kwargs.get('kde_curves', True)
-        scatter = kwargs.get('scatter', True)
-        
+        contours = kwargs.get("contours", False)
+        kde_curves = kwargs.get("kde_curves", True)
+        scatter = kwargs.get("scatter", True)
+
         if not is_list(estimator_names):
             estimator_names = to_list(estimator_names)
 
@@ -189,9 +189,9 @@ class PlotInterpret2D(PlotStructure):
                 zdata_temp *= 100.0
 
             # if the max value is super small
-            if np.round(np.max(np.absolute(zdata_temp)), 10) < 1e-5 :
+            if np.round(np.max(np.absolute(zdata_temp)), 10) < 1e-5:
                 zdata_temp[:] = 0.0
-                
+
             max_value = np.nanmax(zdata_temp)
             min_value = np.nanmin(zdata_temp)
 
@@ -213,7 +213,7 @@ class PlotInterpret2D(PlotStructure):
             round_to=5,
             center=True,
         )
-        
+
         cmap = plt.get_cmap(cmap)
         counter = 0
         n = 1
@@ -269,16 +269,11 @@ class PlotInterpret2D(PlotStructure):
 
             if to_probability:
                 zdata *= 100.0
-                
+
             if contours:
-                cf = main_ax.contourf(x1, 
-                                      x2, 
-                                      zdata, 
-                                      cmap=cmap, 
-                                      alpha=0.8, 
-                                      levels=levels, 
-                                      extend='neither'
-                                     )
+                cf = main_ax.contourf(
+                    x1, x2, zdata, cmap=cmap, alpha=0.8, levels=levels, extend="neither"
+                )
             else:
                 cf = main_ax.pcolormesh(
                     x1,
@@ -290,7 +285,7 @@ class PlotInterpret2D(PlotStructure):
                 )
 
             mark_empty = False
-            if mark_empty: 
+            if mark_empty:
                 # Do not autoscale, so that boxes at the edges (contourf only plots the bin
                 # centres, not their edges) don't enlarge the plot.
                 plt.autoscale(False)
@@ -309,11 +304,13 @@ class PlotInterpret2D(PlotStructure):
                     )
 
             if scatter:
-                idx = np.random.choice(len(xdata1_hist), size=min(2000, len(xdata1_hist)))
+                idx = np.random.choice(
+                    len(xdata1_hist), size=min(2000, len(xdata1_hist))
+                )
                 main_ax.scatter(
                     xdata1_hist[idx], xdata2_hist[idx], alpha=0.3, color="grey", s=1
                 )
-            
+
             if kde_curves:
                 try:
                     # There can be very rare cases where two functions are linearly correlated (cc~1.0)

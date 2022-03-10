@@ -123,8 +123,8 @@ class model_scorer(object):
         self.n_permute = n_permute
         self.subsample = subsample
         self.kwargs = kwargs
-        self.random_seed = kwargs.get('random_seed', 42)
-        
+        self.random_seed = kwargs.get("random_seed", 42)
+
     def __call__(self, training_data, scoring_data, var_idx=None):
         """Uses the training, predicting, and evaluation functions to score the
         model given the training and scoring data
@@ -151,59 +151,80 @@ class model_scorer(object):
                 return [self.default_score]
             else:
                 return np.full((self.n_permute,), self.default_score)
-            
+
         # Predict
         if var_idx is None:
-            ###print('Getting the original score!') 
+            ###print('Getting the original score!')
             predictions = self.prediction_fn(trained_model, scoring_inputs)
-            return [self.evaluation_fn(scoring_outputs, predictions)]*self.n_permute
-        
+            return [self.evaluation_fn(scoring_outputs, predictions)] * self.n_permute
+
         random_states = bootstrap_generator(self.n_permute, seed=self.random_seed)
         if self.n_permute == 1 and subsample == int(len(scoring_data[0])):
             ###print('Only one permutation and no subsampling!')
             shuffled_indices = random_states[0].permutation(scoring_outputs.shape[0])
             permuted_scoring_inputs = scoring_inputs.copy()
-            permuted_scoring_inputs[:,var_idx] = scoring_inputs[shuffled_indices,var_idx]
-            permuted_predictions = self.prediction_fn(trained_model, permuted_scoring_inputs)
-            return [self.evaluation_fn(scoring_outputs, permuted_predictions,)]
-        
+            permuted_scoring_inputs[:, var_idx] = scoring_inputs[
+                shuffled_indices, var_idx
+            ]
+            permuted_predictions = self.prediction_fn(
+                trained_model, permuted_scoring_inputs
+            )
+            return [
+                self.evaluation_fn(
+                    scoring_outputs,
+                    permuted_predictions,
+                )
+            ]
+
         elif self.n_permute == 1 and subsample != int(len(scoring_data[0])):
             ###print('Only one permutation, but with subsampling!')
             scores = []
             rows = random_states[0].choice(scoring_outputs.shape[0], subsample)
             subsampled_scoring_outputs = get_data_subset(scoring_outputs, rows)
             subsampled_scoring_inputs = get_data_subset(scoring_inputs, rows)
-            
-            shuffled_indices = random_states[0].permutation(subsampled_scoring_outputs.shape[0])
+
+            shuffled_indices = random_states[0].permutation(
+                subsampled_scoring_outputs.shape[0]
+            )
             permuted_scoring_inputs = subsampled_scoring_inputs.copy()
-            permuted_scoring_inputs[:,var_idx] = subsampled_scoring_inputs[shuffled_indices,var_idx]
-            permuted_predictions = self.prediction_fn(trained_model, permuted_scoring_inputs)
-   
+            permuted_scoring_inputs[:, var_idx] = subsampled_scoring_inputs[
+                shuffled_indices, var_idx
+            ]
+            permuted_predictions = self.prediction_fn(
+                trained_model, permuted_scoring_inputs
+            )
+
             scores.append(
-                    self.evaluation_fn(
-                        subsampled_scoring_outputs,
-                        permuted_predictions,
-                    )
+                self.evaluation_fn(
+                    subsampled_scoring_outputs,
+                    permuted_predictions,
                 )
-            return np.array(scores) 
+            )
+            return np.array(scores)
         else:
-            #print('Multiple permutations and subsampling!')
+            # print('Multiple permutations and subsampling!')
             # Bootstrap the scores
             scores = []
             # This function controls the randomness of the bootstrapping.
-            # The samples are different per bootstrap iteration (but controlled) 
-            # , but this same sampling is repeated per multipass iteration. 
+            # The samples are different per bootstrap iteration (but controlled)
+            # , but this same sampling is repeated per multipass iteration.
             for random_state in random_states:
                 rows = random_state.choice(scoring_outputs.shape[0], subsample)
-                
+
                 subsampled_scoring_outputs = get_data_subset(scoring_outputs, rows)
                 subsampled_scoring_inputs = get_data_subset(scoring_inputs, rows)
-            
-                shuffled_indices = random_state.permutation(subsampled_scoring_outputs.shape[0])
+
+                shuffled_indices = random_state.permutation(
+                    subsampled_scoring_outputs.shape[0]
+                )
                 permuted_scoring_inputs = subsampled_scoring_inputs.copy()
-                permuted_scoring_inputs[:,var_idx] = subsampled_scoring_inputs[shuffled_indices,var_idx]
-                permuted_predictions = self.prediction_fn(trained_model, permuted_scoring_inputs)
-                
+                permuted_scoring_inputs[:, var_idx] = subsampled_scoring_inputs[
+                    shuffled_indices, var_idx
+                ]
+                permuted_predictions = self.prediction_fn(
+                    trained_model, permuted_scoring_inputs
+                )
+
                 scores.append(
                     self.evaluation_fn(
                         subsampled_scoring_outputs,

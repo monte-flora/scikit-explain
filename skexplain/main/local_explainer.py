@@ -29,9 +29,9 @@ class LocalExplainer(Attributes):
 
     """
     ExplainToolkit inherits functionality from LocalExplainer and is not meant to be
-    instantiated by the end-user. 
-    
-    
+    instantiated by the end-user.
+
+
     LocalExplainer incorporates important methods for explaining local estimator behavior
     for select data instances. The calculations are primarily based on SHAP (source), but also
     includes treeinterpreter (source) for random forests and for other select tree-based methods in
@@ -40,10 +40,10 @@ class LocalExplainer(Attributes):
     Attributes
     --------------
     estimators : object, list of objects
-        A fitted estimator object or list thereof implementing `predict` or 
+        A fitted estimator object or list thereof implementing `predict` or
         `predict_proba`.
         Multioutput-multiclass classifiers are not supported.
-        
+
     estimator_names : string, list
         Names of the estimators (for internal and plotting purposes)
 
@@ -55,18 +55,18 @@ class LocalExplainer(Attributes):
         y values.
 
     estimator_output : "raw" or "probability"
-        What output of the estimator should be evaluated. default is None. If None, 
-        ExplainToolkit will determine internally what the estimator output is. 
+        What output of the estimator should be evaluated. default is None. If None,
+        ExplainToolkit will determine internally what the estimator output is.
 
     feature_names : array-like of shape (n_features,), dtype=str, default=None
         Name of each feature; `feature_names[i]` holds the name of the feature
         with index `i`.
         By default, the name of the feature corresponds to their numerical
-        index for NumPy array and their column name for pandas dataframe. 
-        Feature names are only required if X is an ndnumpy.array, it will be 
-        converted to a pandas.DataFrame internally. 
-        
-        
+        index for NumPy array and their column name for pandas dataframe.
+        Feature names are only required if X is an ndnumpy.array, it will be
+        converted to a pandas.DataFrame internally.
+
+
     Reference:
         SHAP
         treeinterpreter
@@ -114,36 +114,36 @@ class LocalExplainer(Attributes):
             Contributions can be computed using treeinterpreter for tree-based estimators
             or using SHAP for both tree- and non-tree-based estimators
         background_dataset : array (n_samples, n_features)
-            A representative (often a K-means or random sample) subset of the 
+            A representative (often a K-means or random sample) subset of the
             data used to train the ML estimator. Used for the background dataset
-            to compute the expected values for the SHAP calculations. 
-            Only required for non-tree based estimators. 
+            to compute the expected values for the SHAP calculations.
+            Only required for non-tree based estimators.
         performance_based : boolean (default=False)
             If True, will average feature contributions over the best and worst
             performing of the given X. The number of X to average over
             is given by n_samples
         n_samples : interger (default=100)
             Number of samples to compute average over if performance_based = True
-            
+
         shap_kwargs : dict
-            Arguments passed to the shap.Explainer object. See 
+            Arguments passed to the shap.Explainer object. See
             https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
-            for details. The main two arguments supported in PyMint is the masker and 
-            algorithm options. By default, the masker option uses 
+            for details. The main two arguments supported in PyMint is the masker and
+            algorithm options. By default, the masker option uses
             masker = shap.maskers.Partition(X, max_samples=100, clustering="correlation") for
             hierarchical clustering by correlations. You can also provide a background dataset
-            e.g., background_dataset = shap.sample(X, 100).reset_index(drop=True). The algorithm 
-            option is set to "auto" by default. 
-            
+            e.g., background_dataset = shap.sample(X, 100).reset_index(drop=True). The algorithm
+            option is set to "auto" by default.
+
             - masker
-            - algorithm 
-            
-            
+            - algorithm
+
+
         Returns
         ---------
-        
+
         results_ds : pandas.DataFrame
-        
+
         """
         if method not in ["tree_interpreter", "shap"]:
             raise ValueError(
@@ -156,8 +156,12 @@ class LocalExplainer(Attributes):
             self.method = method
 
         # will be returned; a list of pandas dataframes, one for each performance dict key
-        contributions_dict = {estimator_name: {} for estimator_name in self.estimator_names}
-        feature_values_dict = {estimator_name: {} for estimator_name in self.estimator_names}
+        contributions_dict = {
+            estimator_name: {} for estimator_name in self.estimator_names
+        }
+        feature_values_dict = {
+            estimator_name: {} for estimator_name in self.estimator_names
+        }
 
         for estimator_name, estimator in self.estimators.items():
             # create entry for current estimator
@@ -180,9 +184,7 @@ class LocalExplainer(Attributes):
                     )
 
                     contributions_dict[estimator_name][key] = cont_dict
-                    feature_values_dict[estimator_name][key] = self.X.iloc[
-                        indices, :
-                    ]
+                    feature_values_dict[estimator_name][key] = self.X.iloc[indices, :]
 
             else:
                 cont_dict = self._get_feature_contributions(
@@ -202,47 +204,50 @@ class LocalExplainer(Attributes):
             contributions_dict[estimator_name] = avg_contrib_dict
             feature_values_dict[estimator_name] = avg_feature_val_dict
 
-        results=(contributions_dict, feature_values_dict)
-        
+        results = (contributions_dict, feature_values_dict)
+
         results_df = to_dataframe(results, self.estimator_names, self.feature_names)
-            
+
         return results_df
 
     def _get_shap_values(
         self,
         estimator,
         X,
-        shap_kwargs=None, 
+        shap_kwargs=None,
     ):
         """
         FOR INTERNAL PURPOSES ONLY.
 
         """
-        masker = shap_kwargs.get('masker', None)
-        algorithm = shap_kwargs.get('algorithm', 'auto')
+        masker = shap_kwargs.get("masker", None)
+        algorithm = shap_kwargs.get("algorithm", "auto")
 
         if masker is None:
-            raise ValueError("""masker in shap_kwargs is None. 
+            raise ValueError(
+                """masker in shap_kwargs is None. 
                              This will cause issues with SHAP. We recommend starting with
                              shap_kwargs = {'masker' = shap.maskers.Partition(X, max_samples=100, clustering="correlation")}
                              where X is the original dataset and not the examples SHAP is being computed for. 
-                             """)
-        
+                             """
+            )
+
         if self.estimator_output == "probability":
             model = estimator.predict_proba
         else:
             model = estimator.predict
-        
-        explainer = shap.Explainer(model=model, 
-                          masker = masker, 
-                          algorithm=algorithm,
-                          )
-        
+
+        explainer = shap.Explainer(
+            model=model,
+            masker=masker,
+            algorithm=algorithm,
+        )
+
         shap_results = explainer(X)
-        
+
         if self.estimator_output == "probability":
-            shap_results = shap_results[...,1]
-        
+            shap_results = shap_results[..., 1]
+
         contributions = shap_results.values
         bias = shap_results.base_values
 
@@ -290,17 +295,16 @@ class LocalExplainer(Attributes):
             contributions, bias = self._get_ti_values(estimator, X)
 
         n_samples = len(X)
-        columns = self.feature_names + ['Bias']
-        
-        if self.estimator_output == "probability":
-            contributions*=100.
+        columns = self.feature_names + ["Bias"]
 
-        # A single example. 
+        if self.estimator_output == "probability":
+            contributions *= 100.0
+
+        # A single example.
         if isinstance(bias, float):
             bias = [bias]
-            
-        bias_reshaped = np.reshape(bias, (len(bias),1))
-        data = np.concatenate((contributions, bias_reshaped), axis=1)                     
-                             
-        return pd.DataFrame(data, columns = columns)
-        
+
+        bias_reshaped = np.reshape(bias, (len(bias), 1))
+        data = np.concatenate((contributions, bias_reshaped), axis=1)
+
+        return pd.DataFrame(data, columns=columns)

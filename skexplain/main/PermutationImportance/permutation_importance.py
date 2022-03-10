@@ -17,7 +17,7 @@ from .abstract_runner import abstract_variable_importance
 from .selection_strategies import (
     PermutationImportanceSelectionStrategy,
     ConditionalPermutationImportanceSelectionStrategy,
-    ForwardPermutationImportanceSelectionStrategy
+    ForwardPermutationImportanceSelectionStrategy,
 )
 from .sklearn_api import (
     score_trained_sklearn_model,
@@ -38,9 +38,9 @@ def permutation_importance(
     variable_names=None,
     nimportant_vars=None,
     njobs=1,
-    direction='backward',
+    direction="backward",
     verbose=False,
-    random_seed=1, 
+    random_seed=1,
     **kwargs,
 ):
     """Performs permutation importance over data given a particular
@@ -59,8 +59,8 @@ def permutation_importance(
         for. Defaults to all variables
     :param njobs: an integer for the number of threads to use. If negative, will
         use ``num_cpus + njobs``. Defaults to 1
-    :param direction: 'forward' or 'backward': Whether the top feature is left permuted (backward) 
-        or all features are permuted and the top features are progressively left unpermuted (forward). 
+    :param direction: 'forward' or 'backward': Whether the top feature is left permuted (backward)
+        or all features are permuted and the top features are progressively left unpermuted (forward).
     :returns: :class:`PermutationImportance.result.ImportanceResult` object
         which contains the results for each run
     """
@@ -68,9 +68,9 @@ def permutation_importance(
         selection_strategy = ConditionalPermutationImportanceSelectionStrategy
     elif direction == "backward":
         selection_strategy = PermutationImportanceSelectionStrategy
-    elif direction == 'forward':
+    elif direction == "forward":
         selection_strategy = ForwardPermutationImportanceSelectionStrategy
-    
+
     else:
         raise ValueError(f'method must be "conditional", "forward", or "backward"!')
 
@@ -89,8 +89,9 @@ def permutation_importance(
             njobs=njobs,
             verbose=verbose,
             random_seed=random_seed,
-            direction=direction, 
+            direction=direction,
         )
+
 
 def sklearn_permutation_importance(
     model,
@@ -104,7 +105,7 @@ def sklearn_permutation_importance(
     n_permute=1,
     subsample=1,
     verbose=False,
-    random_seed=1, 
+    random_seed=1,
     **scorer_kwargs,
 ):
 
@@ -145,13 +146,21 @@ def sklearn_permutation_importance(
     # if len(scoring_data[1].shape) > 1 and scoring_data[1].shape[1] > 1:
     if len(np.unique(scoring_data[1])) == 2:
         scoring_fn = score_trained_sklearn_model_with_probabilities(
-            model, evaluation_fn, n_permute=n_permute, 
-            subsample=subsample, random_seed=random_seed, scorer_kwargs={}
+            model,
+            evaluation_fn,
+            n_permute=n_permute,
+            subsample=subsample,
+            random_seed=random_seed,
+            scorer_kwargs={},
         )
     else:
         scoring_fn = score_trained_sklearn_model(
-            model, evaluation_fn, n_permute=n_permute, 
-            subsample=subsample, random_seed=random_seed, scorer_kwargs={}
+            model,
+            evaluation_fn,
+            n_permute=n_permute,
+            subsample=subsample,
+            random_seed=random_seed,
+            scorer_kwargs={},
         )
 
     return permutation_importance(

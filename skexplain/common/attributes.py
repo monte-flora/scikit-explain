@@ -3,6 +3,7 @@ import pandas as pd
 from collections import OrderedDict
 from .utils import is_list, to_list, is_fitted
 
+
 class Attributes:
     """
     The Attributes class handles checking and setting the attributes
@@ -21,15 +22,15 @@ class Attributes:
         Parameters
         ----------
         estimators : object, list of objects
-            A fitted estimator object or list thereof implementing `predict` or 
+            A fitted estimator object or list thereof implementing `predict` or
             `predict_proba`.
             Multioutput-multiclass classifiers are not supported.
-            
+
         estimator_names : string, list
-            Names of the estimators (for internal and plotting purposes)    
+            Names of the estimators (for internal and plotting purposes)
         """
         estimator_is_none = estimator_objs == None
-        
+
         # Convert the estimator_objs to a list, if it is not already.
         if not is_list(estimator_objs):
             estimator_objs = to_list(estimator_objs)
@@ -45,11 +46,13 @@ class Attributes:
                 estimator_names
             ), "Number of estimator objects is not equal to the number of estimator names given!"
 
-        # Check that the estimator objects have been fit! 
+        # Check that the estimator objects have been fit!
         if not estimator_is_none:
             if not all([is_fitted(m) for m in estimator_objs]):
-                raise ValueError('One or more of the estimators given has NOT been fit!') 
-            
+                raise ValueError(
+                    "One or more of the estimators given has NOT been fit!"
+                )
+
         # Create a dictionary from the estimator_objs and estimator_names.
         # Then set the attributes.
         self.estimators = OrderedDict(
@@ -72,9 +75,7 @@ class Attributes:
             self.y = y.values
         else:
             if y is not None:
-                raise TypeError(
-                    "y must be an numpy array or pandas.DataFrame."
-                )
+                raise TypeError("y must be an numpy array or pandas.DataFrame.")
             else:
                 self.y = None
 
@@ -101,7 +102,7 @@ class Attributes:
         Check the estimator output is given and if not try to
         assume the correct estimator output.
         """
-        
+
         estimator_obj = estimator[0] if is_list(estimator) else estimator
         available_options = ["raw", "probability"]
 

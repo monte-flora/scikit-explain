@@ -66,8 +66,8 @@ def dependence_plot(
     Parameters
     ----------
     feature : string
-        name of the feature to plot. 
-        
+        name of the feature to plot.
+
     shap_values : numpy.array
         Matrix of SHAP values (# samples x # features).
 
@@ -105,21 +105,21 @@ def dependence_plot(
          In this case we do not create a Figure, otherwise we do.
 
     """
-    marker = kwargs.get('marker', 'o')
+    marker = kwargs.get("marker", "o")
     unnormalize = kwargs.get("unnormalize", None)
-    cmap = kwargs.get('cmap', colors.red_blue)
+    cmap = kwargs.get("cmap", colors.red_blue)
     feature_names = list(X.columns)
- 
-    color = kwargs.get("color", "#1E88E5")
-    axis_color=kwargs.get('axis_color', "#333333")
-    dot_size = kwargs.get('s', 5)
-    x_jitter=kwargs.get('x_jitter', 0)
-    xmin = kwargs.get('xmin', None)
-    xmax = kwargs.get('xmax', None) 
-    alpha = kwargs.get('alpha', 0.8) 
 
-    histdata = kwargs.get('histdata', None) 
-    target = kwargs.get('target', None)
+    color = kwargs.get("color", "#1E88E5")
+    axis_color = kwargs.get("axis_color", "#333333")
+    dot_size = kwargs.get("s", 5)
+    x_jitter = kwargs.get("x_jitter", 0)
+    xmin = kwargs.get("xmin", None)
+    xmax = kwargs.get("xmax", None)
+    alpha = kwargs.get("alpha", 0.8)
+
+    histdata = kwargs.get("histdata", None)
+    target = kwargs.get("target", None)
 
     if feature_values is None:
         feature_values = X.values
@@ -133,12 +133,10 @@ def dependence_plot(
     feature_ind = convert_name(feature, shap_values, feature_names)
 
     # guess what other feature as the stongest interaction with the plotted feature
-    interaction_index = get_interaction_index(feature_ind, 
-                          interaction_index, 
-                          shap_values, 
-                          feature_values, 
-                          feature_names)
-    
+    interaction_index = get_interaction_index(
+        feature_ind, interaction_index, shap_values, feature_values, feature_names
+    )
+
     assert (
         shap_values.shape[0] == X.shape[0]
     ), "'shap_values' and 'features' values must have the same number of rows!"
@@ -147,8 +145,8 @@ def dependence_plot(
     ), "'shap_values' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values
-    oinds = np.arange(shap_values.shape[0])  
-    
+    oinds = np.arange(shap_values.shape[0])
+
     # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
 
@@ -185,29 +183,28 @@ def dependence_plot(
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xdata_nan = np.isnan(xdata)
     xdata_notnan = np.invert(xdata_nan)
-    
+
     ####
     if target_values is not None and interaction_index is not None:
         # Binary classification
         classes = np.unique(target_values)
         n_classes = len(classes)
         if n_classes == 2:
-            dot_sizes = [1,8]
+            dot_sizes = [1, 8]
             markers = ["o", "v"]
-            idx_set = [np.where(target_values==i)[0] for i in classes]
+            idx_set = [np.where(target_values == i)[0] for i in classes]
             alphas = [0.4, 1.0]
-            
 
-    # Plot background histogram 
+    # Plot background histogram
     # add histogram
     if histdata is not None:
         hist_ax = make_twin_ax(ax)
         twin_yaxis_label = add_histogram_axis(
-                hist_ax, 
-                feature=feature,
-                target=target,
-                data = histdata, 
-            )
+            hist_ax,
+            feature=feature,
+            target=target,
+            data=histdata,
+        )
 
     if interaction_index is not None and target_values is None:
         cdata_imp = cdata.copy()
@@ -225,11 +222,11 @@ def dependence_plot(
             vmin=clow,
             vmax=chigh,
             rasterized=len(xdata) > 500,
-            label = 'SHAP',
-            zorder=0
+            label="SHAP",
+            zorder=0,
         )
         p.set_array(cdata[xdata_notnan])
-        
+
     elif target_values is not None and interaction_index is None:
         p = ax.scatter(
             xdata[xdata_notnan],
@@ -242,12 +239,12 @@ def dependence_plot(
             vmin=np.min(target_values),
             vmax=np.max(target_values),
             rasterized=len(xdata) > 500,
-            label = 'SHAP',
-            zorder=0
+            label="SHAP",
+            zorder=0,
         )
-        
+
     elif target_values is not None and interaction_index is not None:
-        
+
         cdata_imp = cdata.copy()
         cdata_imp[np.isnan(cdata)] = (clow + chigh) / 2.0
         cdata[cdata_imp > chigh] = chigh
@@ -256,7 +253,7 @@ def dependence_plot(
             xdata_temp = xdata[xdata_notnan]
             ydata_temp = s[xdata_notnan]
             cdata_temp = cdata[xdata_notnan]
-            
+
             p = ax.scatter(
                 xdata_temp[idxs],
                 ydata_temp[idxs],
@@ -269,10 +266,10 @@ def dependence_plot(
                 vmax=chigh,
                 rasterized=len(xdata) > 500,
                 marker=marker,
-                label = 'SHAP',
+                label="SHAP",
                 zorder=0,
-                )
-        
+            )
+
     else:
         p = ax.scatter(
             xdata[xdata_notnan],
@@ -283,8 +280,8 @@ def dependence_plot(
             alpha=alpha,
             rasterized=len(xdata) > 500,
             marker=marker,
-            label = 'SHAP',
-            zorder=0
+            label="SHAP",
+            zorder=0,
         )
 
     if interaction_index != feature_ind and interaction_index is not None:
@@ -300,11 +297,11 @@ def dependence_plot(
         base_plot._to_sci_notation(ax=None, colorbar=cb, ydata=cdata)
 
     # plot any nan feature values as tick marks along the y-axis
-    # NOT plotting the full range. 
+    # NOT plotting the full range.
     xmin = np.nanpercentile(xdata, 2.0)
     xmax = np.nanpercentile(xdata, 97.5)
     ax.set_xlim([xmin, xmax])
-    
+
     xlim = ax.get_xlim()
     if interaction_index is not None:
         p = ax.scatter(
@@ -318,7 +315,7 @@ def dependence_plot(
             vmin=clow,
             vmax=chigh,
             rasterized=len(xdata) > 1000,
-            zorder=0
+            zorder=0,
         )
         p.set_array(cdata[xdata_nan])
     else:
@@ -330,13 +327,13 @@ def dependence_plot(
             color=color,
             alpha=alpha,
             rasterized=len(xdata) > 1000,
-            zorder=0
+            zorder=0,
         )
- 
-    # NOT plotting the full range. 
-    #xmin = np.nanpercentile(xdata, 1.0)
-    #xmax = np.nanpercentile(xdata, 99.0)
-    #ax.set_xlim([xmin, xmax])
+
+    # NOT plotting the full range.
+    # xmin = np.nanpercentile(xdata, 1.0)
+    # xmax = np.nanpercentile(xdata, 99.0)
+    # ax.set_xlim([xmin, xmax])
 
     # make the plot more readable
     ax.xaxis.set_ticks_position("bottom")
@@ -347,43 +344,48 @@ def dependence_plot(
     for spine in ax.spines.values():
         spine.set_edgecolor(axis_color)
 
-def get_interaction_index(feature_ind, 
-                          interaction_index, 
-                          shap_values, 
-                          feature_values, 
-                          feature_names):
-    """
-    """
+
+def get_interaction_index(
+    feature_ind, interaction_index, shap_values, feature_values, feature_names
+):
+    """ """
     # guess what other feature as the stongest interaction with the plotted feature
     if not hasattr(feature_ind, "__len__"):
         if interaction_index == "auto":
             interaction_index = approximate_interactions(
                 feature_ind, shap_values, feature_values
             )[0]
-        interaction_index = convert_name(
-            interaction_index, shap_values, feature_names
-        )
-        
-    return interaction_index  
+        interaction_index = convert_name(interaction_index, shap_values, feature_names)
+
+    return interaction_index
+
 
 def add_histogram_axis(
-        ax, data, feature, target, bins='auto', min_value=None, max_value=None, density=False, **kwargs
-    ):
-        """
-        Adds a background histogram of data for a given feature.
-        """
-        sns.histplot(
-                ax=ax, 
-                data=data,
-                x=feature,
-                hue = target,
-                legend=False,
-                stat='probability',
-                common_norm=False
-               )
-        ax.set_ylabel('') 
+    ax,
+    data,
+    feature,
+    target,
+    bins="auto",
+    min_value=None,
+    max_value=None,
+    density=False,
+    **kwargs
+):
+    """
+    Adds a background histogram of data for a given feature.
+    """
+    sns.histplot(
+        ax=ax,
+        data=data,
+        x=feature,
+        hue=target,
+        legend=False,
+        stat="probability",
+        common_norm=False,
+    )
+    ax.set_ylabel("")
 
-        '''
+    """
         color = kwargs.get("color", "xkcd:dark sky blue")
         edgecolor = kwargs.get("color", "white")
 
@@ -406,26 +408,25 @@ def add_histogram_axis(
             ax.set_ylim([0, ymax])
             ax.set_yticks([10 ** i for i in range(n_ticks + 1)])
             return "Frequency"
-        '''
+        """
+
 
 def make_twin_ax(ax):
-        """
-        Create a twin axis on an existing axis with a shared x-axis
-        """
-        # align the twinx axis
-        twin_ax = ax.twinx()
+    """
+    Create a twin axis on an existing axis with a shared x-axis
+    """
+    # align the twinx axis
+    twin_ax = ax.twinx()
 
-        # Turn twin_ax grid off.
-        twin_ax.grid(False)
+    # Turn twin_ax grid off.
+    twin_ax.grid(False)
 
-        # Set ax's patch invisible
-        ax.patch.set_visible(False)
-        # Set axtwin's patch visible and colorize it in grey
-        twin_ax.patch.set_visible(True)
+    # Set ax's patch invisible
+    ax.patch.set_visible(False)
+    # Set axtwin's patch visible and colorize it in grey
+    twin_ax.patch.set_visible(True)
 
-        # move ax in front
-        ax.set_zorder(twin_ax.get_zorder() + 1)
+    # move ax in front
+    ax.set_zorder(twin_ax.get_zorder() + 1)
 
-        return twin_ax
-
-
+    return twin_ax

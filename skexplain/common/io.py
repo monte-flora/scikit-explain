@@ -1,4 +1,4 @@
-import xarray as xr 
+import xarray as xr
 import pandas as pd
 import pickle
 from collections import ChainMap
@@ -55,28 +55,29 @@ def load_netcdf(fnames):
 
     return ds_set
 
+
 def load_dataframe(fnames):
     """Load multiple dataframes with pandas"""
     if not is_list(fnames):
-        fnames=[fnames]
+        fnames = [fnames]
 
     data = [pd.read_pickle(file_name) for file_name in fnames]
-   
+
     attrs = [d.attrs for d in data]
-    estimators_used = [d.attrs['estimators used'] for d in data]
-    
+    estimators_used = [d.attrs["estimators used"] for d in data]
+
     attrs = dict(ChainMap(*attrs))
-    
+
     # Merge dataframes
     data_concat = pd.concat(data)
-    
+
     for key in attrs.keys():
         data_concat.attrs[key] = attrs[key]
-    
-    data_concat.attrs['estimators used'] = flatten_nested_list(estimators_used)
-    
+
+    data_concat.attrs["estimators used"] = flatten_nested_list(estimators_used)
+
     return data_concat
-        
+
 
 def save_netcdf(fname, ds, complevel=5):
     """Save netcdf file with xarray"""
@@ -86,8 +87,11 @@ def save_netcdf(fname, ds, complevel=5):
     ds.close()
     del ds
 
-    
-def save_dataframe(fname, dframe, ):
+
+def save_dataframe(
+    fname,
+    dframe,
+):
     """Save dataframe as pickle file"""
-    dframe.to_pickle(fname) 
+    dframe.to_pickle(fname)
     del dframe

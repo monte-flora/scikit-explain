@@ -176,19 +176,17 @@ def check_random_state(seed):
     raise ValueError(
         "%r cannot be used to seed a numpy.random.RandomState" " instance" % seed
     )
-    
-    
+
+
 def bootstrap_generator(n_bootstrap, seed=42):
     """
     Create a repeatable bootstrap generator.
-    Will create the same set of random state generators given 
-    a number of bootstrap iterations. 
+    Will create the same set of random state generators given
+    a number of bootstrap iterations.
     """
     base_random_state = np.random.RandomState(seed)
     random_num_set = base_random_state.choice(10000, size=n_bootstrap, replace=False)
-    
-    random_states = [np.random.RandomState(s) for s in random_num_set]
-    
-    return random_states   
 
-    
+    random_states = [np.random.RandomState(s) for s in random_num_set]
+
+    return random_states

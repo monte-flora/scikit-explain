@@ -160,6 +160,16 @@ class PermutationImportanceSelectionStrategy(SelectionStrategy):
         # Also initialize the "shuffled data"
         scoring_inputs, __ = self.scoring_data
         indices = random_state.permutation(len(scoring_inputs))
+        
+        # With each iteration of the algorithm, the indices 
+        # are shuffled once and identically for each feature. 
+        # Thus, when multiple features are permuted they are 
+        # jointly permuted (i.e., without destroying the 
+        # dependencies of the features within the group).
+        # However, how the features are jointly permuted 
+        # changes from iteration to iteration to limit
+        # bias due to a poor permutation. 
+        
         self.shuffled_scoring_inputs = get_data_subset(
             scoring_inputs, indices
         )  # This copies
@@ -253,11 +263,11 @@ class ConditionalPermutationImportanceSelectionStrategy(SelectionStrategy):
         )
 
         return self.training_data, (complete_scoring_inputs, scoring_outputs)
-    
-    
+
+
 class ForwardPermutationImportanceSelectionStrategy(SelectionStrategy):
-    """Forward Permutation Importance permutes all variables and then tests 
-       all variables which are not yet considered."""
+    """Forward Permutation Importance permutes all variables and then tests
+    all variables which are not yet considered."""
 
     name = "Forward Permutation Importance"
 
@@ -282,6 +292,16 @@ class ForwardPermutationImportanceSelectionStrategy(SelectionStrategy):
             training_data, scoring_data, num_vars, important_vars
         )
 
+         # With each iteration of the algorithm, the indices 
+        # are shuffled once and identically for each feature. 
+        # Thus, when multiple features are permuted they are 
+        # jointly permuted (i.e., without destroying the 
+        # dependencies of the features within the group).
+        # However, how the features are jointly permuted 
+        # changes from iteration to iteration to limit
+        # bias due to a poor permutation. 
+        
+        
         # Also initialize the "shuffled data"
         scoring_inputs, __ = self.scoring_data
         indices = random_state.permutation(len(scoring_inputs))
@@ -292,7 +312,6 @@ class ForwardPermutationImportanceSelectionStrategy(SelectionStrategy):
         self.original_index = (
             scoring_inputs.index if isinstance(scoring_inputs, pd.DataFrame) else None
         )
-        
 
     def generate_datasets(self, important_variables):
         """Check each of the non-important variables. Dataset has columns which
@@ -316,5 +335,3 @@ class ForwardPermutationImportanceSelectionStrategy(SelectionStrategy):
         )
 
         return self.training_data, (complete_scoring_inputs, scoring_outputs)
-
-    

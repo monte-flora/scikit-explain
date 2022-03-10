@@ -10,31 +10,34 @@ def flatten_nested_list(list_of_lists):
     """Turn a list of list into a single, flatten list"""
     all_elements_are_lists = all([is_list(item) for item in list_of_lists])
     if not all_elements_are_lists:
-        new_list_of_lists=[]
+        new_list_of_lists = []
         for item in list_of_lists:
             if is_list(item):
                 new_list_of_lists.append(item)
             else:
                 new_list_of_lists.append([item])
         list_of_lists = new_list_of_lists
-    
-    
-    return [ item for elem in list_of_lists for item in elem]
+
+    return [item for elem in list_of_lists for item in elem]
+
 
 def is_dataset(data):
     return isinstance(data, xr.Dataset)
 
+
 def is_dataframe(data):
     return isinstance(data, pd.DataFrame)
+
 
 def check_is_permuted(X, X_permuted):
     permuted_features = []
     for f in X.columns:
-        if not np.array_equal(X.loc[:,f], X_permuted.loc[:,f]):
+        if not np.array_equal(X.loc[:, f], X_permuted.loc[:, f]):
             permuted_features.append(f)
-            
+
     return permuted_features
-        
+
+
 def is_correlated(corr_matrix, feature_pairs, rho_threshold=0.8):
     """
     Returns dict where the key are the feature pairs and the items
@@ -139,29 +142,35 @@ def cartesian(array, out=None):
 def to_dataframe(results, estimator_names, feature_names):
     """
     Convert the feature contribution results to a pandas.DataFrame
-    with nested indexing. 
+    with nested indexing.
     """
-    # results[0] = dict of avg. contributions per estimator 
+    # results[0] = dict of avg. contributions per estimator
     # results[1] = dict of avg. feature values per estimator
     contrib_names = feature_names.copy()
-    contrib_names+=['Bias']
-    
+    contrib_names += ["Bias"]
+
     nested_key = results[0][estimator_names[0]].keys()
-    
+
     dframes = []
     for key in nested_key:
-        data=[]
+        data = []
         for name in estimator_names:
             contribs_dict = results[0][name][key]
             vals_dict = results[1][name][key]
-            data.append([contribs_dict[f] for f in contrib_names] + [vals_dict[f] for f in feature_names]) 
-        column_names = [f+'_contrib' for f in contrib_names] + [f+'_val' for f in feature_names]
+            data.append(
+                [contribs_dict[f] for f in contrib_names]
+                + [vals_dict[f] for f in feature_names]
+            )
+        column_names = [f + "_contrib" for f in contrib_names] + [
+            f + "_val" for f in feature_names
+        ]
         df = pd.DataFrame(data, columns=column_names, index=estimator_names)
         dframes.append(df)
-    
+
     result = pd.concat(dframes, keys=list(nested_key))
-    
+
     return result
+
 
 def to_xarray(data):
     """Converts data dict to xarray.Dataset"""
@@ -182,6 +191,7 @@ def is_list(a):
 def to_list(a):
     """Convert argument to a list"""
     return [a]
+
 
 def is_tuple(a):
     """Check if argument is a tuple"""
@@ -233,10 +243,10 @@ def is_regressor(estimator):
 
 
 def is_all_dict(alist):
-    """ Check if every element of a list are dicts """
+    """Check if every element of a list are dicts"""
     return all([isinstance(l, dict) for l in alist])
 
-    
+
 def compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=1, seed=90):
     """
     Routine to generate the indices for bootstrapped X.
@@ -255,10 +265,10 @@ def compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=1, seed=90):
     base_random_state = np.random.RandomState(seed=seed)
     random_num_set = base_random_state.choice(10000, size=n_bootstrap, replace=False)
     random_states = [np.random.RandomState(s) for s in random_num_set]
-    
+
     n_samples = len(X)
     size = int(n_samples * subsample) if subsample <= 1.0 else subsample
-    
+
     bootstrap_indices = [
         random_state.choice(range(n_samples), size=size).tolist()
         for random_state in random_states
@@ -267,7 +277,7 @@ def compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=1, seed=90):
 
 
 def merge_dict(dicts):
-    """Merge a list of dicts into a single dict """
+    """Merge a list of dicts into a single dict"""
     return dict(ChainMap(*dicts))
 
 
