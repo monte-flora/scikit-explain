@@ -6,6 +6,28 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from scipy.stats import t
 
 
+class MissingFeaturesError(Exception):
+    """ Raised when features are missing. 
+        E.g., All features are require for 
+        IAS or MEC
+    """
+    def __init__(self, estimator_name, missing_features):
+        self.message = f"""ALE for {estimator_name} was not computed for all features. 
+                        These features were missing: {missing_features}"""
+        super().__init__(self.message)
+    
+
+def check_all_features_for_ale(ale, estimator_names, features):
+    """ Is there ALE values for each feature """
+    data_vars = ale.data_vars
+    for estimator_name in estimator_names:
+        _list = [True if f'{f}__{estimator_name}__ale' in data_vars else False for f in features]
+        print(f'{_list=}')
+        if not all(_list):
+            missing_features = np.array(features)[np.where(~np.array(_list))[0]]
+            raise MissingFeaturesError(estimator_name, missing_features) 
+
+
 def flatten_nested_list(list_of_lists):
     """Turn a list of list into a single, flatten list"""
     all_elements_are_lists = all([is_list(item) for item in list_of_lists])

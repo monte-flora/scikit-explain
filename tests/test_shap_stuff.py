@@ -1,75 +1,28 @@
 # Unit test for the SHAP code in scikit-explain
-import unittest
-import os, sys
-import numpy as np
-import pandas as pd
-from sklearn.linear_model import LinearRegression, LogisticRegression
+
 import shap
-
-sys.path.append(os.path.dirname(os.getcwd()))
-
 import skexplain
+import numpy as np
+
+from tests import TestMultiExampleContributions
 
 
-class TestExplainToolkit(unittest.TestCase):
-    def setUp(self):
-
-        # Fit a simple 5-variable linear regression estimator.
-        n_X = 2000
-        n_vars = 5
-        weights = [2.0, 1.5, 1.2, 0.7, 0.2]
-        X = np.stack(
-            [np.random.uniform(-1, 1, size=n_X) for _ in range(n_vars)], axis=-1
-        )
-        feature_names = [f"X_{i+1}" for i in range(n_vars)]
-        X = pd.DataFrame(X, columns=feature_names)
-        y = X.dot(weights).values
-
-        lr = LinearRegression()
-        lr.fit(X, y)
-
-        self.X = X
-        self.y = y
-        self.lr = lr
-        self.lr_estimator_name = "Linear Regression"
-
-        # Computing SHAP values in scikit-explain.
-        inds = np.random.choice(len(self.X), size=5, replace=False)
-        X_sub = self.X.iloc[inds]
-        X_sub.reset_index(inplace=True, drop=True)
-
-        self.X_sub = X_sub
-        self.y_sub = self.y[inds]
-
-        self.explainer = skexplain.ExplainToolkit(
-            estimators=(self.lr_estimator_name, self.lr), X=X_sub, y=self.y_sub
-        )
-        self.results = self.explainer.shap(
-            shap_kwargs={
-                "masker": shap.maskers.Partition(
-                    self.X, max_samples=100, clustering="correlation"
-                ),
-                "algorithm": "permutation",
-            }
-        )
-
-
-class TestSHAP(TestExplainToolkit):
+class TestSHAP(TestMultiExampleContributions):
     # Simple test to see that the shap contributions + bias = predictions
     def test_compute_shap_equals_prediction(self):
-        shap_values = self.results[f"shap_values__{self.lr_estimator_name}"].values
-        bias = self.results[f"bias__{self.lr_estimator_name}"].values
+        shap_values = self.results[f"shap_values__{self.rf_estimator_name}"].values
+        bias = self.results[f"bias__{self.rf_estimator_name}"].values
 
         contrib = np.concatenate((shap_values, bias.reshape(len(bias), 1)), axis=1)
         shap_predictions = np.sum(contrib, axis=1)
-        predictions = self.lr.predict(self.X_sub)
+        predictions = self.rf.predict(self.X_sub)
 
-        self.assertAlmostEqual(predictions, shap_predictions)
+        np.testing.assert_allclose(predictions, shap_predictions, rtol=0.1)
 
     def test_compute_shap_with_no_masker(self):
         # Computing SHAP values in scikit-explain.
         explainer = skexplain.ExplainToolkit(
-            estimators=(self.lr_estimator_name, self.lr), X=self.X_sub, y=self.y_sub
+            estimators=self.rf_estimator, X=self.X_sub, y=self.y_sub
         )
         with self.assertRaises(Exception) as ex:
             results = explainer.shap(
@@ -88,7 +41,7 @@ class TestSHAP(TestExplainToolkit):
         self.explainer.plot_shap(
             plot_type="summary",
             shap_values=self.results,
-            estimator_name=self.lr_estimator_name,
+            estimator_name=self.rf_estimator_name,
         )
 
         # Checking error when estimator name is not declared.
@@ -108,7 +61,7 @@ class TestSHAP(TestExplainToolkit):
             self.explainer.plot_shap(
                 plot_type="summar",
                 shap_values=self.results,
-                estimator_name=self.lr_estimator_name,
+                estimator_name=self.rf_estimator_name,
             )
 
         except_msg = "Invalid plot_type! Must be 'summary' or 'dependence'"
@@ -125,7 +78,7 @@ class TestSHAP(TestExplainToolkit):
             features=features,
             plot_type="dependence",
             shap_values=self.results,
-            estimator_name=self.lr_estimator_name,
+            estimator_name=self.rf_estimator_name,
         )
 
         # Plot 'auto' interaction index.
@@ -133,7 +86,7 @@ class TestSHAP(TestExplainToolkit):
             features=features,
             plot_type="dependence",
             shap_values=self.results,
-            estimator_name=self.lr_estimator_name,
+            estimator_name=self.rf_estimator_name,
             histdata=histdata,
             interaction_index="auto",
         )
@@ -143,7 +96,7 @@ class TestSHAP(TestExplainToolkit):
             features=features,
             plot_type="dependence",
             shap_values=self.results,
-            estimator_name=self.lr_estimator_name,
+            estimator_name=self.rf_estimator_name,
             histdata=histdata,
             interaction_index="X_3",
         )
@@ -153,7 +106,7 @@ class TestSHAP(TestExplainToolkit):
             features=features,
             plot_type="dependence",
             shap_values=self.results,
-            estimator_name=self.lr_estimator_name,
+            estimator_name=self.rf_estimator_name,
             histdata=histdata,
         )
 
@@ -162,9 +115,9 @@ class TestSHAP(TestExplainToolkit):
             features=features,
             plot_type="dependence",
             shap_values=self.results,
-            estimator_name=self.lr_estimator_name,
+            estimator_name=self.rf_estimator_name,
             histdata=histdata,
-            target_values=self.y_sub,
+            target_values=self.y_sub.values,
             interaction_index=None,
         )
 

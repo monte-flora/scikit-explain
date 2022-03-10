@@ -494,20 +494,19 @@ class PlotStructure:
         Adds minor tick marks to the x- and y-axis to a subplot ax
         to increase readability.
         """
-        ax.xaxis.set_minor_locator(AutoMinorLocator())
-        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        ax.xaxis.set_minor_locator(AutoMinorLocator(n=3))
+        ax.yaxis.set_minor_locator(AutoMinorLocator(n=3))
 
-    def set_n_ticks(self, ax, option="y"):
+    def set_n_ticks(self, ax, option="y", nticks=5):
         """
         Set the max number of ticks per x- and y-axis for a
         subplot ax
         """
         if option == "y" or option == "both":
-            ax.yaxis.set_major_locator(MaxNLocator(5))
-            ax.yaxis.set_major_locator(MaxNLocator(4))
+            ax.yaxis.set_major_locator(MaxNLocator(nticks))
+            
         if option == "x" or option == "both":
-            ax.xaxis.set_major_locator(MaxNLocator(5))
-            ax.xaxis.set_major_locator(MaxNLocator(4))
+            ax.xaxis.set_major_locator(MaxNLocator(nticks))
 
     def make_twin_ax(self, ax):
         """

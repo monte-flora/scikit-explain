@@ -26,6 +26,7 @@ from ..common.utils import (
     is_dataset,
     is_dataframe,
     is_tuple,
+    check_all_features_for_ale
 )
 
 from ..common.importance_utils import (
@@ -689,7 +690,11 @@ class ExplainToolkit(Attributes):
         """
         if (features == "all" or features is None) and interaction:
             features = list(itertools.combinations(self.feature_names, r=2))
-
+        elif features is None:
+            # Assume all features. 
+            features = self.feature_names
+            
+            
         if estimator_names is None:
             estimator_names = self.estimator_names
 
@@ -698,8 +703,8 @@ class ExplainToolkit(Attributes):
 
         if interaction:
             if ale.attrs["dimension"] != "2D":
-                raise Expection(
-                    "ale must be compute for second-order ALE if interaction == True"
+                raise Exception(
+                    "ale must be second-order if interaction == True"
                 )
 
         # Check that ale_data is an xarray.Dataset
@@ -813,6 +818,8 @@ class ExplainToolkit(Attributes):
         else:
             if is_str(estimator_names):
                 estimator_names = [estimator_names]
+
+        check_all_features_for_ale(ale, estimator_names, self.feature_names)
 
         mec_dict = {}
         for estimator_name in estimator_names:
@@ -1344,6 +1351,8 @@ class ExplainToolkit(Attributes):
             if is_str(estimator_names):
                 estimator_names = [estimator_names]
 
+        check_all_features_for_ale(ale, estimator_names, self.feature_names)        
+                
         # Check that ale_data is an xarray.Dataset
         if not isinstance(ale, xr.core.dataset.Dataset):
             raise ValueError(

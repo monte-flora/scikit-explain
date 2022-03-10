@@ -2,7 +2,7 @@ from ..common.utils import to_list, is_list, is_str
 from .base_plotting import PlotStructure
 from math import log10
 import numpy as np
-
+import warnings
 
 class PlotInterpretCurves(PlotStructure):
     """
@@ -157,19 +157,23 @@ class PlotInterpretCurves(PlotStructure):
                         **line_kws,
                     )
 
-            self.set_n_ticks(lineplt_ax)
+            nticks = 5 if n_panels < 10 else 3
+            self.set_n_ticks(lineplt_ax, nticks)
+            
             if n_panels < 10:
                 self.set_minor_ticks(lineplt_ax)
+      
             self.set_axis_label(lineplt_ax, xaxis_label="".join(feature))
             lineplt_ax.axhline(
                 y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed"
             )
 
-            nticks = 5 if n_panels < 10 else 3
-            lineplt_ax.set_yticks(
-                self.calculate_ticks(ax=lineplt_ax, nticks=nticks, center=False)
-            )
-
+            #nticks = 5 if n_panels < 10 else 3
+            # Deprecated 10 Mar 2022
+            #lineplt_ax.set_yticks(
+                #self.calculate_ticks(ax=lineplt_ax, nticks=nticks, center=False)
+                #)
+   
         majoraxis_fontsize = self.FONT_SIZES["teensie"]
         if fig is not None and add_hist:
             major_ax = self.set_major_axis_labels(

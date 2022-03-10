@@ -1,52 +1,33 @@
-# Unit test for the accumulated local effect code in MintPy
-import unittest
-import sys, os
+#===================================================
+# Unit test for the ALE and PD 
+# code in Scikit-Explain.
+#===================================================
+
+import shap
 import numpy as np
-import pandas as pd
-from sklearn.linear_model import LinearRegression, LogisticRegression
-
-sys.path.append(os.path.dirname(os.getcwd()))
-
 import skexplain
+from skexplain.common.importance_utils import to_skexplain_importance
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+import itertools
+
+from tests import TestLR, TestRF, TestSciKitExplainData
 
 
-class TestExplainToolkit(unittest.TestCase):
-    def setUp(self):
-        self.estimators = skexplain.load_models()
-        X_clf, y_clf = skexplain.load_data()
-        X_clf = X_clf.astype({"urban": "category", "rural": "category"})
-
-        self.X_clf = X_clf
-        self.y_clf = y_clf
-
-        random_state = np.random.RandomState(42)
-
-        # Fit a simple 5-variable linear regression estimator.
-        n_X = 1000
-        n_vars = 5
-        weights = [2.0, 1.5, 1.2, 0.5, 0.2]
-        X = np.stack(
-            [random_state.uniform(0, 1, size=n_X) for _ in range(n_vars)], axis=-1
+class TestALECat(TestSciKitExplainData):
+     def test_cat_ale_simple(self):
+        # Make sure the categorical ALE is working correctly
+        explainer = skexplain.ExplainToolkit(
+            estimators=self.estimators[0], X=self.X, y=self.y
         )
-        feature_names = [f"X_{i+1}" for i in range(n_vars)]
-        X = pd.DataFrame(X, columns=feature_names)
-        y = X.dot(weights)
-
-        lr = LinearRegression()
-        lr.fit(X, y)
-
-        self.X = X
-        self.y = y
-        self.lr = lr
-        self.lr_estimator_name = "Linear Regression"
-        self.weights = weights
-
-
-class TestInterpretCurves(TestExplainToolkit):
+        explainer.ale(features='urban') 
+        
+        
+class TestInterpretCurves(TestLR):
     def test_bad_feature_names_exception(self):
         feature = "bad_feature"
         explainer = skexplain.ExplainToolkit(
-            estimators=self.estimators[0], X=self.X_clf, y=self.y_clf
+            estimators=self.lr_estimator, X=self.X, y=self.y
         )
         with self.assertRaises(KeyError) as ex:
             explainer.ale(features=feature)
@@ -56,13 +37,13 @@ class TestInterpretCurves(TestExplainToolkit):
 
     def test_too_many_bins(self):
         explainer = skexplain.ExplainToolkit(
-            estimators=self.estimators[0], X=self.X_clf, y=self.y_clf
+            estimators=self.lr_estimator, X=self.X, y=self.y
         )
 
         n_bins = 100
         with self.assertRaises(ValueError) as ex:
             explainer.ale(
-                features=["temp2m"],
+                features=["X_1"],
                 subsample=100,
                 n_bins=n_bins,
             )
@@ -71,7 +52,8 @@ class TestInterpretCurves(TestExplainToolkit):
                                  high relative to the sample size of the data. Either increase
                                  the data size (if using subsample) or use less bins. 
                                  """
-        self.assertEqual(ex.exception.args[0], except_msg)
+        self.assertMultiLineEqual(ex.exception.args[0], except_msg)
+        
 
     def test_results_shape(self):
         # Bootstrap has correct shape
@@ -84,6 +66,7 @@ class TestInterpretCurves(TestExplainToolkit):
 
         self.assertEqual(ydata.shape, (5, 10))
 
+        
     def test_xdata(self):
         # Bin values are correct.
         explainer = skexplain.ExplainToolkit(
@@ -95,7 +78,7 @@ class TestInterpretCurves(TestExplainToolkit):
 
         self.assertCountEqual(
             np.round(xdata, 8),
-            [0.09082125, 0.27714732, 0.48378955, 0.6950751, 0.89978646],
+            [-2.03681146, -0.53458709,  0.01499989,  0.55125525,  2.38096491,],
         )
 
     def test_ale_simple(self):
@@ -113,7 +96,7 @@ class TestInterpretCurves(TestExplainToolkit):
             results[f"{feature}__{self.lr_estimator_name}__ale"].values[0, :],
         )
 
-        self.assertAlmostEqual(lr.coef_[0], self.weights[0])
+        self.assertAlmostEqual(lr.coef_[0], self.WEIGHTS[0])
 
     def test_pd_simple(self):
         # PD is correct for a simple case
@@ -130,27 +113,104 @@ class TestInterpretCurves(TestExplainToolkit):
             results[f"{feature}__{self.lr_estimator_name}__pd"].values[0, :],
         )
 
-        self.assertAlmostEqual(lr.coef_[0], self.weights[0])
+        self.assertAlmostEqual(lr.coef_[0], self.WEIGHTS[0])
 
-    def test_cat_ale_simple(self):
-        # Make sure the categorical ALE is working correctly
-        pass
 
     def test_ale_complex(self):
         # ALE is correct for a more complex case!
-        pass
+        """ Test that ALE is correct for y = X^2 """
+        X = np.linspace(-3, 3, 10000)
+        X = X.reshape(-1, 1)
+        y = X**2
+        rf = RandomForestRegressor()
+        rf.fit(X, y)
+        
+        explainer = skexplain.ExplainToolkit(('RF', rf), X=X, y=y, feature_names=['X_1'])
+        ale = explainer.ale(features='all', n_bins=50)
+        
+        # The idea is that for y = x^2 
+        # ALE(x) = x^2 - mean(y) 
+        
+        val = (ale['X_1__bin_values'].values)**2 - np.mean(y)
+        np.testing.assert_allclose(val, ale['X_1__RF__ale'].values[0,:], rtol=0.1)
+        
 
+    def test_ice_curves(self):
+        """ Test the ICE curves """
+        ice_ds = self.explainer_interact.ice(features='all', n_jobs=5)
+        ale = self.explainer_interact.ale(features='all')
+        self.explainer_interact.plot_ale(ale=ale, ice_curves=ice_ds, )
+        
+        # Test the color-by functionality. 
+        self.explainer_interact.plot_ale(ale=ale, ice_curves=ice_ds, color_by='X_1')
+    
+        
     def test_2d_ale(self):
-        pass
+        """ Test the 2D ALE """
+        # From TestInteractions
+        ale_2d = self.explainer_interact.ale(features='all_2d')
+        
+        self.explainer_interact.plot_ale(ale_2d) 
+        
+        # TODO: Check that the 2D ALE is correct!
+        # Remember that the 2D ALE is the solely 
+        # second-order interactions such that 
+        # the average effects from both features
+        # has been removed. 
+
+    def test_ale_var(self):
+        """ Test the 1st and 2nd ALE variance """
+        ale_1d = self.explainer_interact.ale(features='all') 
+        ale_2d = self.explainer_interact.ale(features='all_2d') 
+        
+        ale_var_2d = self.explainer_interact.ale_variance(ale=ale_2d,  interaction=True)
+        ale_var = self.explainer_interact.ale_variance(ale=ale_1d) 
+        
+        # Check the dimension!
+        with self.assertRaises(Exception) as ex:
+            self.explainer_interact.ale_variance(ale=ale_1d,  interaction=True)
+            
+        except_msg = "ale must be second-order if interaction == True"
+        self.assertEqual(ex.exception.args[0], except_msg)    
+        
 
     def test_2d_pd(self):
-        pass
-
+        """ Test the 2D PD compute and plot."""
+        pd_2d = self.explainer_interact.pd(features = 'all_2d')
+        self.explainer_interact.plot_pd(pd_2d) 
+        
     def test_ias(self):
-        pass
-
+        """ Test the interaction strength statistics """
+        # Test for a linear model IAS ~ 0. 
+        explainer = skexplain.ExplainToolkit(
+            estimators=(self.lr_estimator_name, self.lr), X=self.X, y=self.y
+        )
+        
+        ale = explainer.ale(features='all') 
+        ias = explainer.interaction_strength(ale)[f'{self.lr_estimator_name}_ias'].values[0]
+        self.assertAlmostEqual(ias, 0., 4)
+        
     def test_hstat(self):
-        pass
+        explainer = skexplain.ExplainToolkit(
+            estimators=(self.lr_estimator_name, self.lr), X=self.X, y=self.y
+        )
+        
+        pd_1d = explainer.pd(features='all', n_bins=10) 
+        pd_2d = explainer.pd(features='all_2d', n_bins=10,)
+        
+        # Compute the H-statistic 
+        features = list(itertools.combinations(self.X.columns, r=2))
+        
+        hstat_results= explainer.friedman_h_stat(pd_1d=pd_1d, pd_2d=pd_2d, features=features)
+        
+    def test_mec(self):
+        """ Test the main effect complexity """
+        explainer = skexplain.ExplainToolkit(
+            estimators=self.lr_estimator, X=self.X, y=self.y
+        )
+        ale_1d = explainer.ale(features='all')
+        mec = explainer.main_effect_complexity(ale=ale_1d)[self.lr_estimator_name]
+        self.assertAlmostEqual(mec, 1., 4)
 
 
 if __name__ == "__main__":

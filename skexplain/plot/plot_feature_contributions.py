@@ -640,7 +640,8 @@ class PlotFeatureContributions(PlotStructure):
                 )
 
             ax_iterator = self.axes_to_iterator(n_panels, axes)
-
+            nticks = 5 if n_panels < 10 else 3
+            
             for ax, feature in zip(ax_iterator, features):
                 dependence_plot(
                     feature=feature,
@@ -655,15 +656,17 @@ class PlotFeatureContributions(PlotStructure):
                 )
 
                 if using_internal_ax:
-                    self.set_n_ticks(ax)
-                    self.set_minor_ticks(ax)
+                    self.set_n_ticks(ax, nticks)
+                    if n_panels < 10:
+                        self.set_minor_ticks(ax)
                     self.set_axis_label(
                         ax, xaxis_label="".join(feature), yaxis_label=""
                     )
                     ax.axhline(
                         y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed"
                     )
-                    ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=False))
+                    ###ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=False))
+                    self.set_n_ticks(ax, nticks)
                     ax.tick_params(axis="both", labelsize=8)
                     vertices = ax.collections[0].get_offsets()
                     self._to_sci_notation(
