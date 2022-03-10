@@ -48,6 +48,7 @@ class TestInterpretCurves(TestLR):
                 n_bins=n_bins,
             )
         except_msg = f"""
+                                 Broadcast error!
                                  The value of n_bins ({n_bins}) is likely too 
                                  high relative to the sample size of the data. Either increase
                                  the data size (if using subsample) or use less bins. 
@@ -137,7 +138,7 @@ class TestInterpretCurves(TestLR):
 
     def test_ice_curves(self):
         """ Test the ICE curves """
-        ice_ds = self.explainer_interact.ice(features='all', n_jobs=5)
+        ice_ds = self.explainer_interact.ice(features='all', n_jobs=1)
         ale = self.explainer_interact.ale(features='all')
         self.explainer_interact.plot_ale(ale=ale, ice_curves=ice_ds, )
         

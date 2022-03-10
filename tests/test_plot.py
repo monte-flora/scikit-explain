@@ -2,6 +2,7 @@
 # Unit test for the plotting 
 # code in Scikit-Explain.
 #===================================================
+from os.path import join
 import numpy as np
 import pandas as pd
 
@@ -43,14 +44,66 @@ class Test2DPlotting(TestLR):
         pass
 
      
-    
-
 class TestRankPlots(TestLR):
 
     # Make sure the ranking is plotted correctly
     def test_rank_plot(self):
-        pass
-
+        explainer = skexplain.ExplainToolkit(
+            estimators=self.lr_estimator, X=self.X, y=self.y
+        )
+        
+        results = explainer.permutation_importance(
+            n_vars=5, evaluation_fn="mse", n_permute=10
+        )
+        
+        explainer.plot_importance(data=results, 
+                                panels=[('singlepass', self.lr_estimator_name)], 
+                                num_vars_to_plot=15, 
+                                 )
+        
+        # Changing the x-labels.
+        explainer.plot_importance(data=results, 
+                                panels=[('singlepass', self.lr_estimator_name)], 
+                                num_vars_to_plot=15,
+                                xlabels = ['Single-Pass']  
+                                 )
+        # Plot single- and multi-pass permutation importance.
+        explainer.plot_importance(data=[results]*2, 
+                                panels=[('singlepass', self.lr_estimator_name),
+                                        ('multipass', self.lr_estimator_name)
+                                       ], 
+                                num_vars_to_plot=15,
+                                 )
+        
+        # Check error when len(results) != len(panels)
+        explainer.plot_importance(data=results, 
+                                panels=[('singlepass', self.lr_estimator_name),
+                                        ('multipass', self.lr_estimator_name)
+                                       ], 
+                                num_vars_to_plot=15,
+                                 )
+        
+        # Using feature_colors.
+        explainer.plot_importance(
+                                data=results, 
+                                panels=[('singlepass', self.lr_estimator_name), 
+                                       ],
+                                num_vars_to_plot=15,
+                                feature_colors = 'xkcd:medium green'
+                                    )
+        
+        
+        # Plotting connections between correlated features. 
+        explainer.plot_importance(
+                                data=results, 
+                                panels=[('singlepass', self.lr_estimator_name), 
+                                       ],
+                                num_vars_to_plot=15,
+                                feature_colors = 'xkcd:medium green',
+                                plot_correlated_features=True, 
+                                rho_threshold = 0.01, 
+                                    )
+        
 
 class TestContributionPlots(TestLR):
 

@@ -111,7 +111,7 @@ class TestRankings(TestLR, TestRF):
                 evaluation_fn="mse",
                 n_permute=50,
                 direction=direction,
-                n_jobs=5, 
+                n_jobs=1, 
             )
 
             np.testing.assert_array_equal(

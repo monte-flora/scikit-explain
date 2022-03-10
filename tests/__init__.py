@@ -12,8 +12,9 @@ import pandas as pd
 import os, sys
 
 # Adding the parent directory to path so that 
-# skexplain can be imported without being explicitly 
-sys.path.append(os.path.dirname(os.getcwd()))
+# skexplain can be imported without being explicitly
+path = os.path.dirname(os.getcwd())
+sys.path.append(path)
 
 import skexplain
 
@@ -48,6 +49,7 @@ class TestSciKitExplainData(unittest.TestCase):
 class TestLR(unittest.TestCase):
     """ Set-up a linear regression model """
     def setUp(self):
+        self.path = path
         lr = LinearRegression()
         lr.fit(X.values, y.values)
 

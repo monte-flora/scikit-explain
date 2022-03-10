@@ -263,7 +263,6 @@ class GlobalExplainer(Attributes):
 
         data = {}
         for estimator_name in self.estimator_names:
-            print(f'{estimator_name=}')
             for func in ["retrieve_multipass", "retrieve_singlepass"]:
                 adict = getattr(pi_dict[estimator_name], func)()
                 features = np.array(list(adict.keys()))
@@ -280,7 +279,6 @@ class GlobalExplainer(Attributes):
                     [f"n_vars_{pass_method}", "n_permute"],
                     scores,
                 )
-                print(f'{func=}')
                 
             data[f"original_score__{estimator_name}"] = (
                 ["n_permute"],
@@ -865,9 +863,10 @@ class GlobalExplainer(Attributes):
             try:
                 ale[k, :] = 0.5 * (ale_uninterpolated[1:] + ale_uninterpolated[:-1])
             except Exception as e:
-                traceback.print_exc()
+                #traceback.print_exc()
                 raise ValueError(
                     f"""
+                                 Broadcast error!
                                  The value of n_bins ({n_bins}) is likely too 
                                  high relative to the sample size of the data. Either increase
                                  the data size (if using subsample) or use less bins. 
