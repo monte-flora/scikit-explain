@@ -28,5 +28,5 @@ jobs:
     
     - name: Upload to codecoverage
       run: | 
-        codecov -t 6f003a89-f2c5-4586-845f-79c0e5410aa5 
+        codecov -t 06e4eebf-3071-48fc-a8dd-e766f0fcbe47
         bash <(curl -s https://codecov.io/bash)
