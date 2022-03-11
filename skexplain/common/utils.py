@@ -22,7 +22,6 @@ def check_all_features_for_ale(ale, estimator_names, features):
     data_vars = ale.data_vars
     for estimator_name in estimator_names:
         _list = [True if f'{f}__{estimator_name}__ale' in data_vars else False for f in features]
-        print(f'{_list=}')
         if not all(_list):
             missing_features = np.array(features)[np.where(~np.array(_list))[0]]
             raise MissingFeaturesError(estimator_name, missing_features) 

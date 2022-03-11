@@ -60,7 +60,6 @@ class TestLR(unittest.TestCase):
         self.lr_estimator=(self.lr_estimator_name, self.lr)
         self.WEIGHTS = WEIGHTS
         
-        #
         # y = x_1 + x_2 + x_1*x_2
         X_interact = X.iloc[:,:2]
         y_interact = X_interact.iloc[:,0] + X_interact.iloc[:,1] + 2.0*(X_interact.iloc[:,0] * X_interact.iloc[:,1])
@@ -119,8 +118,7 @@ class TestMultiExampleContributions(unittest.TestCase, TestRF):
             estimators=self.rf_estimator,
             X=X_sub, y=self.y_sub
         )
-        
-        
+
         self.results = self.explainer.shap(
             shap_kwargs={
                 "masker": shap.maskers.Partition(

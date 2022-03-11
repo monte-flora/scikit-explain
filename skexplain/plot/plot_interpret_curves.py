@@ -136,17 +136,17 @@ class PlotInterpretCurves(PlotStructure):
 
                 # depending on number of bootstrap examples, do CI plot or just mean
                 if "color" not in line_kws.keys():
-                    line_kws["color"] = line_colors[i]
+                    line_kws_copy = line_kws.copy()
+                    line_kws_copy["color"] = line_colors[i]
 
                 if ydata.shape[0] > 1:
-                    if "facecolor" not in line_kws.keys():
-                        line_kws["facecolor"] = line_colors[i]
                     self.confidence_interval_plot(
                         lineplt_ax,
                         xdata,
                         ydata,
                         label=model_name,
-                        **line_kws,
+                        facecolor = line_colors[i], 
+                        **line_kws_copy,
                     )
                 else:
                     self.line_plot(
@@ -154,7 +154,7 @@ class PlotInterpretCurves(PlotStructure):
                         xdata,
                         ydata[0, :],
                         label=model_name.replace("Classifier", ""),
-                        **line_kws,
+                        **line_kws_copy,
                     )
 
             nticks = 5 if n_panels < 10 else 3
@@ -313,19 +313,15 @@ class PlotInterpretCurves(PlotStructure):
             **line_kws,
         )
 
-    def confidence_interval_plot(self, ax, xdata, ydata, label, **line_kws):
+    def confidence_interval_plot(self, ax, xdata, ydata, label, facecolor, **line_kws):
         """
         Plot a line plot with an optional confidence interval polygon
         """
-        facecolor = line_kws.get("facecolor", "r")
-
         # get mean curve
         mean_ydata = np.mean(ydata, axis=0)
 
         # plot mean curve
         line_kws = line_kws.copy()
-        if "facecolor" in list(line_kws.keys()):
-            line_kws.pop("facecolor")
         if "line_colors" in line_kws.keys():
             line_kws.pop("line_colors")
 
