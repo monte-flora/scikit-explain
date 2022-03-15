@@ -94,7 +94,8 @@ class PlotImportance(PlotStructure):
 
         """Plots any variable importance method for a particular estimator
 
-        Args:
+        Parameters
+        -----------------
             data : xarray.Dataset or list of xarray.Dataset
                 Permutation importance dataset for one or more metrics
             panels: list of 2-tuples of estimator names and rank method
@@ -110,13 +111,22 @@ class PlotImportance(PlotStructure):
                 A dict mapping features to various colors. Helpful for color coding groups of features
             num_vars_to_plot : int
                 Number of top variables to plot (defalut is None and will use number of multipass results)
+                
+            kwargs: 
+                - xlabels 
+                - ylabel 
+                - xticks
+                - p_values 
+                - colinear_features 
+                - rho_threshold 
+                
         """
         xlabels = kwargs.get("xlabels", None)
         ylabels = kwargs.get("ylabels", None)
         xticks = kwargs.get("xticks", None)
         title = kwargs.get("title", "")
         p_values = kwargs.get("p_values", None)
-        colinear_predictors = kwargs.get("colinear_predictors", None)
+        colinear_features = kwargs.get("colinear_features", None)
         rho_threshold = kwargs.get("rho_threshold", 0.8)
 
         only_one_method = all([m[0] == panels[0][0] for m in panels])
@@ -142,7 +152,7 @@ class PlotImportance(PlotStructure):
         for i, (panel, ax) in enumerate(zip(panels, ax_iterator)):
 
             # Set the facecolor.
-            ax.set_facecolor(kwargs.get("facecolor", (0.95, 0.95, 0.95)))
+            #ax.set_facecolor(kwargs.get("facecolor", (0.95, 0.95, 0.95)))
 
             method, estimator_name = panel
             results = data[i]
@@ -179,15 +189,11 @@ class PlotImportance(PlotStructure):
             # Set very small values to zero.
             scores = np.where(np.absolute(np.round(scores, 17)) < 1e-15, 0, scores)
 
-            if plot_correlated_features:
-                self._add_correlated_brackets(
-                    ax, corr_matrix, sorted_var_names, rho_threshold
-                )
-
             # Get the colors for the plot
             colors_to_plot = [
                 self.variable_to_color(var, feature_colors) for var in sorted_var_names
             ]
+            
             # Get the predictor names
             variable_names_to_plot = [
                 f" {var}"
@@ -233,6 +239,14 @@ class PlotImportance(PlotStructure):
                 zorder=2,
             )
 
+            
+            if plot_correlated_features:
+                self._add_correlated_brackets(
+                    ax, np.arange(len(scores_to_plot)), 
+                    scores_to_plot,
+                    corr_matrix, sorted_var_names, rho_threshold
+                )
+
             if num_vars_to_plot >= 20:
                 size = kwargs.get("fontsize", self.FONT_SIZES["teensie"] - 3)
             elif num_vars_to_plot > 10:
@@ -240,19 +254,6 @@ class PlotImportance(PlotStructure):
             else:
                 size = kwargs.get("fontsize", self.FONT_SIZES["teensie"] - 1)
 
-            # Put the variable names _into_ the plot
-            if estimator_output == "probability" and method not in [
-                "perm_based",
-                "coefs",
-            ]:
-                x_pos = 0.0
-                ha = ["left"] * len(variable_names_to_plot)
-            elif estimator_output == "raw" and method not in ["perm_based", "coefs"]:
-                x_pos = 0.05
-                ha = ["left"] * len(variable_names_to_plot)
-            else:
-                x_pos = 0
-                ha = ["left" if score > 0 else "right" for score in scores_to_plot]
 
             # Put the variable names _into_ the plot
             if method not in self.SINGLE_VAR_METHODS and plot_correlated_features:
@@ -260,72 +261,41 @@ class PlotImportance(PlotStructure):
                     corr_matrix, sorted_var_names, rho_threshold=rho_threshold
                 )
 
-            # First regular is for the 'No Permutations'
-            if p_values is None:
-                colors = ["k"] + ["k"] * len(variable_names_to_plot)
+            if colinear_features is None:
+                fontweight = ["light"] * len(variable_names_to_plot)
+                colors = ["k"] * len(variable_names_to_plot)
             else:
+                # Bold text if the VIF > threshold (indicates a multicolinear predictor)
+                fontweight =  [
+                    "bold" if v in colinear_features else "light" for v in sorted_var_names
+                ]  
+                
                 # Bold text if value is insignificant.
-                colors = ["k"] + ["xkcd:bright blue" if v else "k" for v in p_values[i]]
+                colors =  ["xkcd:medium blue" if v in colinear_features else "k" for v in sorted_var_names]
+                
 
-            if colinear_predictors is None:
-                fontweight = ["light"] + ["light"] * len(variable_names_to_plot)
-            else:
-                # Italicize text if the VIF > threshold (indicates a multicolinear predictor)
-                fontweight = ["light"] + [
-                    "bold" if v else "light" for v in colinear_predictors[i]
-                ]
-
-            # Reverse the order since the variable names are reversed.
-            colors = colors[::-1]
-            fontweight = fontweight[::-1]
-
-            for i in range(len(variable_names_to_plot)):
-                color = "k"
-                if method not in self.SINGLE_VAR_METHODS and plot_correlated_features:
-                    correlated = results_dict.get(sorted_var_names[i], False)
-                    color = "xkcd:medium green" if correlated else "k"
-
-                if p_values is not None:
-                    color = colors[i]
-
-                if method not in self.SINGLE_VAR_METHODS:
-                    var = variable_names_to_plot[i].replace("__", " & ")
-                else:
-                    var = variable_names_to_plot[i]
-
-                ax.annotate(
-                    var,
-                    xy=(x_pos, i),
-                    va="center",
-                    ha=ha[i],
-                    size=size,
-                    alpha=0.8,
-                    color=color,
-                    fontweight=fontweight[i],
-                )
-
+            ax.set_yticks(range(len(variable_names_to_plot)))
+            ax.set_yticklabels(variable_names_to_plot)
+            labels = ax.get_yticklabels()
+            
+            # Bold var names 
+            ##[label.set_fontweight(opt) for opt, label in zip(fontweight, labels)]
+            
+            [label.set_color(c) for c, label in zip(colors, labels)]
+            
             ax.tick_params(axis="both", which="both", length=0)
-            ax.set_yticks([])
 
             if xticks is not None:
                 ax.set_xticks(xticks)
             else:
                 self.set_n_ticks(ax, option="x")
-
-            ax.grid(axis="x", linestyle="dashed", alpha=0.1)
-
-            # Adds some vertical dashed lines for context.
-            # vals = ax.get_xticks()
-            # for tick in vals:
-            #    ax.axvline(
-            #            x=tick, linestyle="dashed", alpha=0.1, color="k", zorder=0, lw=0.8,
-            #       )
-
+                
         xlabel = (
             self.DISPLAY_NAMES_DICT.get(method, method)
             if (only_one_method and xlabels is None)
             else ""
         )
+        
         major_ax = self.set_major_axis_labels(
             fig,
             xlabel=xlabel,
@@ -335,37 +305,7 @@ class PlotImportance(PlotStructure):
             fontsize=self.FONT_SIZES["small"],
             **kwargs,
         )
-
-        pad = -0.2 if plot_correlated_features else -0.15
-        diff = 0.2 if n_panels > 3 else 0.0
-        ax_iterator[0].annotate(
-            "higher ranking",
-            xy=(pad, 0.8 + diff),
-            xytext=(pad, 0.5),
-            arrowprops=dict(arrowstyle="->", color="xkcd:blue grey"),
-            xycoords=ax_iterator[0].transAxes,
-            rotation=90,
-            size=6,
-            ha="center",
-            va="center",
-            color="xkcd:blue grey",
-            alpha=0.65,
-        )
-
-        ax_iterator[0].annotate(
-            "lower ranking",
-            xy=(pad + 0.05, 0.2 - diff),
-            xytext=(pad + 0.05, 0.5),
-            arrowprops=dict(arrowstyle="->", color="xkcd:blue grey"),
-            xycoords=ax_iterator[0].transAxes,
-            rotation=90,
-            size=6,
-            ha="center",
-            va="center",
-            color="xkcd:blue grey",
-            alpha=0.65,
-        )
-
+        
         if ylabels is not None:
             self.set_row_labels(
                 labels=ylabels, axes=axes, pos=-1, pad=1.15, rotation=270, **kwargs
@@ -375,51 +315,59 @@ class PlotImportance(PlotStructure):
             n_panels, axes, pos=kwargs.get("alphabet_pos", (0.9, 0.09))
         )
 
+        # Necessary to make sure that the tick labels for the feature names
+        # do overlap another ax. 
+        fig.tight_layout()
+        
         return fig, axes
 
-    def _add_correlated_brackets(self, ax, corr_matrix, top_features, rho_threshold):
+    def _add_correlated_brackets(self, ax, y, width, corr_matrix, top_features, rho_threshold):
         """
         Add bracket connecting features above a given correlation threshold.
+        
+        Parameters
+        ------------------
+        ax : matplotlib.ax.Axes object 
+        y : 
+        width : 
+        corr_matrix: 
+        top_features:
+        rho_threshold:
         """
         get_colors = lambda n: list(
             map(lambda i: "#" + "%06x" % random.randint(0, 0xFFFFFF), range(n))
         )
-        colors = get_colors(
-            5
-        )  # sample return:  ['#8af5da', '#fbc08c', '#b741d0', '#e599f1', '#bbcb59', '#a2a6c0']
 
         _, pair_indices = find_correlated_pairs_among_top_features(
             corr_matrix,
             top_features,
             rho_threshold=rho_threshold,
         )
+        
         colors = get_colors(len(pair_indices))
 
-        x = 0.0001
-        dx = 0.0002
-        bottom_indices = []
-        top_indices = []
+        top_indices, bottom_indices = [], []
         for p, color in zip(pair_indices, colors):
+            delta=0
             if p[0] > p[1]:
                 bottom_idx = p[1]
                 top_idx = p[0]
             else:
                 bottom_idx = p[0]
                 top_idx = p[1]
-
+            
+            # If a feature has already shown up in a correlated pair,
+            # then we want to shift the brackets slightly for ease of 
+            # interpretation. 
             if bottom_idx in bottom_indices or bottom_idx in top_indices:
-                bottom_idx += 0.1
-
+                delta += 0.1
             if top_idx in top_indices or top_idx in bottom_indices:
-                top_idx += 0.1
-
-            bottom_indices.append(bottom_idx)
+                delta += 0.1
+                
             top_indices.append(top_idx)
-
-            self.annotate_bars(
-                ax, bottom_idx=bottom_idx, top_idx=top_idx, x=x, color=color
-            )
-            x += dx
+            bottom_indices.append(bottom_idx)
+            
+            self.annotate_bars(ax, bottom_idx, top_idx, y=y, width=width, delta=delta)
 
     # You can fill this in by using a dictionary with {var_name: legible_name}
     def convert_vars_to_readable(self, variables_list, VARIABLE_NAMES_DICT):
