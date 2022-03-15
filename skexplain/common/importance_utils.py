@@ -324,13 +324,10 @@ def find_correlated_pairs_among_top_features(
 
     """
     top_feature_indices = {f: i for i, f in enumerate(top_features)}
-
-    _top_features = [f for f in top_features if f != "No Permutations"]
-
-    sub_corr_matrix = corr_matrix[_top_features].loc[_top_features]
+    sub_corr_matrix = corr_matrix[top_features].loc[top_features]
 
     pairs = []
-    for feature in _top_features:
+    for feature in top_features:
         # try:
         most_corr_feature = (
             sub_corr_matrix[feature].sort_values(ascending=False).index[1]

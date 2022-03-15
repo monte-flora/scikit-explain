@@ -11,22 +11,19 @@ from matplotlib import rcParams
 from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
 import matplotlib
+import seaborn as sns
 
 from ..common.utils import is_outlier
 from ..common.contrib_utils import combine_like_features
 import shap
-
 
 class PlotStructure:
     """
     Plot handles figure and subplot generation
     """
 
-    def __init__(self, BASE_FONT_SIZE=12):
-
-        # Setting the font style to serif
-        rcParams["font.family"] = "serif"
-
+    def __init__(self, BASE_FONT_SIZE=12, set_seaborn=True):
+        
         GENERIC_FONT_SIZE_NAMES = [
             "teensie",
             "tiny",
@@ -35,29 +32,35 @@ class PlotStructure:
             "big",
             "large",
             "huge",
-        ]
+            ]
 
         FONT_SIZES_ARRAY = np.arange(-6, 8, 2) + BASE_FONT_SIZE
 
         self.FONT_SIZES = {
-            name: size for name, size in zip(GENERIC_FONT_SIZE_NAMES, FONT_SIZES_ARRAY)
-        }
+                name: size for name, size in zip(GENERIC_FONT_SIZE_NAMES, FONT_SIZES_ARRAY)
+            }
+        
+        if set_seaborn:
+            sns.set_theme()
+        
+        # Setting the font style to serif
+        rcParams["font.family"] = "serif"
 
         plt.rc("font", size=self.FONT_SIZES["normal"])  # controls default text sizes
         plt.rc("axes", titlesize=self.FONT_SIZES["tiny"])  # fontsize of the axes title
         plt.rc(
-            "axes", labelsize=self.FONT_SIZES["normal"]
-        )  # fontsize of the x and y labels
+                 "axes", labelsize=self.FONT_SIZES["normal"]
+                )  # fontsize of the x and y labels
         plt.rc(
-            "xtick", labelsize=self.FONT_SIZES["teensie"]
-        )  # fontsize of the x-axis tick marks
+                "xtick", labelsize=self.FONT_SIZES["teensie"]
+                )  # fontsize of the x-axis tick marks
         plt.rc(
-            "ytick", labelsize=self.FONT_SIZES["teensie"]
-        )  # fontsize of the y-axis tick marks
+                "ytick", labelsize=self.FONT_SIZES["teensie"]
+                )  # fontsize of the y-axis tick marks
         plt.rc("legend", fontsize=self.FONT_SIZES["teensie"])  # legend fontsize
         plt.rc(
-            "figure", titlesize=self.FONT_SIZES["big"]
-        )  # fontsize of the figure title
+                "figure", titlesize=self.FONT_SIZES["big"]
+                )  # fontsize of the figure title
 
     def get_fig_props(self, n_panels, **kwargs):
         """Determine appropriate figure properties"""
@@ -271,8 +274,11 @@ class PlotStructure:
                 fontsize=fontsize,
                 color=ylabel_right_color,
             )
+            ax_right.grid(False)
 
         ax.set_title(title)
+        
+        ax.grid(False)
 
         return ax
 
@@ -537,6 +543,37 @@ class PlotStructure:
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
 
+    def annotate_bars(self, ax, num1, num2, y, width, dh=0.01, barh=0.05, delta=0):
+        """ 
+        Annotate barplot with connections between correlated variables. 
+
+        Parameters
+        ----------------
+            num1: index of left bar to put bracket over
+            num2: index of right bar to put bracket over
+            y: centers of all bars (like plt.barh() input)
+            width: widths of all bars (like plt.barh() input)
+            dh: height offset over bar / bar + yerr in axes coordinates (0 to 1)
+            barh: bar height in axes coordinates (0 to 1)
+            delta : shifting of the annotation when multiple annotations would overlap
+        """
+        lx, ly = y[num1], width[num1]
+        rx, ry = y[num2], width[num2]
+
+        ax_y0, ax_y1 = plt.gca().get_xlim()
+        dh *= (ax_y1 - ax_y0)
+        barh *= (ax_y1 - ax_y0)
+
+        y = max(ly, ry) + dh
+
+        barx = [lx, lx, rx, rx]
+        bary = [y, y+barh, y+barh, y]
+        mid = ((lx+rx)/2, y+barh)
+
+        ax.plot(np.array(bary)+delta, barx, alpha=0.8, clip_on=False)   
+        
+    '''
+    Deprecated 14 March 2022. 
     def annotate_bars(self, ax, bottom_idx, top_idx, x=0, **kwargs):
         """
         Adds a square bracket that contains two points. Used to
@@ -557,6 +594,7 @@ class PlotStructure:
                 linewidth=0.5,
             ),
         )
+    '''
 
     def get_custom_colormap(self, vals, **kwargs):
         """Get a custom colormap"""
