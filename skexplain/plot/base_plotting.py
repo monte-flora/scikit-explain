@@ -274,12 +274,11 @@ class PlotStructure:
                 fontsize=fontsize,
                 color=ylabel_right_color,
             )
+            ax_right.grid(False)
 
         ax.set_title(title)
         
         ax.grid(False)
-        ax_right.grid(False)
-        
 
         return ax
 
@@ -544,7 +543,7 @@ class PlotStructure:
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
 
-    def annotate_bars(self, ax, num1, num2, y, width, dh=0.01, barh=0.01, delta=0):
+    def annotate_bars(self, ax, num1, num2, y, width, dh=0.01, barh=0.05, delta=0):
         """ 
         Annotate barplot with connections between correlated variables. 
 
