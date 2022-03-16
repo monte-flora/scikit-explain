@@ -309,11 +309,10 @@ class PlotStructure:
                 alpha=0.65,
             )
 
-    def add_alphabet_label(self, n_panels, axes, pos=(0.9, 0.09), **kwargs):
+    def add_alphabet_label(self, n_panels, axes, pos=(0.9, 0.09), alphabet_fontsize=10, **kwargs):
         """
         A alphabet character to each subpanel.
         """
-        fontsize = kwargs.get("fontsize", 10)
         alphabet_list = [chr(x) for x in range(ord("a"), ord("z") + 1)] + [
             f"{chr(x)}{chr(x)}" for x in range(ord("a"), ord("z") + 1)
         ]
@@ -325,7 +324,7 @@ class PlotStructure:
                 pos[0],
                 pos[1],
                 f"({alphabet_list[i]})",
-                fontsize=fontsize,
+                fontsize=alphabet_fontsize,
                 alpha=0.8,
                 ha="center",
                 va="center",

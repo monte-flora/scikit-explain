@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from .dependence import dependence_plot
 from matplotlib.lines import Line2D
 import matplotlib
+import seaborn as sns
 
 import re
 from shap.plots import colors
@@ -401,8 +402,9 @@ class PlotFeatureContributions(PlotStructure):
     """
 
     def __init__(self, BASE_FONT_SIZE=12):
-        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
-
+        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE, set_seaborn=False)
+        sns.set_style("white")
+        
     def plot_contributions(
         self,
         data,
