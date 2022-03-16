@@ -312,7 +312,8 @@ class PlotImportance(PlotStructure):
             )
 
         self.add_alphabet_label(
-            n_panels, axes, pos=kwargs.get("alphabet_pos", (0.9, 0.09))
+            n_panels, axes, pos=kwargs.get("alphabet_pos", (0.9, 0.09)), 
+            alphabet_fontsize = kwargs.get("alphabet_fontsize", 10)
         )
 
         # Necessary to make sure that the tick labels for the feature names

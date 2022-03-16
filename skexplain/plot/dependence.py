@@ -287,6 +287,7 @@ def dependence_plot(
     if interaction_index != feature_ind and interaction_index is not None:
         # draw the color bar
         pad = 0.05 if histdata is None else 0.18
+        pad = kwargs.get('colorbar_pad', pad) 
         cb = pl.colorbar(p, ticks=MaxNLocator(5), ax=ax, pad=pad)
         cb.set_label(display_feature_names[interaction_index], size=8)
         cb.ax.tick_params(labelsize=8)

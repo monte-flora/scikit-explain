@@ -299,6 +299,7 @@ class LocalExplainer(Attributes):
 
         if self.estimator_output == "probability":
             contributions *= 100.0
+            bias *= 100.
 
         # A single example.
         if isinstance(bias, float):
