@@ -39,6 +39,7 @@ REQUIRED = [
     "ipywidgets",
     "statsmodels",
     "seaborn>=0.11.0",
+    "lime>=0.2.0" 
 ]
 
 # What packages are optional?
