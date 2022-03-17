@@ -466,13 +466,21 @@ class PlotFeatureContributions(PlotStructure):
         n_columns += additional_columns
         kwargs["n_columns"] = kwargs.get("n_columns", n_columns)
 
-        # create subplots, one for each feature
-        fig, axes = self.create_subplots(
-            n_panels=n_panels,
-            sharex=False,
-            sharey=False,
-            **kwargs,
-        )
+        using_internal_ax = True
+        if kwargs.get("ax") is not None:
+            using_internal_ax = False
+            axes = kwargs.get("ax")
+            fig = axes.get_figure()
+            n_panels = 1
+            kwargs.pop("ax")
+        else:
+            # create subplots, one for each feature
+            fig, axes = self.create_subplots(
+                n_panels=n_panels,
+                sharex=False,
+                sharey=False,
+                **kwargs,
+            )
 
         ax_iterator = axes.flat if n_panels > 1 else axes
 
