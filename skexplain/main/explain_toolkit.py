@@ -1657,22 +1657,21 @@ class ExplainToolkit(Attributes):
         performance_based=False,
         n_samples=100,
         shap_kwargs=None,
+        lime_kws=None
     ):
         """
         Computes the individual feature contributions to a predicted outcome for
         a series of examples either based on tree interpreter (only Tree-based methods)
-        or Shapley Additive Explanations.
+        , Shapley Additive Explanations, or Local Interpretable Model-Agnostic Explanations (LIME). 
 
         Parameters
         -----------
 
-        method : ``'shap'`` or ``'tree_interpreter'``
-            Can use SHAP or treeinterpreter to compute the feature contributions.
-            SHAP is estimator-agnostic while treeinterpreter can only be used on
-            select decision-tree based estimators in scikit-learn. SHAP will attempt
-            to first use the Tree-based explainer and if that fails, then the
-            Kernel-based explainer.
-
+        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'``
+            Can use SHAP, treeinterpreter, or LIME to compute the feature contributions.
+            SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
+            select decision-tree based estimators in scikit-learn (e.g., random forests). 
+            
         performance_based : boolean (default=False)
             If True, will average feature contributions over the best and worst
             performing of the given X. The number of examples to average over
@@ -1694,7 +1693,15 @@ class ExplainToolkit(Attributes):
             - masker
             - algorithm
 
-
+        lime_kws : dict 
+            Arguments passed to the LimeTabularExplainer object. See https://github.com/marcotcr/lime
+            for details. Generally, you'll pass the in the following:
+            
+            - training_data 
+            - categorical_names (scikit-explain will attempt to determine it internally, 
+                                 if it is not passed in)
+            - random_state (for reproduciability) 
+           
         Returns
         --------
 
@@ -1733,9 +1740,9 @@ class ExplainToolkit(Attributes):
         ...                   performance_based=True, n_samples=100)
 
         """
-        if method not in ["shap", "tree_interpreter"]:
+        if method not in ["shap", "tree_interpreter", "lime"]:
             raise ValueError(
-                "Invalid method! Method must be 'shap' or 'tree_interpreter'"
+                "Invalid method! Method must be 'shap', 'tree_interpreter', 'lime'"
             )
 
         results_df = self.local_obj._get_local_prediction(
@@ -1743,6 +1750,7 @@ class ExplainToolkit(Attributes):
             performance_based=performance_based,
             n_samples=n_samples,
             shap_kwargs=shap_kwargs,
+            lime_kws=lime_kws,
         )
 
         # Add metadata
@@ -1842,18 +1850,24 @@ class ExplainToolkit(Attributes):
 
     def shap(self, shap_kwargs={"masker": None, "algorithm": "auto"}):
         """
-        Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_. The calculations starts
-        with the Tree-based explainer and then defaults to the Kernel-based explainer for
-        non-tree based estimators. If using a non-tree based estimators, then you must provide a
-        background dataset
+        Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_. 
+        By default, we set algorithm = ``'auto'``, so that the best algorithm 
+        for a model is determined internally in the SHAP package. 
 
         Parameters
         ------------------
-        background_dataset : array of shape (n_samples, n_features)
-            A representative (often a K-means or random sample) subset of the
-            data used to train the ML estimator. Used for the background dataset
-            to compute the expected values for the SHAP calculations.
-            Only required for non-tree based methods.
+        shap_kwargs : dict
+            Arguments passed to the shap.Explainer object. See
+            https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
+            for details. The main two arguments supported in skexplain is the masker and
+            algorithm options. By default, the masker option uses
+            masker = shap.maskers.Partition(X, max_samples=100, clustering="correlation") for
+            hierarchical clustering by correlations. You can also provide a background dataset
+            e.g., background_dataset = shap.sample(X, 100).reset_index(drop=True). The algorithm
+            option is set to "auto" by default.
+
+            - masker
+            - algorithm
 
         Returns
         -------------------

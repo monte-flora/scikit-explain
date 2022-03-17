@@ -20,6 +20,13 @@ class TestFeatureContributions(TestSingleExampleContributions):
         # Test a single example with tree interpreter.
         contrib_ds = self.explainer.local_contributions(method="tree_interpreter")
 
+    def test_lime_single_example(self):
+        # Test a single example with LIME. 
+        lime_kws = {'training_data' : self.X.values}
+        contrib_ds = self.explainer.local_contributions(method="lime", 
+                                                        lime_kws=lime_kws,
+                                                       )
+
     def test_plot_ti_contributions(self):
         # Test plotting the treeinterpret results.
         # Should be vaild for SHAP as well.
@@ -39,16 +46,18 @@ class TestFeatureContributions(TestSingleExampleContributions):
             y=self.y,
         )
 
-        for method in ["tree_interpreter", "shap"]:
+        for method in ["tree_interpreter", "shap", ]:
             contrib_ds = explainer.local_contributions(
                 method=method,
                 performance_based=True,
                 n_samples=10,
+                lime_kws={'training_data' : self.X.values}, 
                 shap_kwargs={
                     "masker": shap.maskers.Partition(
                         self.X, max_samples=100, clustering="correlation"
                     ),
                     "algorithm": "permutation",
+                   
                 },
             )
 
@@ -57,7 +66,7 @@ class TestFeatureContributions(TestSingleExampleContributions):
             contrib_ds = self.explainer.local_contributions(
                 method="nonsense", performance_based=True, n_samples=10
             )
-        except_msg = "Invalid method! Method must be 'shap' or 'tree_interpreter'"
+        except_msg = "Invalid method! Method must be 'shap', 'tree_interpreter', 'lime'"
         self.assertEqual(ex.exception.args[0], except_msg)
 
 
