@@ -24,6 +24,7 @@ scikit-explain is a user-friendly Python module for machine learning explainabil
   * [Accumulated local effects](https://christophm.github.io/interpretable-ml-book/ale.html) (ALE), 
   * Random forest-based feature contributions ([treeinterpreter](http://blog.datadive.net/interpreting-random-forests/))
   * SHAP 
+  * [LIME](https://christophm.github.io/interpretable-ml-book/lime.html#lime)
   * Main Effect Complexity (MEC; [Molnar et al. 2019](https://arxiv.org/abs/1904.03867))
 
 * Feature Interactions:
@@ -42,7 +43,8 @@ This package is largely original code, but also includes snippets or chunks of c
 [**PermutationImportance**](https://github.com/gelijergensen/PermutationImportance),
 [**ALEPython**](https://github.com/blent-ai/ALEPython),
 [**SHAP**](https://github.com/slundberg/shap/), 
-[**scikit-explain**](https://github.com/scikit-explain/scikit-explain)
+[**scikit-learn**](https://github.com/scikit-learn/scikit-learn)
+[**LIME**](https://github.com/marcotcr/lime)
 
 If you employ scikit-explain in your research, please cite this github and the relevant packages listed above. 
 
