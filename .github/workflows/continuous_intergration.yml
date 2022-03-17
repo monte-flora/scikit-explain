@@ -24,9 +24,14 @@ jobs:
     
     - name: Run the test scripts 
       run: |
-        pytest -s tests --cov='.'
+        pytest -s tests --cov=./ --cov-report=xml
     
-    - name: Upload to codecoverage
-      run: | 
-        codecov -t 06e4eebf-3071-48fc-a8dd-e766f0fcbe47
-        bash <(curl -s https://codecov.io/bash)
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        directory: ./coverage/reports/
+        fail_ci_if_error: true
+        files: ./coverage1.xml,./coverage2.xml
+        path_to_write_report: ./coverage/codecov_report.txt
+        verbose: true
