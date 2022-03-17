@@ -4,9 +4,11 @@ from .tree_interpreter import TreeInterpreter
 import pandas as pd
 import numpy as np
 
+from lime.lime_tabular import LimeTabularExplainer
+
 from ..common.attributes import Attributes
 from ..common.importance_utils import retrieve_important_vars
-from ..common.utils import to_dataframe
+from ..common.utils import to_dataframe, determine_feature_dtype
 from ..common.metrics import brier_skill_score
 
 
@@ -102,6 +104,7 @@ class LocalExplainer(Attributes):
         performance_based=True,
         n_samples=100,
         shap_kwargs=None,
+        lime_kws=None, 
     ):
         """
         Explain individual predictions using SHAP (SHapley Additive exPlanations;
@@ -110,7 +113,7 @@ class LocalExplainer(Attributes):
 
         Parameters
         ------------
-        method : 'treeinterpreter' or 'shap'
+        method : 'treeinterpreter', 'shap', or 'lime'
             Contributions can be computed using treeinterpreter for tree-based estimators
             or using SHAP for both tree- and non-tree-based estimators
         background_dataset : array (n_samples, n_features)
@@ -145,10 +148,10 @@ class LocalExplainer(Attributes):
         results_ds : pandas.DataFrame
 
         """
-        if method not in ["tree_interpreter", "shap"]:
+        if method not in ["tree_interpreter", "shap", "lime"]:
             raise ValueError(
                 """
-                             Declared method is not 'tree_interpreter' or 'shap'. 
+                             Declared method is not 'tree_interpreter','shap', or 'lime'. 
                              Check for spelling mistake or syntax error!
                              """
             )
@@ -191,6 +194,7 @@ class LocalExplainer(Attributes):
                     estimator=estimator,
                     X=self.X,
                     shap_kwargs=shap_kwargs,
+                    lime_kws=lime_kws, 
                 )
 
                 contributions_dict[estimator_name]["non_performance"] = cont_dict
@@ -250,7 +254,7 @@ class LocalExplainer(Attributes):
 
         contributions = shap_results.values
         bias = shap_results.base_values
-
+        
         return contributions, bias
 
     def _get_ti_values(self, estimator, X):
@@ -277,7 +281,52 @@ class LocalExplainer(Attributes):
 
         return contributions, bias
 
-    def _get_feature_contributions(self, estimator, X, shap_kwargs=None):
+    
+    def _get_lime_values(self, estimator, X, lime_kws):
+        """
+        Compute the Local Interpretable Model-Agnostic Explanations
+        """
+        if lime_kws is None:
+            raise KeyError('lime_kws is None, but lime_kws must contain training_data!')
+        
+        lime_kws['feature_names'] = X.columns
+        
+        # Determine categorical features
+        if lime_kws.get('categorical_names', None) is None and lime_kws.get('categorical_features', None) is None:
+            features, cat_features = determine_feature_dtype(X, X.columns)
+            lime_kws['categorical_names'] = cat_features
+        
+        
+        # Determine whether its a classification or regression task.
+        mode = 'regression' 
+        if lime_kws.get('mode', None) is None:
+            mode = 'classification' if hasattr(estimator, 'predict_proba') else 'regression'
+            lime_kws['mode'] = mode
+        
+        # Set the random state for reproducible results. 
+        if lime_kws.get('random_state', None) is None:
+            lime_kws['random_state'] = 123 
+        
+        
+        explainer = LimeTabularExplainer(**lime_kws)
+        
+        if mode == 'classification' and hasattr(estimator, 'predict_proba'):
+            predict_fn = estimator.predict_proba 
+        else:
+            predict_fn = estimator.predict 
+        
+        # Using X.values[0] rather than X.values since it requires 
+        # a (n_features) rather than (1,n_features).
+        explanation = explainer.explain_instance(X.values[0], predict_fn, num_features=X.shape[1],)
+
+        sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
+        contributions = np.array([[val[1] for val in sorted_exp]])
+        bias = explanation.intercept[1] 
+    
+        return contributions, bias
+        
+    
+    def _get_feature_contributions(self, estimator, X, shap_kwargs=None, lime_kws=None):
         """
         FOR INTERNAL PURPOSES ONLY.
 
@@ -293,6 +342,8 @@ class LocalExplainer(Attributes):
             contributions, bias = self._get_shap_values(estimator, X, shap_kwargs)
         elif self.method == "tree_interpreter":
             contributions, bias = self._get_ti_values(estimator, X)
+        elif self.method == 'lime':
+            contributions, bias = self._get_lime_values(estimator, X, lime_kws)
 
         n_samples = len(X)
         columns = self.feature_names + ["Bias"]

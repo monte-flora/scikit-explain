@@ -9,3 +9,4 @@ ipywidgets
 statsmodels
 seaborn>=0.11.0
 jupyter
+lime>=0.2.0
