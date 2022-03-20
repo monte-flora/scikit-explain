@@ -6,6 +6,7 @@ from sklearn.metrics import (
     average_precision_score,
     precision_recall_curve,
 )
+import numpy as np
 
 
 def brier_skill_score(y_values, forecast_probabilities):
