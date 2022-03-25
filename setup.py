@@ -32,7 +32,7 @@ REQUIRED = [
     "numpy",
     "pandas",
     "scikit-learn>=1.0.0",
-    "matplotlib<=3.4.3",
+    "matplotlib",
     "shap>=0.30.0",
     "xarray>=0.16.0",
     "tqdm",
