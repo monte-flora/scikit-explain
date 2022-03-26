@@ -125,13 +125,16 @@ class model_scorer(object):
         self.kwargs = kwargs
         self.random_seed = kwargs.get("random_seed", 42)
 
-    def __call__(self, training_data, scoring_data, var_idx=None):
+    def __call__(self, training_data, scoring_data, var_idx):
         """Uses the training, predicting, and evaluation functions to score the
         model given the training and scoring data
 
         :param training_data: (training_input, training_output)
         :param scoring_data: (scoring_input, scoring_output)
         :returns: either a single value or an array of values
+        :param var_idx : integer
+            The column index of the variable being permuted. When computing the original
+            score, set var_idx==None.
         """
         (training_inputs, training_outputs) = training_data
         (scoring_inputs, scoring_outputs) = scoring_data
@@ -152,20 +155,15 @@ class model_scorer(object):
             else:
                 return np.full((self.n_permute,), self.default_score)
 
-        # Predict
-        if var_idx is None:
-            ###print('Getting the original score!')
-            predictions = self.prediction_fn(trained_model, scoring_inputs)
-            return [self.evaluation_fn(scoring_outputs, predictions)] * self.n_permute
-
         random_states = bootstrap_generator(self.n_permute, seed=self.random_seed)
         if self.n_permute == 1 and subsample == int(len(scoring_data[0])):
             ###print('Only one permutation and no subsampling!')
             shuffled_indices = random_states[0].permutation(scoring_outputs.shape[0])
             permuted_scoring_inputs = scoring_inputs.copy()
-            permuted_scoring_inputs[:, var_idx] = scoring_inputs[
-                shuffled_indices, var_idx
-            ]
+            if var_idx is not None: 
+                permuted_scoring_inputs[:, var_idx] = scoring_inputs[
+                    shuffled_indices, var_idx
+                ]
             permuted_predictions = self.prediction_fn(
                 trained_model, permuted_scoring_inputs
             )
@@ -187,13 +185,13 @@ class model_scorer(object):
                 subsampled_scoring_outputs.shape[0]
             )
             permuted_scoring_inputs = subsampled_scoring_inputs.copy()
-            permuted_scoring_inputs[:, var_idx] = subsampled_scoring_inputs[
-                shuffled_indices, var_idx
-            ]
+            if var_idx is not None:    
+                permuted_scoring_inputs[:, var_idx] = subsampled_scoring_inputs[
+                    shuffled_indices, var_idx
+                ]
             permuted_predictions = self.prediction_fn(
                 trained_model, permuted_scoring_inputs
             )
-
             scores.append(
                 self.evaluation_fn(
                     subsampled_scoring_outputs,
@@ -218,9 +216,10 @@ class model_scorer(object):
                     subsampled_scoring_outputs.shape[0]
                 )
                 permuted_scoring_inputs = subsampled_scoring_inputs.copy()
-                permuted_scoring_inputs[:, var_idx] = subsampled_scoring_inputs[
-                    shuffled_indices, var_idx
-                ]
+                if var_idx is not None:
+                    permuted_scoring_inputs[:, var_idx] = subsampled_scoring_inputs[
+                        shuffled_indices, var_idx
+                    ]
                 permuted_predictions = self.prediction_fn(
                     trained_model, permuted_scoring_inputs
                 )

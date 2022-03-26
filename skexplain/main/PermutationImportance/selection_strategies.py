@@ -68,7 +68,7 @@ class SelectionStrategy(object):
                         var,
                     ]
                 )
-                yield (var, training_data, scoring_data)
+                yield (training_data, scoring_data, var)
 
     def __iter__(self):
         return self.generate_all_datasets()

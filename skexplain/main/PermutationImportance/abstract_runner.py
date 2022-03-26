@@ -87,7 +87,7 @@ def abstract_variable_importance(
     num_vars = len(variable_names)
 
     # Compute the original score over all the data
-    original_score = scoring_fn(training_data, scoring_data)
+    original_score = scoring_fn(training_data, scoring_data, var_idx=None)
     result_obj = ImportanceResult(method, variable_names, original_score)
 
     # This random state generator is for the predictors left permuted.
@@ -112,9 +112,7 @@ def abstract_variable_importance(
         if njobs == 1:
             result = _singlethread_iteration(selection_iter, scoring_fn)
         else:
-            result = _multithread_iteration(
-                selection_iter, scoring_fn, njobs, num_vars - i
-            )
+            result = _multithread_iteration(selection_iter, scoring_fn, njobs)
 
         next_result = add_ranks_to_dict(result, variable_names, scoring_strategy)
         best_var = min(next_result.keys(), key=lambda key: next_result[key][0])
@@ -137,13 +135,13 @@ def _singlethread_iteration(selection_iterator, scoring_fn):
     :returns: a dict of ``{var: score}``
     """
     result = dict()
-    for var, training_data, scoring_data in selection_iterator:
+    for training_data, scoring_data, var in selection_iterator:
         score = scoring_fn(training_data, scoring_data, var_idx=var)
         result[var] = score
     return result
 
 
-def _multithread_iteration(selection_iterator, scoring_fn, njobs, n_vars):
+def _multithread_iteration(selection_iterator, scoring_fn, njobs):
     """Handles a single pass of the abstract variable importance algorithm using
     multithreading
 
