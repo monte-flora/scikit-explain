@@ -2032,8 +2032,8 @@ class ExplainToolkit(Attributes):
         if self.estimator_output == "probability":
             to_probability = kwargs.get("to_probability", None)
             if to_probability is None:
-                to_probability = True
-
+                to_probability = True        
+                
         ###to_probability = True if self.estimator_output == 'probability' else False
         if to_probability:
             shap_values_copy = np.copy(shap_values)
