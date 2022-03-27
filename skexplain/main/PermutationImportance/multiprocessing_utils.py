@@ -21,7 +21,11 @@ __all__ = ["pool_imap_unordered"]
 
 def worker(func, recvq, sendq):
     for args in iter(recvq.get, None):
-        result = (args[0], func(*args[1:]))
+        # The args are training_data, scoring_data, var_idx
+        # Thus, we want to return the var_idx and then 
+        # send those args to the abstract runner. 
+        result = (args[-1], func(*args))
+        
         sendq.put(result)
 
 

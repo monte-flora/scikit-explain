@@ -65,8 +65,13 @@ def abstract_variable_importance(
     :returns: :class:`PermutationImportance.result.ImportanceResult` object
         which contains the results for each run
     """
-    training_data = verify_data(training_data)
+    #training_data = #verify_data(training_data)
     scoring_data = verify_data(scoring_data)
+    
+    # Sending the scoring_data in as training_data so that for the 
+    # forward permutation importance methods, we can un-permuted data. 
+    training_data = (scoring_data[0].copy(), scoring_data[1].copy())
+    
     scoring_strategy = verify_scoring_strategy(scoring_strategy)
     variable_names = determine_variable_names(scoring_data, variable_names)
 
@@ -87,7 +92,7 @@ def abstract_variable_importance(
     num_vars = len(variable_names)
 
     # Compute the original score over all the data
-    original_score = scoring_fn(training_data, scoring_data)
+    original_score = scoring_fn(training_data, scoring_data, var_idx=None)
     result_obj = ImportanceResult(method, variable_names, original_score)
 
     # This random state generator is for the predictors left permuted.
@@ -100,6 +105,8 @@ def abstract_variable_importance(
         if verbose:
             print(f"Multi-pass iteration {i+1} out of {nimportant_vars}...")
 
+        # Sending the scoring_data in as training_data so that for the 
+        # forward permutation importance methods, we can un-permuted data. 
         selection_iter = selection_strategy(
             training_data,
             scoring_data,
@@ -112,10 +119,8 @@ def abstract_variable_importance(
         if njobs == 1:
             result = _singlethread_iteration(selection_iter, scoring_fn)
         else:
-            result = _multithread_iteration(
-                selection_iter, scoring_fn, njobs, num_vars - i
-            )
-
+            result = _multithread_iteration(selection_iter, scoring_fn, njobs)
+   
         next_result = add_ranks_to_dict(result, variable_names, scoring_strategy)
         best_var = min(next_result.keys(), key=lambda key: next_result[key][0])
         best_index = np.flatnonzero(variable_names == best_var)[0]
@@ -137,13 +142,13 @@ def _singlethread_iteration(selection_iterator, scoring_fn):
     :returns: a dict of ``{var: score}``
     """
     result = dict()
-    for var, training_data, scoring_data in selection_iterator:
+    for training_data, scoring_data, var in selection_iterator:
         score = scoring_fn(training_data, scoring_data, var_idx=var)
         result[var] = score
     return result
 
 
-def _multithread_iteration(selection_iterator, scoring_fn, njobs, n_vars):
+def _multithread_iteration(selection_iterator, scoring_fn, njobs):
     """Handles a single pass of the abstract variable importance algorithm using
     multithreading
 
