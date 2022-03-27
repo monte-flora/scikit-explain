@@ -92,7 +92,6 @@ def permutation_importance(
             direction=direction,
         )
 
-
 def sklearn_permutation_importance(
     model,
     scoring_data,
@@ -151,6 +150,7 @@ def sklearn_permutation_importance(
             n_permute=n_permute,
             subsample=subsample,
             random_seed=random_seed,
+            direction=direction,
             scorer_kwargs={},
         )
     else:
@@ -160,6 +160,7 @@ def sklearn_permutation_importance(
             n_permute=n_permute,
             subsample=subsample,
             random_seed=random_seed,
+            direction=direction,
             scorer_kwargs={},
         )
 

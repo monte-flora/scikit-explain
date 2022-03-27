@@ -64,9 +64,7 @@ class SelectionStrategy(object):
             if var not in self.important_vars:
                 training_data, scoring_data = self.generate_datasets(
                     self.important_vars
-                    + [
-                        var,
-                    ]
+                    + [var,]
                 )
                 yield (training_data, scoring_data, var)
 
@@ -312,7 +310,7 @@ class ForwardPermutationImportanceSelectionStrategy(SelectionStrategy):
         self.original_index = (
             scoring_inputs.index if isinstance(scoring_inputs, pd.DataFrame) else None
         )
-
+        
     def generate_datasets(self, important_variables):
         """Check each of the non-important variables. Dataset has columns which
         are non-important variables are shuffled
@@ -326,8 +324,7 @@ class ForwardPermutationImportanceSelectionStrategy(SelectionStrategy):
                     scoring_inputs
                     if i in important_variables
                     else self.shuffled_scoring_inputs,
-                    None,
-                    [i],
+                    columns = [i],
                 )
                 for i in range(self.num_vars)
             ],

@@ -65,8 +65,13 @@ def abstract_variable_importance(
     :returns: :class:`PermutationImportance.result.ImportanceResult` object
         which contains the results for each run
     """
-    training_data = verify_data(training_data)
+    #training_data = #verify_data(training_data)
     scoring_data = verify_data(scoring_data)
+    
+    # Sending the scoring_data in as training_data so that for the 
+    # forward permutation importance methods, we can un-permuted data. 
+    training_data = (scoring_data[0].copy(), scoring_data[1].copy())
+    
     scoring_strategy = verify_scoring_strategy(scoring_strategy)
     variable_names = determine_variable_names(scoring_data, variable_names)
 
@@ -100,6 +105,8 @@ def abstract_variable_importance(
         if verbose:
             print(f"Multi-pass iteration {i+1} out of {nimportant_vars}...")
 
+        # Sending the scoring_data in as training_data so that for the 
+        # forward permutation importance methods, we can un-permuted data. 
         selection_iter = selection_strategy(
             training_data,
             scoring_data,
@@ -113,7 +120,7 @@ def abstract_variable_importance(
             result = _singlethread_iteration(selection_iter, scoring_fn)
         else:
             result = _multithread_iteration(selection_iter, scoring_fn, njobs)
-
+   
         next_result = add_ranks_to_dict(result, variable_names, scoring_strategy)
         best_var = min(next_result.keys(), key=lambda key: next_result[key][0])
         best_index = np.flatnonzero(variable_names == best_var)[0]

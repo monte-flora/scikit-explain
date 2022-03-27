@@ -193,7 +193,6 @@ class GlobalExplainer(Attributes):
         See calc_permutation_importance in IntepretToolkit for documentation.
 
         """
-
         if isinstance(evaluation_fn, str):
             evaluation_fn = evaluation_fn.lower()
             is_str = True
@@ -211,7 +210,6 @@ class GlobalExplainer(Attributes):
         if isinstance(evaluation_fn, str):
             evaluation_fn, scoring_strategy = self._to_scorer(evaluation_fn)
 
-            
         # Convert the scoring strategies to the appropriate 
         # style for PermutationImportance. 
         if scoring_strategy == 'maximize':
@@ -219,14 +217,13 @@ class GlobalExplainer(Attributes):
         elif scoring_strategy == 'minimize':
             scoring_strategy == 'argmin_of_mean'
 
-            
         if is_str:
             if direction == "forward":
                 if "max" in scoring_strategy:
                     scoring_strategy = scoring_strategy.replace("max", "min")
                 else:
-                    scoring_strategy = scoring_strategy.replace("min", "max")
-
+                    scoring_strategy = scoring_strategy.replace("min", "max")        
+                    
         y = pd.DataFrame(data=self.y, columns=["Test"])
 
         pi_dict = {}
