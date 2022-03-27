@@ -580,9 +580,10 @@ class PlotFeatureContributions(PlotStructure):
         else:
             pos = (1.15, -0.025)
 
-        self.add_alphabet_label(
-            n_panels, axes, pos=pos, fontsize=self.FONT_SIZES["tiny"]
-        )
+        if using_internal_ax:
+            self.add_alphabet_label(
+                n_panels, axes, pos=pos, fontsize=self.FONT_SIZES["tiny"]
+            )
 
         return fig, axes
 
