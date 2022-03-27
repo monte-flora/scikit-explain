@@ -22,9 +22,8 @@ from .result import ImportanceResult
 from .scoring_strategies import verify_scoring_strategy
 from .utils import add_ranks_to_dict, get_data_subset, bootstrap_generator
 
-# from ...common.multiprocessing_utils import run_parallel
-# from ...common.utils import merge_dict
-
+from ...common.multiprocessing_utils import run_parallel
+from ...common.utils import merge_dict
 
 def abstract_variable_importance(
     training_data,
@@ -119,7 +118,7 @@ def abstract_variable_importance(
         if njobs == 1:
             result = _singlethread_iteration(selection_iter, scoring_fn)
         else:
-            result = _multithread_iteration(selection_iter, scoring_fn, njobs)
+            result = _multithread_iteration(selection_iter, scoring_fn, njobs, nimportant_vars-i)
    
         next_result = add_ranks_to_dict(result, variable_names, scoring_strategy)
         best_var = min(next_result.keys(), key=lambda key: next_result[key][0])
@@ -148,7 +147,7 @@ def _singlethread_iteration(selection_iterator, scoring_fn):
     return result
 
 
-def _multithread_iteration(selection_iterator, scoring_fn, njobs):
+def _multithread_iteration(selection_iterator, scoring_fn, njobs, total=None):
     """Handles a single pass of the abstract variable importance algorithm using
     multithreading
 
@@ -160,13 +159,15 @@ def _multithread_iteration(selection_iterator, scoring_fn, njobs):
     :param num_jobs: number of processes to use
     :returns: a dict of ``{var: score}``
     """
+    
+    """
     result = dict()
     for index, score in pool_imap_unordered(scoring_fn, selection_iterator, njobs):
         result[index] = score
     return result
 
     """
-    def worker(var, training_data, scoring_data):
+    def worker(training_data, scoring_data, var):
         result = {}
         score = scoring_fn(training_data, scoring_data, var_idx=var)
         result[var] = score
@@ -177,7 +178,7 @@ def _multithread_iteration(selection_iterator, scoring_fn, njobs):
                 args_iterator=selection_iterator,
                 kwargs={},
                 nprocs_to_use=njobs,
-                total=n_vars,
+                total=total,
                          )
     return merge_dict(result)
-    """
+
