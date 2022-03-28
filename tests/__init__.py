@@ -65,12 +65,13 @@ class TestLR(unittest.TestCase):
         y_interact = X_interact.iloc[:,0] + X_interact.iloc[:,1] + 2.0*(X_interact.iloc[:,0] * X_interact.iloc[:,1])
         feature_names = [f"X_{i+1}" for i in range(X_interact.shape[1])]
 
-        rf_interact = RandomForestRegressor()
-        rf_interact.fit(X_interact, y_interact)
-        estimator_name = 'RF'
+        self.rf_interact = RandomForestRegressor(random_state=42)
+        self.rf_interact.fit(X_interact, y_interact)
+        self.rf_estimator_name = 'RF'
     
         self.explainer_interact = skexplain.ExplainToolkit(
-            estimators=(estimator_name, rf_interact), X=X_interact, y=y_interact, feature_names=feature_names
+            estimators=(self.rf_estimator_name, self.rf_interact), 
+            X=X_interact, y=y_interact, feature_names=feature_names
         )
         
 class TestRF:
