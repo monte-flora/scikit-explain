@@ -28,19 +28,19 @@ class PlotImportance(PlotStructure):
     ]
 
     DISPLAY_NAMES_DICT = {
-        "multipass": "Multi-Pass Importance Scores",
-        "singlepass": "Single-Pass Importance Scores",
-        "perm_based": "Permutation-based Interactions Importance Scores",
-        "ale_variance": "ALE-Based Importance Scores",
-        "ale_variance_interactions": "ALE-Based Interactions Importance Scores",
-        "coefs": "Coef. Importance Scores",
-        "shap_sum": "SHAP Importance Scores",
-        "hstat": "H-Stat Importance Scores",
-        "gini": "Gini Importance Scores",
+        "multipass": "Multi-Pass",
+        "singlepass": "Single-Pass",
+        "perm_based": "Permutation-based Interactions",
+        "ale_variance": "ALE-Based Importance",
+        "ale_variance_interactions": "ALE-Based Interactions",
+        "coefs": "Coef.",
+        "shap_sum": "SHAP",
+        "hstat": "H-Stat",
+        "gini": "Gini",
         "combined": "Method-Average Ranking",
         "sage": "SAGE Importance Scores",
-        "grouped": "Grouped Importance Scores",
-        "grouped_only": "Grouped Only Importance Scores",
+        "grouped": "Grouped Importance",
+        "grouped_only": "Grouped Only Importance",
     }
 
     def __init__(self, BASE_FONT_SIZE=12):

@@ -90,16 +90,26 @@ def abstract_variable_importance(
     important_vars = list()
     num_vars = len(variable_names)
 
-    # Compute the original score over all the data
-    original_score = scoring_fn(training_data, scoring_data, var_idx=None)
-    result_obj = ImportanceResult(method, variable_names, original_score)
-
     # This random state generator is for the predictors left permuted.
     # As predictors are left permuted, they are left different permuted states
     # with each multi-pass iterations. This hopefully ensures that the permuted
     # variables are not left in poor permutations to bias the results.
     random_states = bootstrap_generator(n_bootstrap=nimportant_vars, seed=156)
+    permute_rs = bootstrap_generator(n_bootstrap=scoring_fn.n_permute, seed=42)
+    
+    subsample_size = scoring_fn.get_subsample_size(full_size=len(scoring_data[1]))
+    
+    rows = [rs.choice(len(scoring_data[1]), subsample_size) for rs in permute_rs]
+    inds = [rs.permutation(subsample_size) for rs in permute_rs]
+   
+    # Setting the shuffled indices to reduce computational costs. 
+    scoring_fn.shuffled_indices = inds
+    scoring_fn.rows = rows 
 
+    # Compute the original score over all the data
+    original_score = scoring_fn(training_data, scoring_data, var_idx=None)
+    result_obj = ImportanceResult(method, variable_names, original_score)
+    
     for i, _ in enumerate(range(nimportant_vars)):
         if verbose:
             print(f"Multi-pass iteration {i+1} out of {nimportant_vars}...")
@@ -159,14 +169,13 @@ def _multithread_iteration(selection_iterator, scoring_fn, njobs, total=None):
     :param num_jobs: number of processes to use
     :returns: a dict of ``{var: score}``
     """
-    
-    """
     result = dict()
     for index, score in pool_imap_unordered(scoring_fn, selection_iterator, njobs):
         result[index] = score
     return result
 
     """
+    This appears to be faster for cases when the dataset is smaller (<5-10K)
     def worker(training_data, scoring_data, var):
         result = {}
         score = scoring_fn(training_data, scoring_data, var_idx=var)
@@ -181,4 +190,5 @@ def _multithread_iteration(selection_iterator, scoring_fn, njobs, total=None):
                 total=total,
                          )
     return merge_dict(result)
+    """
 
