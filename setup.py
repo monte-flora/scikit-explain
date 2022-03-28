@@ -25,14 +25,14 @@ URL = "https://github.com/monte-flora/scikit-explain/"
 EMAIL = "monte.flora@noaa.gov"
 AUTHOR = "Montgomery Flora"
 REQUIRES_PYTHON = ">=3.8.0"
-VERSION = "0.0.2"
+VERSION = "0.0.4"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     "numpy",
     "pandas",
     "scikit-learn>=1.0.0",
-    "matplotlib<=3.4.3",
+    "matplotlib",
     "shap>=0.30.0",
     "xarray>=0.16.0",
     "tqdm",
