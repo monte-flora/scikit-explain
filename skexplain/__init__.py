@@ -8,6 +8,6 @@ from .main.local_explainer import LocalExplainer
 from .common.models import load_models
 from .common.dataset import load_data
 
-__version__ = '0.0.2' 
+__version__ = '0.0.4' 
 
 
