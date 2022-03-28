@@ -135,7 +135,7 @@ class PlotInterpret2D(PlotStructure):
 
         if not is_list(estimator_names):
             estimator_names = to_list(estimator_names)
-
+   
         unnormalize = kwargs.get("unnormalize", None)
         self.display_feature_names = display_feature_names
         self.display_units = display_units
@@ -283,7 +283,8 @@ class PlotInterpret2D(PlotStructure):
                     alpha=0.8,
                     norm=BoundaryNorm(boundaries=levels, ncolors=cmap.N, clip=True),
                 )
-
+            
+            """
             mark_empty = False
             if mark_empty:
                 # Do not autoscale, so that boxes at the edges (contourf only plots the bin
@@ -302,6 +303,7 @@ class PlotInterpret2D(PlotStructure):
                             alpha=0.4,
                         )
                     )
+            """
 
             if scatter:
                 idx = np.random.choice(
@@ -364,16 +366,27 @@ class PlotInterpret2D(PlotStructure):
         if only_one_model:
             major_ax = self.set_major_axis_labels(fig=fig)
             # colorbar
-            cax = inset_axes(
-                major_ax,
-                width="100%",  # width = 10% of parent_bbox width
-                height="100%",  # height : 50%
-                loc="lower center",
-                bbox_to_anchor=(0.02, -0.1, 0.8, 0.05),
-                bbox_transform=major_ax.transAxes,
-                borderpad=0,
+            #cax = major_ax.inset_axes(
+            #    major_ax,
+            #    width="100%",  # width = 10% of parent_bbox width
+            #    height="100%",  # height : 50%
+            #    loc="lower center",
+            #    bbox_to_anchor=(0.02, -0.1, 0.8, 0.05),
+            #    bbox_transform=major_ax.transAxes,
+            #    borderpad=0,
+            #)
+            
+            cax = major_ax.inset_axes(
+                bounds = (0.02, -0.1, 0.8, 0.05),
+                transform=major_ax.transAxes,
             )
-
+            #    width="100%",  # width = 10% of parent_bbox width
+            #    height="100%",  # height : 50%
+            #    loc="lower center",
+            #    borderpad=0,
+            #)
+            
+            
             self.add_colorbar(
                 fig,
                 plot_obj=cf,
@@ -384,6 +397,7 @@ class PlotInterpret2D(PlotStructure):
                 colorbar_label=colorbar_label,
                 extend="both",
             )
+            
         # Add an letter per panel for publication purposes.
         self.add_alphabet_label(n_panels, main_axes)
 

@@ -149,15 +149,37 @@ class TestInterpretCurves(TestLR):
     def test_2d_ale(self):
         """ Test the 2D ALE """
         # From TestInteractions
-        ale_2d = self.explainer_interact.ale(features='all_2d')
+        ale_2d = self.explainer_interact.ale(features='all_2d', n_bins=10)
         
         self.explainer_interact.plot_ale(ale_2d) 
         
-        # TODO: Check that the 2D ALE is correct!
-        # Remember that the 2D ALE is the solely 
-        # second-order interactions such that 
-        # the average effects from both features
-        # has been removed. 
+        # The 2nd order ALE is remaining effect after the 
+        # first order effects have been removed. The first order 
+        # effects having already had the average effect removed 
+        # as that the average(first order effect) == 0. 
+        
+        # Since the coefficients for each feature is 1, then 
+        # the first order effect is just X - mean(self.y). 
+        #var1_effect = ale_2d['X_1__bin_values'].values - np.mean(self.y)
+        #var2_effect = ale_2d['X_2__bin_values'].values - np.mean(self.y)
+        
+        #first_order = var1_effect[:, np.newaxis] + var2_effect[np.newaxis, :]
+        #xx,yy = np.meshgrid(ale_2d_ds['X_1__bin_values'].values,
+        #            ale_2d_ds['X_2__bin_values'].values
+        #           )
+
+        #y_pred = self.rf_interact.predict(np.c_[xx.ravel(), yy.ravel()])
+        #y_pred = y_pred.reshape(xx.shape)
+
+        # The second order effect is the prediction minus the first order effects. 
+        #second_order = y_pred - first_order
+        
+        #ale_second_order = ale_2d[f'X_1__X_2__{self.rf_estimator_name}__ale'].values
+        
+        #diff = np.absolute(ale_second_order - second_order) 
+        # This should be approximately zero, but is unlikely to be precisely zero.
+        #self.assertAlmostEqual(diff, 0., places=1)
+
 
     def test_ale_var(self):
         """ Test the 1st and 2nd ALE variance """
