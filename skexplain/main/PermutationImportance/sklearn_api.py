@@ -22,6 +22,7 @@ import numpy as np
 from sklearn.base import clone
 
 from .utils import get_data_subset, bootstrap_generator
+from joblib import Parallel, delayed
 
 
 __all__ = [
@@ -37,29 +38,29 @@ __all__ = [
 ]
 
 
-def train_model(model, training_inputs, training_outputs):
+def train_model(model, X_train, y_train):
     """Trains a scikit-learn model and returns the trained model"""
-    if training_inputs.shape[1] == 0:
+    if X_train.shape[1] == 0:
         # No data to train over, so don't bother
         return None
     cloned_model = clone(model)
-    return cloned_model.fit(training_inputs, training_outputs)
+    return cloned_model.fit(X_train, y_train)
 
 
-def get_model(model, training_inputs, training_outputs):
+def get_model(model, X_train, y_train):
     """Just return the trained model"""
     return model
 
 
-def predict_model(model, scoring_inputs):
+def predict_model(model, X_score):
     """Uses a trained scikit-learn model to predict over the scoring data"""
-    return model.predict(scoring_inputs)
+    return model.predict(X_score)
 
 
-def predict_proba_model(model, scoring_inputs):
+def predict_proba_model(model, X_score):
     """Uses a trained scikit-learn model to predict class probabilities for the
     scoring data"""
-    return model.predict_proba(scoring_inputs)[:, 1]
+    return model.predict_proba(X_score)[:, 1]
 
 
 def forward_permutations(X, inds, var_idx):
@@ -100,13 +101,13 @@ class model_scorer(object):
 
         :param model: a scikit-learn model
         :param training_fn: a function for training a scikit-learn model. Must
-            be of the form ``(model, training_inputs, training_outputs) ->
+            be of the form ``(model, X_train, y_train) ->
             trained_model | None``. If the function returns ``None``, then it is
             assumed that the model training failed.
             Probably :func:`PermutationImportance.sklearn_api.train_model` or
             :func:`PermutationImportance.sklearn_api.get_model`
         :param predicting_fn: a function for predicting on scoring data using a
-            scikit-learn model. Must be of the form ``(model, scoring_inputs) ->
+            scikit-learn model. Must be of the form ``(model, X_score) ->
             predictions``. Predictions may be either deterministic or
             probabilistic, depending on what the evaluation_fn accepts.
             Probably :func:`PermutationImportance.sklearn_api.predict_model` or
@@ -139,6 +140,61 @@ class model_scorer(object):
         self.kwargs = kwargs
         self.random_seed = kwargs.get("random_seed", 42)
 
+    def _scorer(self, X, y):
+        predictions = self.prediction_fn(self.model, X)
+        return self.evaluation_fn(y,predictions)
+    
+    def get_subsample_size(self, full_size):
+        return (
+            int(full_size * self.subsample)
+            if self.subsample <= 1
+            else self.subsample
+        )
+    
+    def _train(self):
+        # Try to train model
+        trained_model = self.training_fn(self.model, X_train, y_train)
+        # If we didn't succeed in training (probably because there weren't any
+        # training predictors), return the default_score
+        if trained_model is None:
+            if self.n_permute == 1:
+                return [self.default_score]
+            else:
+                return np.full((self.n_permute,), self.default_score)
+    
+    
+    def get_permuted_data(self, idx, var_idx):
+        """ Get permuted data """
+        X_score_sub = self.X_score
+        y_score_sub = self.y_score
+        X_train_sub = self.X_train
+        
+        inds = self.shuffled_indices[idx]
+        
+        if len(self.rows[0]) != self.y_score.shape[0]: 
+            X_score_sub = get_data_subset(self.X_score, self.rows[idx])
+            y_score_sub = get_data_subset(self.y_score, self.rows[idx])
+        
+            if self.direction == 'forward':
+                X_train_sub = get_data_subset(self.X_train, self.rows[idx])
+                
+            #inds = inds[idx]
+        
+        if var_idx is None:
+            return X_score_sub, y_score_sub
+        
+        # For the backward, X_score is mostly unpermuted expect for 
+        # the top features. For the forward, X_score is all permuted 
+        # expect for the top features. 
+        X_perm = X_score_sub.copy()
+        
+        if self.direction == 'backward':
+            X_perm[:,var_idx] = X_score_sub[inds, var_idx]
+        else:
+            X_perm[:,var_idx] = X_train_sub[:, var_idx]
+            
+        return X_perm, y_score_sub
+        
     def __call__(self, training_data, scoring_data, var_idx):
         """Uses the training, predicting, and evaluation functions to score the
         model given the training and scoring data
@@ -150,135 +206,14 @@ class model_scorer(object):
             The column index of the variable being permuted. When computing the original
             score, set var_idx==None.
         """
-        (training_inputs, training_outputs) = training_data
-        (scoring_inputs, scoring_outputs) = scoring_data
+        (self.X_train, self.y_train) = training_data
+        (self.X_score, self.y_score) = scoring_data
         
-        ##print(f'{training_inputs=}')
-
-        subsample = (
-            int(len(scoring_data[0]) * self.subsample)
-            if self.subsample <= 1
-            else self.subsample
-        )
-
-        # Try to train model
-        trained_model = self.training_fn(self.model, training_inputs, training_outputs)
-        # If we didn't succeed in training (probably because there weren't any
-        # training predictors), return the default_score
-        if trained_model is None:
-            if self.n_permute == 1:
-                return [self.default_score]
-            else:
-                return np.full((self.n_permute,), self.default_score)
-
-        random_states = bootstrap_generator(self.n_permute, seed=self.random_seed)
-        if self.n_permute == 1 and subsample == int(len(scoring_data[0])):
-            ###print('Only one permutation and no subsampling!')
-            shuffled_indices = random_states[0].permutation(scoring_outputs.shape[0])
-            permuted_scoring_inputs = scoring_inputs.copy()
-            if var_idx is not None: 
-                if self.direction == 'backward':
-                    # Permute var @ var_idx 
-                    permuted_scoring_inputs[:, var_idx] = scoring_inputs[
-                        shuffled_indices, var_idx
-                    ]
-                else:
-                    # Un-permuted var @ var_idx
-                    permuted_scoring_inputs[:, var_idx] = training_inputs[:, var_idx]
-     
-                    
-            permuted_predictions = self.prediction_fn(
-                trained_model, permuted_scoring_inputs
-            )
-            return [
-                self.evaluation_fn(
-                    scoring_outputs,
-                    permuted_predictions,
-                )
-            ]
-
-        elif self.n_permute == 1 and subsample != int(len(scoring_data[0])):
-            ###print('Only one permutation, but with subsampling!')
-            scores = []
-            rows = random_states[0].choice(scoring_outputs.shape[0], subsample)
-            
-            subsampled_scoring_outputs = get_data_subset(scoring_outputs, rows)
-            subsampled_scoring_inputs = get_data_subset(scoring_inputs, rows)  
-                    
-            if self.direction == 'forward':
-                subsampled_training_outputs = get_data_subset(training_outputs, rows)
-                subsampled_training_inputs = get_data_subset(training_inputs, rows)  
-            
-
-            shuffled_indices = random_states[0].permutation(
-                subsampled_scoring_outputs.shape[0]
-            )
-            permuted_scoring_inputs = subsampled_scoring_inputs.copy()
-            if var_idx is not None: 
-                if self.direction == 'backward':
-                    # Permute var @ var_idx
-                    permuted_scoring_inputs[:, var_idx] = subsampled_scoring_inputs[
-                    shuffled_indices, var_idx
-                    ]
-                else:
-                    # Un-permute var @ var_idx
-                    permuted_scoring_inputs[:, var_idx]  = subsampled_training_inputs[:, var_idx]
-                    
-            permuted_predictions = self.prediction_fn(
-                trained_model, permuted_scoring_inputs
-            )
-            scores.append(
-                self.evaluation_fn(
-                    subsampled_scoring_outputs,
-                    permuted_predictions,
-                )
-            )
-            return np.array(scores)
-        else:
-            # print('Multiple permutations and subsampling!')
-            # Bootstrap the scores
-            scores = []
-            # This function controls the randomness of the bootstrapping.
-            # The samples are different per bootstrap iteration (but controlled)
-            # , but this same sampling is repeated per multipass iteration.
-            for random_state in random_states:
-                rows = random_state.choice(scoring_outputs.shape[0], subsample)
-
-                subsampled_scoring_outputs = get_data_subset(scoring_outputs, rows)
-                subsampled_scoring_inputs = get_data_subset(scoring_inputs, rows)  
-                    
-                if self.direction == 'forward':
-                    subsampled_training_outputs = get_data_subset(training_outputs, rows)
-                    subsampled_training_inputs = get_data_subset(training_inputs, rows)  
-                    
-                shuffled_indices = random_state.permutation(
-                    subsampled_scoring_outputs.shape[0]
-                )
-                
-                permuted_scoring_inputs = subsampled_scoring_inputs.copy()
-                
-                if var_idx is not None:
-                    if self.direction == 'backward':
-                        permuted_scoring_inputs[:, var_idx] = subsampled_scoring_inputs[
-                            shuffled_indices, var_idx
-                        ]
-                    else:
-                        # Un-permute var @ var_idx
-                        permuted_scoring_inputs[:, var_idx] = subsampled_training_inputs[:, var_idx]
-                
-                permuted_predictions = self.prediction_fn(
-                    trained_model, permuted_scoring_inputs
-                )
-
-                scores.append(
-                    self.evaluation_fn(
-                        subsampled_scoring_outputs,
-                        permuted_predictions,
-                    )
-                )
-
-            return np.array(scores)
-
+        permuted_set = [self.get_permuted_data(idx, var_idx) for idx in range(self.n_permute)] 
+        scores = np.array([self._scorer(*arg) for arg in permuted_set]) 
+    
+        return np.array(scores) 
+    
 
 def score_untrained_sklearn_model(
     model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs
