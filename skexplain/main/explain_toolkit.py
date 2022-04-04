@@ -369,6 +369,9 @@ class ExplainToolkit(Attributes):
             random_seed=random_seed,
         )
 
+        if not is_str(evaluation_fn):
+            evaluation_fn = evaluation_fn.__name__
+        
         self.attrs_dict["n_multipass_vars"] = n_vars
         self.attrs_dict["method"] = "permutation_importance"
         self.attrs_dict["direction"] = direction
