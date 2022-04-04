@@ -193,6 +193,7 @@ class GlobalExplainer(Attributes):
         See calc_permutation_importance in IntepretToolkit for documentation.
 
         """
+        is_str = False
         if isinstance(evaluation_fn, str):
             evaluation_fn = evaluation_fn.lower()
             is_str = True
