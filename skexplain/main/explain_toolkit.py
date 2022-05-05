@@ -2406,14 +2406,15 @@ class ExplainToolkit(Attributes):
             setattr(s, "estimators used", estimator_names)
 
             # in the case of shap_values.
-            if "X" in results.data_vars:
-                feature_names = results.attrs["features"]
-                X = pd.DataFrame(results["X"].values, columns=feature_names)
-                setattr(s, "X", X)
-                setattr(s, "feature_names", feature_names)
+            if dtype == 'dataset':
+                if "X" in results.data_vars:
+                    feature_names = results.attrs["features"]
+                    X = pd.DataFrame(results["X"].values, columns=feature_names)
+                    setattr(s, "X", X)
+                    setattr(s, "feature_names", feature_names)
 
-            if "y" in results.data_vars:
-                setattr(s, "y", results["y"])
+                if "y" in results.data_vars:
+                    setattr(s, "y", results["y"])
 
         return results
 
