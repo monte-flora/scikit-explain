@@ -3,7 +3,7 @@ import pandas as pd
 import pickle
 from collections import ChainMap
 
-from .utils import is_list, is_all_dict
+from .utils import is_list, is_all_dict, flatten_nested_list
 
 
 def load_pickle(fnames):
