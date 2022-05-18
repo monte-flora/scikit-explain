@@ -64,12 +64,12 @@ class TestRankings(TestLR, TestRF):
         )
         # shape should be (n_vars_multipass, n_permute)
         self.assertEqual(
-            results[f"multipass_scores__{self.lr_estimator_name}"].values.shape,
+            results[f"backward_multipass_scores__{self.lr_estimator_name}"].values.shape,
             (n_vars, n_permute),
         )
         # shape should be (n_vars_singlepass, n_permute)
         self.assertEqual(
-            results[f"singlepass_scores__{self.lr_estimator_name}"].values.shape,
+            results[f"backward_singlepass_scores__{self.lr_estimator_name}"].values.shape,
             (len(self.X.columns), n_permute),
         )
 
@@ -115,11 +115,11 @@ class TestRankings(TestLR, TestRF):
             )
 
             np.testing.assert_array_equal(
-                results[f"multipass_rankings__{self.lr_estimator_name}"].values,
+                results[f"{direction}_multipass_rankings__{self.lr_estimator_name}"].values,
                 TRUE_RANKINGS,
             )
             np.testing.assert_array_equal(
-                results[f"singlepass_rankings__{self.lr_estimator_name}"].values,
+                results[f"{direction}_singlepass_rankings__{self.lr_estimator_name}"].values,
                 TRUE_RANKINGS,
             )
 
