@@ -108,6 +108,15 @@ class ExplainToolkit(Attributes):
         index for NumPy array and their column name for pandas dataframe.
         Feature names are only required if ``X`` is an ndnumpy.array, a it will be
         converted to a pandas.DataFrame internally.
+        
+    seaborn_kws : dict, None, or False (default is None)
+        Arguments for the seaborn.set_theme(). By default, we use the following settings. 
+        
+        custom_params = {"axes.spines.right": False, "axes.spines.top": False}
+        sns.set_theme(style="ticks", rc=custom_params)
+        
+        If False, then seaborn settings are not used. 
+        
 
     Raises
     ---------
@@ -129,8 +138,9 @@ class ExplainToolkit(Attributes):
         y=np.array([]),
         estimator_output=None,
         feature_names=None,
+        seaborn_kws=None, 
     ):
-
+        self.seaborn_kws=seaborn_kws
         if estimators is not None:
             if not is_list(estimators) and estimators:
                 estimators = [estimators]
@@ -191,6 +201,7 @@ class ExplainToolkit(Attributes):
             )
         )
 
+    
     def _append_attributes(self, ds):
         """
         FOR INTERNAL PURPOSES ONLY.
@@ -369,6 +380,12 @@ class ExplainToolkit(Attributes):
             random_seed=random_seed,
         )
 
+        # Rename the results:
+        for opt in ['multipass', 'singlepass']:
+            pimp_vars = [v for v in results_ds.data_vars if opt in v]
+            name_dict = { v : f'{direction}_{v}' for v in pimp_vars}
+            results_ds = results_ds.rename(name_dict)
+        
         if not is_str(evaluation_fn):
             evaluation_fn = evaluation_fn.__name__
         
@@ -397,48 +414,44 @@ class ExplainToolkit(Attributes):
         clustering_kwargs={"n_clusters": 10},
     ):
         """
-         The group only permutation feature importance (GOPFI) from Au et al. 2021 [1]_
-         (see their equations 10 and 11). This function has a built-in method for clustering
-         features using the sklearn.cluster.FeatureAgglomeration. It also has the ability to
-         compute the results over multiple permutations to improve the feature importance
-         estimate (and provide uncertainty).
+        The group only permutation feature importance (GOPFI) from Au et al. 2021 [1]_
+        (see their equations 10 and 11). This function has a built-in method for clustering
+        features using the sklearn.cluster.FeatureAgglomeration. It also has the ability to
+        compute the results over multiple permutations to improve the feature importance
+        estimate (and provide uncertainty).
 
-         Original score = Jointly permute all features
-         Permuted score = Jointly permuting all features except the considered group
+        Original score = Jointly permute all features
+        Permuted score = Jointly permuting all features except the considered group
 
-         Loss metrics := Original_score - Permuted Score
-         Skill Score metrics := Permuted score - Original Score
+        Loss metrics := Original_score - Permuted Score
+        Skill Score metrics := Permuted score - Original Score
 
+        Parameters
+        ----------
 
-         Parameters
-         ----------------
+        perm_method : ``"grouped"`` or ``"grouped_only"``
+            If ``"grouped"``, the features within a group are jointly permuted and other features
+            are left unpermuted.
 
-         perm_method : ``"grouped"`` or ``"grouped_only"``
+            If ``"grouped_only"``, only the features within a group are left unpermuted and
+            other features are jointly permuted.
 
-             If ``"grouped"``, the features within a group are jointly permuted and other features
-             are left unpermuted.
+        evaluation_fn : string or callable
+            evaluation/scoring function for evaluating the loss of skill once a feature is permuted.
+            evaluation_fn can be set to one of the following strings:
 
-             If ``"grouped_only"``, only the features within a group are left unpermuted and
-             other features are jointly permuted.
+                - ``"auc"``, Area under the Curve
+                - ``"auprc"``, Area under the Precision-Recall Curve
+                - ``"bss"``, Brier Skill Score
+                - ``"mse"``, Mean Square Error
+                - ``"norm_aupdc"``,  Normalized Area under the Performance Diagram (Precision-Recall) Curve
 
+            Otherwise, evaluation_fn can be any function of form,
+            `evaluation_fn(targets, predictions)` and must return a scalar value
 
-         evaluation_fn : string or callable
-             evaluation/scoring function for evaluating the loss of skill once a feature is permuted.
-             evaluation_fn can be set to one of the following strings:
+            When using a custom function, you must also set the scoring strategy (see below).
 
-                 - ``"auc"``, Area under the Curve
-                 - ``"auprc"``, Area under the Precision-Recall Curve
-                 - ``"bss"``, Brier Skill Score
-                 - ``"mse"``, Mean Square Error
-                 - ``"norm_aupdc"``,  Normalized Area under the Performance Diagram (Precision-Recall) Curve
-
-             Otherwise, evaluation_fn can be any function of form,
-             `evaluation_fn(targets, predictions)` and must return a scalar value
-
-             When using a custom function, you must also set the scoring strategy (see below).
-
-         scoring_strategy : string (default=None)
-
+        scoring_strategy : string (default=None)
             This argument is only required if you are using a non-default evaluation_fn (see above)
 
             If the evaluation_fn is positively-oriented (a higher value is better),
@@ -446,66 +459,64 @@ class ExplainToolkit(Attributes):
             indicates higher importance) and if it is negatively-oriented-
             (a lower value is better), then set ``scoring_strategy = "maximize"``
 
-         n_permute: integer (default=1 for only one permutation per feature)
-                 Number of permutations for computing confidence intervals on the feature rankings.
+        n_permute: integer (default=1 for only one permutation per feature)
+            Number of permutations for computing confidence intervals on the feature rankings.
 
-         groups : dict (default=None)
-                 Dictionary of group names and the feature names or feature column indices.
-                 If None, then the feature groupings are determined internally based on
-                 feature clusterings.
+        groups : dict (default=None)
+            Dictionary of group names and the feature names or feature column indices.
+            If None, then the feature groupings are determined internally based on
+            feature clusterings.
 
-         sample_size : integer (default=100)
-                 Number of random samples to determine the correlation for the feature clusterings
+        sample_size : integer (default=100)
+            Number of random samples to determine the correlation for the feature clusterings
 
-         subsample: float or integer (default=1.0 for no subsampling)
+        subsample: float or integer (default=1.0 for no subsampling)
+            if value is between 0-1, it is interpreted as fraction of total X to use
+            if value > 1, interpreted as the number of X to randomly sample
+            from the original dataset.
 
-                 if value is between 0-1, it is interpreted as fraction of total X to use
-                 if value > 1, interpreted as the number of X to randomly sample
-                 from the original dataset.
+        n_jobs : interger or float (default=1; no multiprocessing)
+           if integer, interpreted as the number of processors to use for multiprocessing
+           if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing
 
-         n_jobs : interger or float (default=1; no multiprocessing)
+        clustering_kwargs : dict (default = {'n_clusters' : 10})
+            See https://scikit-learn.org/stable/modules/generated/sklearn.cluster.FeatureAgglomeration.html
+            for details
 
-             if integer, interpreted as the number of processors to use for multiprocessing
-             if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing
+        Returns
+        -------
 
-         clustering_kwargs : dict (default = {'n_clusters' : 10})
-             See https://scikit-learn.org/stable/modules/generated/sklearn.cluster.FeatureAgglomeration.html
-             for details
+        results : xarray.DataSet
+            Permutation importance results. Includes the both multi-pass and single-pass
+            feature rankings and the scores with the various features permuted.
 
-         Returns
-         ----------------
+        groups : dict
+            If groups is None, then it returns the groups that were
+            automatically created in the feature clustering. Otherwise,
+            only results is returned.
 
-         results : xarray.DataSet
-             Permutation importance results. Includes the both multi-pass and single-pass
-             feature rankings and the scores with the various features permuted.
+        References
+        -----------
+        .. [1] Au, Q., J. Herbinger, C. Stachl, B. Bischl, and G. Casalicchio, 2021:
+        Grouped Feature Importance and Combined Features Effect Plot. Arxiv,.
 
-         groups : dict
-             If groups is None, then it returns the groups that were
-             automatically created in the feature clustering. Otherwise,
-             only results is returned.
-
-         References
-         -----------
-         .. [1] Au, Q., J. Herbinger, C. Stachl, B. Bischl, and G. Casalicchio, 2021:
-         Grouped Feature Importance and Combined Features Effect Plot. Arxiv,.
-
-         Examples
-         ----------
-         >>> import skexplain
-         >>> # pre-fit estimators within skexplain
-         >>> estimators = skexplain.load_models()
-         >>> X, y = skexplain.load_data() # training data
-         >>> # Only compute for the first model
-         >>> explainer = skexplain.ExplainToolkit(estimators=estimators[0],
-         ...                             X=X,
-         ...                             y=y,
-         ...                            )
-         >>> # Group only, the features within a group are the only one's left unpermuted
-         >>> results, groups = explainer.grouped_permutation_importance(
-         ...                                          perm_method = 'grouped_only',
-         ...                                          evaluation_fn = 'norm_aupdc',)
-         >>> print(results)
-         <xarray.Dataset>
+        Examples
+        ----------
+        >>> import skexplain
+        >>> # pre-fit estimators within skexplain
+        >>> estimators = skexplain.load_models()
+        >>> X, y = skexplain.load_data() # training data
+        >>> # Only compute for the first model
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators[0],
+        ...                             X=X,
+        ...                             y=y,
+        ...                            )
+        >>> # Group only, the features within a group are the only one's left unpermuted
+        >>> results, groups = explainer.grouped_permutation_importance(
+        ...                                          perm_method = 'grouped_only',
+        ...                                          evaluation_fn = 'norm_aupdc',)
+        >>> print(results)
+        <xarray.Dataset>
              Dimensions:                        (n_vars_group: 10, n_bootstrap: 1)
              Dimensions without coordinates: n_vars_group, n_bootstrap
              Data variables:
@@ -519,11 +530,11 @@ class ExplainToolkit(Attributes):
                  method:            grouped_permutation_importance
                  perm_method:       grouped_only
                  evaluation_fn:     norm_aupdc
-         >>> print(groups)
-         {'group 0': array(['d_rad_d', 'd_rad_u'], dtype=object),
-         'group 1': array(['high_cloud', 'lat_hf', 'mid_cloud', 'sfcT_hrs_ab_frez', 'date_marker'], dtype=object),
-         'group 2': array(['dllwave_flux', 'uplwav_flux'], dtype=object),
-         'group 3': array(['dwpt2m', 'fric_vel', 'sat_irbt', 'sfc_rough', 'sfc_temp',
+        >>> print(groups)
+        {'group 0': array(['d_rad_d', 'd_rad_u'], dtype=object),
+        'group 1': array(['high_cloud', 'lat_hf', 'mid_cloud', 'sfcT_hrs_ab_frez', 'date_marker'], dtype=object),
+        'group 2': array(['dllwave_flux', 'uplwav_flux'], dtype=object),
+        'group 3': array(['dwpt2m', 'fric_vel', 'sat_irbt', 'sfc_rough', 'sfc_temp',
         'temp2m', 'wind10m', 'urban', 'rural', 'hrrr_dT'], dtype=object),
         'group 4': array(['low_cloud', 'tot_cloud', 'vbd_flux', 'vdd_flux'], dtype=object),
         'group 5': array(['gflux', 'd_ground'], dtype=object),
@@ -1427,7 +1438,7 @@ class ExplainToolkit(Attributes):
         else:
             base_font_size = 12 if len(features) <= 6 else 16
             base_font_size = kwargs.get("base_font_size", base_font_size)
-            plot_obj = PlotInterpretCurves(BASE_FONT_SIZE=base_font_size)
+            plot_obj = PlotInterpretCurves(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
             return plot_obj.plot_1d_curve(
                 method=method,
                 data=data,
@@ -1840,7 +1851,7 @@ class ExplainToolkit(Attributes):
             contrib.index[0][0] == "non_performance" and len(estimator_names) == 1
         )
         base_font_size = kwargs.get("base_font_size", 16 if only_one_panel else 11)
-        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size)
+        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
         kwargs["estimator_output"] = self.estimator_output
 
         return plot_obj.plot_contributions(
@@ -2051,7 +2062,7 @@ class ExplainToolkit(Attributes):
             fontsize = 12 if len(features) <= 6 else 16
 
         base_font_size = kwargs.get("base_font_size", fontsize)
-        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size)
+        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
         plot_obj.feature_names = self.feature_names
         plot_obj.plot_shap(
             shap_values=shap_values_copy,
@@ -2185,7 +2196,7 @@ class ExplainToolkit(Attributes):
 
         # initialize a plotting object
         base_font_size = kwargs.get("base_font_size", 12)
-        plot_obj = PlotImportance(BASE_FONT_SIZE=base_font_size)
+        plot_obj = PlotImportance(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
 
         if plot_correlated_features:
             kwargs["X"] = self.X
@@ -2269,7 +2280,7 @@ class ExplainToolkit(Attributes):
 
         # initialize a plotting object
         base_font_size = kwargs.get("base_font_size", 12)
-        plot_obj = PlotScatter(base_font_size)
+        plot_obj = PlotScatter(base_font_size, seaborn_kws=self.seaborn_kws)
 
         f, axes = plot_obj.plot_scatter(
             self.estimators,

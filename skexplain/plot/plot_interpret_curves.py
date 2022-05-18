@@ -20,8 +20,8 @@ class PlotInterpretCurves(PlotStructure):
         "xkcd:burnt sienna",
     ]
 
-    def __init__(self, BASE_FONT_SIZE=12):
-        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
+    def __init__(self, BASE_FONT_SIZE=12, seaborn_kws=None):
+        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE, seaborn_kws=seaborn_kws)
 
     def plot_1d_curve(
         self,
@@ -101,7 +101,9 @@ class PlotInterpretCurves(PlotStructure):
 
         # loop over each feature and add relevant plotting stuff
         for lineplt_ax, feature, color_by in zip(ax_iterator, features, color_bys):
-
+            
+            lineplt_ax.grid(False)
+            
             xdata = data[f"{feature}__bin_values"].values
             if add_hist:
                 hist_data = data[f"{feature}"].values
@@ -116,6 +118,7 @@ class PlotInterpretCurves(PlotStructure):
                     n_panels=n_panels,
                     **kwargs,
                 )
+                hist_ax.grid(False)
 
             for i, model_name in enumerate(estimator_names):
                 if ice_curves:
@@ -184,6 +187,7 @@ class PlotInterpretCurves(PlotStructure):
                 **kwargs,
             )
 
+        
         if not only_one_estimator and fig is not None and not using_internal_ax:
             self.set_legend(n_panels, fig, lineplt_ax, major_ax)
 
