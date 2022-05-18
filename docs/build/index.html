@@ -1,0 +1,1572 @@
+
+<!DOCTYPE html>
+
+<html lang="">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Scikit-Explain Documentation &#8212; Scikit-Explain v0.0.4 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="scikit-explain-documentation">
+<h1>Scikit-Explain Documentation<a class="headerlink" href="#scikit-explain-documentation" title="Permalink to this headline">¶</a></h1>
+<p><strong>scikit-explain</strong> is a user-friendly Python module for machine learning explainability. Current explainability products includes</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>Feature importance:</dt><dd><ul>
+<li><p>Single- and Multi-pass Permutation Importance (<a class="reference external" href="https://link.springer.com/article/10.1023/A:1010933404324">Brieman et al. 2001</a> , <a class="reference external" href="https://journals.ametsoc.org/view/journals/atot/32/6/jtech-d-13-00205_1.xml?rskey=hlSyXu&amp;result=2">Lakshmanan et al. 2015</a>)</p></li>
+<li><p><a class="reference external" href="https://christophm.github.io/interpretable-ml-book/shap.html">SHAP</a></p></li>
+<li><p>First-order PD/ALE Variance (<a class="reference external" href="https://arxiv.org/abs/1805.04755">Greenwell et al. 2018</a> )</p></li>
+<li><p>Grouped Permutation Importance (<a class="reference external" href="https://arxiv.org/abs/2104.11688">Au et al. 2021</a>)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Feature Effects/Attributions:</dt><dd><ul>
+<li><p><a class="reference external" href="https://christophm.github.io/interpretable-ml-book/pdp.html">Partial Dependence</a> (PD),</p></li>
+<li><p><a class="reference external" href="https://christophm.github.io/interpretable-ml-book/ale.html">Accumulated local effects</a> (ALE),</p></li>
+<li><p>Random forest-based feature contributions (<a class="reference external" href="http://blog.datadive.net/interpreting-random-forests/">treeinterpreter</a>)</p></li>
+<li><p><a class="reference external" href="https://christophm.github.io/interpretable-ml-book/shap.html">SHAP</a></p></li>
+<li><p>Main Effect Complexity (MEC; <a class="reference external" href="https://arxiv.org/abs/1904.03867">Molnar et al. 2019</a>)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Feature Interactions:</dt><dd><ul>
+<li><p>Second-order PD/ALE</p></li>
+<li><p>Interaction Strength and Main Effect Complexity (IAS; <a class="reference external" href="https://arxiv.org/abs/1904.03867">Molnar et al. 2019</a>)</p></li>
+<li><p>Second-order PD/ALE Variance (<a class="reference external" href="https://arxiv.org/abs/1805.04755">Greenwell et al. 2018</a>)</p></li>
+<li><p>Second-order Permutation Importance (<a class="reference external" href="https://www.mdpi.com/2076-3417/9/23/5191">Oh et al. 2019</a>)</p></li>
+<li><p>Friedman H-statistic (<a class="reference external" href="https://projecteuclid.org/journals/annals-of-applied-statistics/volume-2/issue-3/Predictive-learning-via-rule-ensembles/10.1214/07-AOAS148.full">Friedman and Popescu 2008</a>)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>These explainability methods are discussed at length in Christoph Molnar’s <a class="reference external" href="https://christophm.github.io/interpretable-ml-book/">Interpretable Machine Learning</a>. A primary feature of scikit-learn is the accompanying plotting methods, which are desgined to be easy to use while producing publication-level quality figures. Lastly, computations in scikit-explain do leverage parallelization when possible.</p>
+<p>The package is under active development and will likely contain bugs or errors. Feel free to raise issues! If you employ scikit-explain in your research, please cite this github and the relevant packages listed above.</p>
+</section>
+<section id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<p>pip install scikit-explain</p>
+</section>
+<section id="module-skexplain.main.explain_toolkit">
+<span id="documentation"></span><h1>Documentation<a class="headerlink" href="#module-skexplain.main.explain_toolkit" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skexplain.main.explain_toolkit.</span></span><span class="sig-name descname"><span class="pre">ExplainToolkit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">estimators=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X=Empty</span> <span class="pre">DataFrame</span> <span class="pre">Columns:</span> <span class="pre">[0]</span> <span class="pre">Index:</span> <span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y=array([]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype=float64)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_output=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit" title="Permalink to this definition">¶</a></dt>
+<dd><p>ExplainToolkit is the primary interface of scikit-explain. The modules contained within compute several
+explainability machine learning methods such as</p>
+<p>Feature importance:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>permutation_importance</cite></p></li>
+<li><p><cite>ale_variance</cite></p></li>
+</ul>
+</div></blockquote>
+<p>Feature Attributions:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>ale</cite></p></li>
+<li><p><cite>pd</cite></p></li>
+<li><p><cite>ice</cite></p></li>
+<li><p><cite>shap</cite></p></li>
+<li><p><cite>local_contributions</cite></p></li>
+</ul>
+</div></blockquote>
+<p>Feature Interactions:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>interaction_strength</cite></p></li>
+<li><p><cite>ale_variance</cite></p></li>
+<li><p><cite>perm_based_interaction</cite></p></li>
+<li><p><cite>friedman_h_stat</cite></p></li>
+<li><p><cite>main_effect_complexity</cite></p></li>
+<li><p><cite>ale</cite></p></li>
+<li><p><cite>pd</cite></p></li>
+</ul>
+</div></blockquote>
+<p>Additionally, there are corresponding plotting modules for
+each method, which are designed to produce publication-quality graphics.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>ExplainToolkit is designed to work with estimators that implement predict or predict_proba.</p>
+</div>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>ExplainToolkit is only designed to work with binary classification and regression problems.
+In future versions of skexplain, we hope to be compatiable with multi-class classification.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>estimators</strong> (<em>list of tuples of</em><em> (</em><em>estimator name</em><em>, </em><em>fitted estimator</em><em>)</em>) – Tuple of (estimator name, fitted estimator object) or list thereof where the
+fitted estimator must implement <code class="docutils literal notranslate"><span class="pre">predict</span></code> or <code class="docutils literal notranslate"><span class="pre">predict_proba</span></code>.
+Multioutput-multiclass classifiers are not supported.</p></li>
+<li><p><strong>X</strong> (<em>{array-like</em><em> or </em><em>dataframe} of shape</em><em> (</em><em>n_samples</em><em>, </em><em>n_features</em><em>)</em>) – Training or validation data used to compute the IML methods.
+If ndnumpy.array, must specify <cite>feature_names</cite>.</p></li>
+<li><p><strong>y</strong> (<em>{list</em><em> or </em><em>numpy.array} of shape</em><em> (</em><em>n_samples</em><em>,</em><em>)</em>) – The target values (class labels in classification, real numbers in regression).</p></li>
+<li><p><strong>estimator_output</strong> (<code class="docutils literal notranslate"><span class="pre">&quot;raw&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;probability&quot;</span></code>) – What output of the estimator should be explained. Determined internally by
+ExplainToolkit. However, if using a classification model, the user
+can set to “raw” for non-probabilistic output.</p></li>
+<li><p><strong>feature_names</strong> (<em>array-like of shape</em><em> (</em><em>n_features</em><em>,</em><em>)</em><em>, </em><em>dtype=str</em><em>, </em><em>default=None</em>) – Name of each feature; <code class="docutils literal notranslate"><span class="pre">feature_names[i]</span></code> holds the name of the feature
+with index <code class="docutils literal notranslate"><span class="pre">i</span></code>. By default, the name of the feature corresponds to their numerical
+index for NumPy array and their column name for pandas dataframe.
+Feature names are only required if <code class="docutils literal notranslate"><span class="pre">X</span></code> is an ndnumpy.array, a it will be
+converted to a pandas.DataFrame internally.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>AssertError</strong> – Number of estimator objects is not equal to the number of estimator names given!</p></li>
+<li><p><strong>TypeError</strong> – y variable must be numpy array or pandas.DataFrame.</p></li>
+<li><p><strong>Exception</strong> – Feature names must be specified if X is an numpy.array.</p></li>
+<li><p><strong>ValueError</strong> – estimator_output is not an accepted option.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.ale">
+<span class="sig-name descname"><span class="pre">ale</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsample</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.ale"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.ale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the 1D or 2D centered accumulated local effects (ALE) <a class="footnote-reference brackets" href="#id6" id="id4">9</a> <a class="footnote-reference brackets" href="#id7" id="id5">10</a>.
+For categorical features, simply set the type of those features in the
+dataframe as <code class="docutils literal notranslate"><span class="pre">category</span></code> and the categorical ALE will be computed.</p>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id6"><span class="brackets"><a class="fn-backref" href="#id4">9</a></span></dt>
+<dd><p><a class="reference external" href="https://christophm.github.io/interpretable-ml-book/ale.html">https://christophm.github.io/interpretable-ml-book/ale.html</a></p>
+</dd>
+<dt class="label" id="id7"><span class="brackets"><a class="fn-backref" href="#id5">10</a></span></dt>
+<dd><p>Apley, D. W., and J. Zhu, 2016: Visualizing the Effects of Predictor Variables in
+Black Box Supervised Learning Models. ArXiv.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>features</strong> (<em>string</em><em> or </em><em>list of strings</em><em> or </em><em>'all'</em>) – Features to compute the PD for.  if ‘all’, the method will compute
+the ALE for all features.</p></li>
+<li><p><strong>n_bins</strong> (<em>integer</em><em> (</em><em>default=30</em><em>)</em>) – Number of bins used to compute the ALE for. Bins are decided based
+on percentile intervals to ensure the same number of samples are in
+each bin.</p></li>
+<li><p><strong>n_jobs</strong> (<em>float</em><em> or </em><em>integer</em><em> (</em><em>default=1</em><em>)</em>) – <ul>
+<li><p>if integer, interpreted as the number of processors to use for multiprocessing</p></li>
+<li><p>if float, interpreted as the fraction of proceesors to use for multiprocessing</p></li>
+</ul>
+</p></li>
+<li><p><strong>subsample</strong> (<em>float</em><em> or </em><em>integer</em><em> (</em><em>default=1.0</em><em>)</em>) – <ul>
+<li><p>if value between 0-1 interpreted as fraction of total X to use</p></li>
+<li><p>if value &gt; 1, interpreted as the absolute number of random samples of X.</p></li>
+</ul>
+</p></li>
+<li><p><strong>n_bootstrap</strong> (<em>integer</em><em> (</em><em>default=1; no bootstrapping</em><em>)</em>) – Number of bootstrap resamples for computing confidence intervals on the ALE curves.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results</strong> – ALE result dataset</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.DataSet</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>Exception</strong> – Highly skewed data may not be divisable into n_bins given. In that case, calc_ale
+    uses the max bins the data can be divided into. But a warning message is raised.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span> <span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Set the type for categorical features and ExplainToolkit with compute the</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># categorical ALE.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s1">&#39;urban&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span> <span class="s1">&#39;rural&#39;</span><span class="p">:</span><span class="s1">&#39;category&#39;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ale</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">ale</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.ale_variance">
+<span class="sig-name descname"><span class="pre">ale_variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interaction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.ale_variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.ale_variance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the standard deviation (std) of the ALE values for each
+features in a dataset and then rank by the magnitude. A higher std(ALE) indicates a
+greater expected contribution to an estimator’s prediction and is thus considered more important.
+If <code class="docutils literal notranslate"><span class="pre">interaction=True</span></code>, then the method computes a similar method for the
+2D ALE to measure the feature interaction strength.</p>
+<p>This method is inspired by the feature importance and interaction
+methods developed in Greenwell et al. (2018) <a class="footnote-reference brackets" href="#id9" id="id8">4</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ale</strong> (<em>xarray.Dataset</em>) – Results of <a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.ale" title="skexplain.main.explain_toolkit.ExplainToolkit.ale"><code class="xref py py-func docutils literal notranslate"><span class="pre">ale()</span></code></a> for
+<code class="docutils literal notranslate"><span class="pre">features</span></code>.</p></li>
+<li><p><strong>features</strong> (<em>'all'</em><em>, </em><em>string</em><em>, </em><em>list of strings</em><em>, </em><em>list of 2-tuples</em>) – Features to compute the ALE variance for. If set to <code class="docutils literal notranslate"><span class="pre">'all'</span></code>, it is
+computed for all features. If <code class="docutils literal notranslate"><span class="pre">interaction=True</span></code>, then features
+must be a list of 2-tuples for computing the interaction between
+the set of feature combinations.</p></li>
+<li><p><strong>estimator_names</strong> (<em>string</em><em>, </em><em>list of strings</em>) – If using multiple estimators, you can pass a single (or subset of) estimator name(s)
+to compute the ALE variance for.</p></li>
+<li><p><strong>interaction</strong> (<em>boolean</em>) – <ul>
+<li><p>If True, it computes the feature interaction strength</p></li>
+<li><p>If False, compute the feature importance</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results_ds</strong> – ALE variance results. Includes both the rankings and scores.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.Dataset</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id9"><span class="brackets"><a class="fn-backref" href="#id8">4</a></span></dt>
+<dd><p>Greenwell, B. M., B. C. Boehmke, and A. J. McCarthy, 2018:
+A Simple and Effective estimator-Based Variable Importance Measure. Arxiv,.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">itertools</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ale</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">ale</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">n_bins</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">subsample</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">n_bootstrap</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Compute 1D ALE variance</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ale_var_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">ale_variance</span><span class="p">(</span><span class="n">ale</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">ale_var_results</span><span class="p">)</span>
+<span class="go">&lt;xarray.Dataset&gt;</span>
+<span class="go">Dimensions:    (n_bootstrap: 1, n_vars_ale_variance: 30)</span>
+<span class="go">Dimensions without coordinates: n_bootstrap, n_vars_ale_variance</span>
+<span class="go">Data variables:</span>
+<span class="go">    ale_variance_rankings__Random Forest        (n_vars_ale_variance) &lt;U17 &#39;r...</span>
+<span class="go">    ale_variance_scores__Random Forest          (n_vars_ale_variance, n_bootstrap) float64 ...</span>
+<span class="go">    ale_variance_rankings__Gradient Boosting    (n_vars_ale_variance) &lt;U17 &#39;u...</span>
+<span class="go">    ale_variance_scores__Gradient Boosting      (n_vars_ale_variance, n_bootstrap) float64 ...</span>
+<span class="go">    ale_variance_rankings__Logistic Regression  (n_vars_ale_variance) &lt;U17 &#39;r...</span>
+<span class="go">    ale_variance_scores__Logistic Regression    (n_vars_ale_variance, n_bootstrap) float64 ...</span>
+<span class="go">Attribute:</span>
+<span class="go">    estimator_output:  probability</span>
+<span class="go">    estimators used:   [&#39;Random Forest&#39;, &#39;Gradient Boosting&#39;, &#39;Logistic Regre...</span>
+<span class="go">    n_multipass_vars:  5</span>
+<span class="go">    method:            ale_variance</span>
+<span class="go">    direction:         backward</span>
+<span class="go">    evaluation_fn:     sigma_ale</span>
+<span class="go">    dimension:         1D</span>
+<span class="go">    features used:     [&#39;dllwave_flux&#39;, &#39;dwpt2m&#39;, &#39;fric_vel&#39;, &#39;gflux&#39;, &#39;high_...</span>
+<span class="go">    estimator output:  probability</span>
+<span class="go">    interaction:       False</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1">#Typical, we only want to evaluate the feature interactions for</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># the most important features</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">important_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sfc_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;temp2m&#39;</span><span class="p">,</span> <span class="s1">&#39;sfcT_hrs_bl_frez&#39;</span><span class="p">,</span> <span class="s1">&#39;tmp2m_hrs_bl_frez&#39;</span><span class="p">,</span>
+<span class="gp">... </span>  <span class="s1">&#39;uplwav_flux&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create all possible combinations</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">important_vars_2d</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">important_vars</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#For the 2D ALE variance to measure feature interaction strength</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ale_2d</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">ale</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="n">important_vars_2d</span><span class="p">,</span> <span class="n">n_bins</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="gp">... </span>             <span class="n">subsample</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">n_bootstrap</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Compute 2D ALE variance</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ale_var_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">ale_variance</span><span class="p">(</span><span class="n">ale_2d</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="n">important_vars_2d</span><span class="p">,</span>
+<span class="gp">... </span>                   <span class="n">interaction</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">ale_var_results</span><span class="p">)</span>
+<span class="go">&lt;xarray.Dataset&gt;</span>
+<span class="go">Dimensions:   (n_bootstrap: 1, n_vars_ale_variance_interactions: 10)</span>
+<span class="go">Dimensions without coordinates: n_bootstrap, n_vars_ale_variance_interactions</span>
+<span class="go">Data variables:</span>
+<span class="go">    ale_variance_interactions_rankings__Random Forest        (n_vars_ale_variance_interactions) &lt;U35 ...</span>
+<span class="go">    ale_variance_interactions_scores__Random Forest          (n_vars_ale_variance_interactions, n_bootstrap) float64 ...</span>
+<span class="go">    ale_variance_interactions_rankings__Gradient Boosting    (n_vars_ale_variance_interactions) &lt;U35 ...</span>
+<span class="go">    ale_variance_interactions_scores__Gradient Boosting      (n_vars_ale_variance_interactions, n_bootstrap) float64 ...</span>
+<span class="go">    ale_variance_interactions_rankings__Logistic Regression  (n_vars_ale_variance_interactions) &lt;U35 ...</span>
+<span class="go">    ale_variance_interactions_scores__Logistic Regression    (n_vars_ale_variance_interactions, n_bootstrap) float64 ...</span>
+<span class="go">Attribute:</span>
+<span class="go">    estimator_output:  probability</span>
+<span class="go">    estimators used:   [&#39;Random Forest&#39;, &#39;Gradient Boosting&#39;, &#39;Logistic Regre...</span>
+<span class="go">    n_multipass_vars:  5</span>
+<span class="go">    method:            ale_variance</span>
+<span class="go">    direction:         backward</span>
+<span class="go">    evaluation_fn:     Interaction Importance</span>
+<span class="go">    dimension:         2D</span>
+<span class="go">    features used:     [(&#39;sfc_temp&#39;, &#39;temp2m&#39;), (&#39;sfc_temp&#39;, &#39;sfcT_hrs_bl_fre...</span>
+<span class="go">    estimator output:  probability</span>
+<span class="go">    interaction:       True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.friedman_h_stat">
+<span class="sig-name descname"><span class="pre">friedman_h_stat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pd_1d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pd_2d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.friedman_h_stat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.friedman_h_stat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the second-order Friedman’s H-statistic for computing feature interactions <a class="footnote-reference brackets" href="#id13" id="id10">11</a> <a class="footnote-reference brackets" href="#id14" id="id11">12</a>.
+Based on equation (44) from Friedman and Popescu (2008) <a class="footnote-reference brackets" href="#id14" id="id12">12</a>. Only computes the interaction strength
+between two features. In future versions of skexplain we hope to include the first-order H-statistics
+that measure the interaction between a single feature and the
+remaining set of features.</p>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id13"><span class="brackets"><a class="fn-backref" href="#id10">11</a></span></dt>
+<dd><p><a class="reference external" href="https://christophm.github.io/interpretable-ml-book/interaction.html">https://christophm.github.io/interpretable-ml-book/interaction.html</a></p>
+</dd>
+<dt class="label" id="id14"><span class="brackets">12</span><span class="fn-backref">(<a href="#id11">1</a>,<a href="#id12">2</a>)</span></dt>
+<dd><p>Friedman, J. H., and B. E. Popescu, 2008: Predictive learning via rule ensembles.
+Ann Appl Statistics, 2, 916–954, <a class="reference external" href="https://doi.org/10.1214/07-aoas148">https://doi.org/10.1214/07-aoas148</a>.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pd_1d</strong> (<em>xarray.Dataset</em>) – 1D partial dependence dataset. Results of <a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.pd" title="skexplain.main.explain_toolkit.ExplainToolkit.pd"><code class="xref py py-func docutils literal notranslate"><span class="pre">pd()</span></code></a> for <code class="docutils literal notranslate"><span class="pre">features</span></code></p></li>
+<li><p><strong>pd_2d</strong> (<em>xarray.Dataset</em>) – 2D partial dependence dataset. Results of <a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.pd" title="skexplain.main.explain_toolkit.ExplainToolkit.pd"><code class="xref py py-func docutils literal notranslate"><span class="pre">pd()</span></code></a>, but 2-tuple combinations
+of <code class="docutils literal notranslate"><span class="pre">features</span></code>.</p></li>
+<li><p><strong>features</strong> (<em>list of 2-tuples of strings</em>) – The pairs of features to compute the feature interaction between.</p></li>
+<li><p><strong>estimator_names</strong> (<em>string</em><em>, </em><em>list of strings</em><em> (</em><em>default is None</em><em>)</em>) – If using multiple estimators, you can pass a single (or subset of) estimator name(s)
+to compute the H-statistic for.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results_ds</strong> – The second-order Friedman H-statistic for all estimators.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.Dataset</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pd_1d</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">pd</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pd_2d</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">pd</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all_2d&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hstat</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">friedman_h_stat</span><span class="p">(</span><span class="n">pd_1d</span><span class="p">,</span> <span class="n">pd_2d</span><span class="p">,)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.get_important_vars">
+<span class="sig-name descname"><span class="pre">get_important_vars</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">perm_imp_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multipass</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_vars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">combine</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.get_important_vars"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.get_important_vars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve the most important variables from permutation importance.
+Can combine rankings from different estimators and only keep those variables that
+occur in more than one estimator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>perm_imp_data</strong> (<em>xarray.Dataset</em>) – Permutation importance result dataset</p></li>
+<li><p><strong>multipass</strong> (<em>boolean</em><em> (</em><em>defaults to True</em><em>)</em>) – if True, return the multipass rankings else returns the singlepass rankings</p></li>
+<li><p><strong>n_vars</strong> (<em>integer</em><em> (</em><em>default=10</em><em>)</em>) – Number of variables to retrieve if multipass=True.</p></li>
+<li><p><strong>combine</strong> (<em>boolean</em><em>  (</em><em>default=False</em><em>)</em>) – If combine=True, n_vars can be set such that you only include a certain amount of
+top features from each estimator. E.g., n_vars=5 and combine=True means to combine
+the top 5 features from each estimator into a single list.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>if combine=True</dt><dd><dl class="simple">
+<dt>results<span class="classifier">list</span></dt><dd><p>List of top features from a different estimators.</p>
+</dd>
+</dl>
+</dd>
+<dt>if combine=False</dt><dd><dl class="simple">
+<dt>results<span class="classifier">dict</span></dt><dd><p>keys are the estimator names and items are the
+top features.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">perm_imp_data</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">permutation_importance</span><span class="p">(</span>
+<span class="gp">... </span>                      <span class="n">n_vars</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">evaluation_fn</span> <span class="o">=</span> <span class="s1">&#39;norm_aupdc&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">direction</span> <span class="o">=</span> <span class="s1">&#39;backward&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">subsample</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">n_bootstrap</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">important_vars</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">get_important_vars</span><span class="p">(</span><span class="n">perm_imp_data</span><span class="p">,</span>
+<span class="gp">... </span>       <span class="n">multipass</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_vars</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">combine</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># set combine=True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">important_vars</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">get_important_vars</span><span class="p">(</span><span class="n">perm_imp_data</span><span class="p">,</span>
+<span class="gp">... </span>       <span class="n">multipass</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_vars</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">combine</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.grouped_permutation_importance">
+<span class="sig-name descname"><span class="pre">grouped_permutation_importance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">perm_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scoring_strategy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_permute</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsample</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clustering_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'n_clusters':</span> <span class="pre">10}</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.grouped_permutation_importance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.grouped_permutation_importance" title="Permalink to this definition">¶</a></dt>
+<dd><p>The group only permutation feature importance (GOPFI) from Au et al. 2021 <a href="#id41"><span class="problematic" id="id15">[1]_</span></a>
+(see their equations 10 and 11). This function has a built-in method for clustering
+features using the sklearn.cluster.FeatureAgglomeration. It also has the ability to
+compute the results over multiple permutations to improve the feature importance
+estimate (and provide uncertainty).</p>
+<p>Original score = Jointly permute all features
+Permuted score = Jointly permuting all features except the considered group</p>
+<p>Loss metrics := Original_score - Permuted Score
+Skill Score metrics := Permuted score - Original Score</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>perm_method</strong> (<code class="docutils literal notranslate"><span class="pre">&quot;grouped&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;grouped_only&quot;</span></code>) – <p>If <code class="docutils literal notranslate"><span class="pre">&quot;grouped&quot;</span></code>, the features within a group are jointly permuted and other features
+are left unpermuted.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">&quot;grouped_only&quot;</span></code>, only the features within a group are left unpermuted and
+other features are jointly permuted.</p>
+</p></li>
+<li><p><strong>evaluation_fn</strong> (<em>string</em><em> or </em><em>callable</em>) – <p>evaluation/scoring function for evaluating the loss of skill once a feature is permuted.
+evaluation_fn can be set to one of the following strings:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;auc&quot;</span></code>, Area under the Curve</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;auprc&quot;</span></code>, Area under the Precision-Recall Curve</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;bss&quot;</span></code>, Brier Skill Score</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;mse&quot;</span></code>, Mean Square Error</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;norm_aupdc&quot;</span></code>,  Normalized Area under the Performance Diagram (Precision-Recall) Curve</p></li>
+</ul>
+</div></blockquote>
+<p>Otherwise, evaluation_fn can be any function of form,
+<cite>evaluation_fn(targets, predictions)</cite> and must return a scalar value</p>
+<p>When using a custom function, you must also set the scoring strategy (see below).</p>
+</p></li>
+<li><p><strong>scoring_strategy</strong> (<em>string</em><em> (</em><em>default=None</em><em>)</em>) – <p>This argument is only required if you are using a non-default evaluation_fn (see above)</p>
+<p>If the evaluation_fn is positively-oriented (a higher value is better),
+then set <code class="docutils literal notranslate"><span class="pre">scoring_strategy</span> <span class="pre">=</span> <span class="pre">&quot;minimize&quot;</span></code> (i.e., a lower score after permutation
+indicates higher importance) and if it is negatively-oriented-
+(a lower value is better), then set <code class="docutils literal notranslate"><span class="pre">scoring_strategy</span> <span class="pre">=</span> <span class="pre">&quot;maximize&quot;</span></code></p>
+</p></li>
+<li><p><strong>n_permute</strong> (<em>integer</em><em> (</em><em>default=1 for only one permutation per feature</em><em>)</em>) – Number of permutations for computing confidence intervals on the feature rankings.</p></li>
+<li><p><strong>groups</strong> (<em>dict</em><em> (</em><em>default=None</em><em>)</em>) – Dictionary of group names and the feature names or feature column indices.
+If None, then the feature groupings are determined internally based on
+feature clusterings.</p></li>
+<li><p><strong>sample_size</strong> (<em>integer</em><em> (</em><em>default=100</em><em>)</em>) – Number of random samples to determine the correlation for the feature clusterings</p></li>
+<li><p><strong>subsample</strong> (<em>float</em><em> or </em><em>integer</em><em> (</em><em>default=1.0 for no subsampling</em><em>)</em>) – if value is between 0-1, it is interpreted as fraction of total X to use
+if value &gt; 1, interpreted as the number of X to randomly sample
+from the original dataset.</p></li>
+<li><p><strong>n_jobs</strong> (<em>interger</em><em> or </em><em>float</em><em> (</em><em>default=1; no multiprocessing</em><em>)</em>) – if integer, interpreted as the number of processors to use for multiprocessing
+if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing</p></li>
+<li><p><strong>clustering_kwargs</strong> (<em>dict</em><em> (</em><em>default = {'n_clusters' : 10}</em><em>)</em>) – See <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.FeatureAgglomeration.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.FeatureAgglomeration.html</a>
+for details</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>results</strong> (<em>xarray.DataSet</em>) – Permutation importance results. Includes the both multi-pass and single-pass
+feature rankings and the scores with the various features permuted.</p></li>
+<li><p><strong>groups</strong> (<em>dict</em>) – If groups is None, then it returns the groups that were
+automatically created in the feature clustering. Otherwise,
+only results is returned.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id16"><span class="brackets">1</span></dt>
+<dd><p>Au, Q., J. Herbinger, C. Stachl, B. Bischl, and G. Casalicchio, 2021:</p>
+</dd>
+</dl>
+<p>Grouped Feature Importance and Combined Features Effect Plot. Arxiv,.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Only compute for the first model</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Group only, the features within a group are the only one&#39;s left unpermuted</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">results</span><span class="p">,</span> <span class="n">groups</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">grouped_permutation_importance</span><span class="p">(</span>
+<span class="gp">... </span>                                         <span class="n">perm_method</span> <span class="o">=</span> <span class="s1">&#39;grouped_only&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                                         <span class="n">evaluation_fn</span> <span class="o">=</span> <span class="s1">&#39;norm_aupdc&#39;</span><span class="p">,)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+<span class="go">&lt;xarray.Dataset&gt;</span>
+<span class="go">     Dimensions:                        (n_vars_group: 10, n_bootstrap: 1)</span>
+<span class="go">     Dimensions without coordinates: n_vars_group, n_bootstrap</span>
+<span class="go">     Data variables:</span>
+<span class="go">         group_rankings__Random Forest  (n_vars_group) &lt;U7 &#39;group 3&#39; ... &#39;group 4&#39;</span>
+<span class="go">         group_scores__Random Forest    (n_vars_group, n_bootstrap) float64 0.4822...</span>
+<span class="go">     Attributes:</span>
+<span class="go">         estimators used:   [&#39;Random Forest&#39;]</span>
+<span class="go">         estimator output:  probability</span>
+<span class="go">         estimator_output:  probability</span>
+<span class="go">         groups:            {&#39;group 0&#39;: array([&#39;d_rad_d&#39;, &#39;d_rad_u&#39;], dtype=object...</span>
+<span class="go">         method:            grouped_permutation_importance</span>
+<span class="go">         perm_method:       grouped_only</span>
+<span class="go">         evaluation_fn:     norm_aupdc</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span>
+<span class="go">{&#39;group 0&#39;: array([&#39;d_rad_d&#39;, &#39;d_rad_u&#39;], dtype=object),</span>
+<span class="go">&#39;group 1&#39;: array([&#39;high_cloud&#39;, &#39;lat_hf&#39;, &#39;mid_cloud&#39;, &#39;sfcT_hrs_ab_frez&#39;, &#39;date_marker&#39;], dtype=object),</span>
+<span class="go">&#39;group 2&#39;: array([&#39;dllwave_flux&#39;, &#39;uplwav_flux&#39;], dtype=object),</span>
+<span class="go">&#39;group 3&#39;: array([&#39;dwpt2m&#39;, &#39;fric_vel&#39;, &#39;sat_irbt&#39;, &#39;sfc_rough&#39;, &#39;sfc_temp&#39;,</span>
+<span class="go">&#39;temp2m&#39;, &#39;wind10m&#39;, &#39;urban&#39;, &#39;rural&#39;, &#39;hrrr_dT&#39;], dtype=object),</span>
+<span class="go">&#39;group 4&#39;: array([&#39;low_cloud&#39;, &#39;tot_cloud&#39;, &#39;vbd_flux&#39;, &#39;vdd_flux&#39;], dtype=object),</span>
+<span class="go">&#39;group 5&#39;: array([&#39;gflux&#39;, &#39;d_ground&#39;], dtype=object),</span>
+<span class="go">&#39;group 6&#39;: array([&#39;sfcT_hrs_bl_frez&#39;, &#39;tmp2m_hrs_bl_frez&#39;], dtype=object),</span>
+<span class="go">&#39;group 7&#39;: array([&#39;swave_flux&#39;], dtype=object),</span>
+<span class="go">&#39;group 8&#39;: array([&#39;sens_hf&#39;], dtype=object),</span>
+<span class="go">&#39;group 9&#39;: array([&#39;tmp2m_hrs_ab_frez&#39;], dtype=object)</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.ice">
+<span class="sig-name descname"><span class="pre">ice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsample</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.ice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.ice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the indiviudal conditional expectations (ICE) <a class="footnote-reference brackets" href="#id18" id="id17">7</a>.</p>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id18"><span class="brackets"><a class="fn-backref" href="#id17">7</a></span></dt>
+<dd><p><a class="reference external" href="https://christophm.github.io/interpretable-ml-book/ice.html">https://christophm.github.io/interpretable-ml-book/ice.html</a></p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>features</strong> (<em>string</em><em> or </em><em>list of strings</em><em> or </em><em>'all'</em>) – Features to compute the ICE for.  if ‘all’, the method will compute
+the ICE for all features.</p></li>
+<li><p><strong>n_bins</strong> (<em>integer</em><em> (</em><em>default=30</em><em>)</em>) – Number of bins used to compute the ICE for. Bins are decided based
+on percentile intervals to ensure the same number of samples are in
+each bin.</p></li>
+<li><p><strong>n_jobs</strong> (<em>float</em><em> or </em><em>integer</em><em> (</em><em>default=1</em><em>)</em>) – <ul>
+<li><p>if integer, interpreted as the number of processors to use for multiprocessing</p></li>
+<li><p>if float, interpreted as the fraction of proceesors to use for multiprocessing</p></li>
+</ul>
+</p></li>
+<li><p><strong>subsample</strong> (<em>float</em><em> or </em><em>integer</em><em> (</em><em>default=1.0</em><em>)</em>) – <ul>
+<li><p>if value between 0-1 interpreted as fraction of total X to use</p></li>
+<li><p>if value &gt; 1, interpreted as the absolute number of random samples of X.</p></li>
+</ul>
+</p></li>
+<li><p><strong>n_bootstrap</strong> (<em>integer</em><em> (</em><em>default=1; no bootstrapping</em><em>)</em>) – Number of bootstrap resamples for computing confidence intervals on the ICE curves.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results</strong> – Main keys are the user-provided estimator names while the sub-key
+are the features computed for. The items are data for the ICE curves. Also,
+contains X data (feature values where the ICE curves were computed) for plotting.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.DataSet</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ice_ds</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">ice</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">subsample</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.interaction_strength">
+<span class="sig-name descname"><span class="pre">interaction_strength</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.interaction_strength"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.interaction_strength" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the InterAction Strength (IAS) statistic from Molnar et al. (2019) <a class="footnote-reference brackets" href="#id21" id="id19">5</a>.
+The IAS varies between 0-1 where values closer to 0 indicate no feature interaction
+strength.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ale</strong> (<em>xarray.Dataset</em>) – Results of <a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.ale" title="skexplain.main.explain_toolkit.ExplainToolkit.ale"><code class="xref py py-func docutils literal notranslate"><span class="pre">ale()</span></code></a>, but must be computed for all features</p></li>
+<li><p><strong>estimator_names</strong> (<em>string</em><em>, </em><em>list of strings</em><em> (</em><em>default is None</em><em>)</em>) – If using multiple estimators, you can pass a single (or subset of) estimator name(s)
+to compute the IAS for.</p></li>
+<li><p><strong>kwargs</strong> (<em>dict</em>) – <ul>
+<li><p>subsample</p></li>
+<li><p>n_bootstrap</p></li>
+<li><p>estimator_output</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results_ds</strong> – Interaction strength result dataset</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.Dataset</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ale</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">ale</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ias</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">interaction_strength</span><span class="p">(</span><span class="n">ale</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.load">
+<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fnames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dataset'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load results of a computation (permutation importance, calc_ale, calc_pd, etc)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fnames</strong> (<em>string</em><em> or </em><em>list of strings</em>) – File names of dataframes or datasets to load.</p></li>
+<li><p><strong>dtype</strong> (<em>'dataset'</em><em> or </em><em>'dataframe'</em>) – Indicate whether you are loading a set of xarray.Datasets
+or pandas.DataFrames</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results</strong> – data for plotting purposes</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.DataSet or pandas.DataFrame</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fname</span> <span class="o">=</span> <span class="s1">&#39;path/to/your/perm_imp_results&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">perm_imp_data</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fnames</span><span class="o">=</span><span class="n">fname</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;dataset&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.local_contributions">
+<span class="sig-name descname"><span class="pre">local_contributions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'shap'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">performance_based</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shap_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lime_kws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.local_contributions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.local_contributions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the individual feature contributions to a predicted outcome for
+a series of examples either based on tree interpreter (only Tree-based methods)
+, Shapley Additive Explanations, or Local Interpretable Model-Agnostic Explanations (LIME).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>method</strong> (<code class="docutils literal notranslate"><span class="pre">'shap'</span></code> , <code class="docutils literal notranslate"><span class="pre">'tree_interpreter'</span></code>, or <code class="docutils literal notranslate"><span class="pre">'lime'</span></code>) – Can use SHAP, treeinterpreter, or LIME to compute the feature contributions.
+SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
+select decision-tree based estimators in scikit-learn (e.g., random forests).</p></li>
+<li><p><strong>performance_based</strong> (<em>boolean</em><em> (</em><em>default=False</em><em>)</em>) – If True, will average feature contributions over the best and worst
+performing of the given X. The number of examples to average over
+is given by n_samples</p></li>
+<li><p><strong>n_samples</strong> (<em>interger</em><em> (</em><em>default=100</em><em>)</em>) – Number of samples to compute average over if performance_based = True</p></li>
+<li><p><strong>shap_kwargs</strong> (<em>dict</em>) – <p>Arguments passed to the shap.Explainer object. See
+<a class="reference external" href="https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer">https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer</a>
+for details. The main two arguments supported in skexplain is the masker and
+algorithm options. By default, the masker option uses
+masker = shap.maskers.Partition(X, max_samples=100, clustering=”correlation”) for
+hierarchical clustering by correlations. You can also provide a background dataset
+e.g., background_dataset = shap.sample(X, 100).reset_index(drop=True). The algorithm
+option is set to “auto” by default.</p>
+<ul>
+<li><p>masker</p></li>
+<li><p>algorithm</p></li>
+</ul>
+</p></li>
+<li><p><strong>lime_kws</strong> (<em>dict</em>) – <p>Arguments passed to the LimeTabularExplainer object. See <a class="reference external" href="https://github.com/marcotcr/lime">https://github.com/marcotcr/lime</a>
+for details. Generally, you’ll pass the in the following:</p>
+<ul>
+<li><p>training_data</p></li>
+<li><dl class="simple">
+<dt>categorical_names (scikit-explain will attempt to determine it internally,</dt><dd><p>if it is not passed in)</p>
+</dd>
+</dl>
+</li>
+<li><p>random_state (for reproduciability)</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results_df</strong> – For each example, contributions from each feature plus the bias
+The dataframe is nested by the estimator names and additional keys
+if performance_based=True.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>nested pandas.DataFrame</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">shap</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Only give the X you want contributions for.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># In this case, we are using a single example.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">single_example</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">iloc</span><span class="p">[[</span><span class="mi">0</span><span class="p">]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">single_example</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a background dataset; randomly sample 100 X</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">background_dataset</span> <span class="o">=</span> <span class="n">shap</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">contrib_ds</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">local_contributions</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;shap&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="n">background_dataset</span><span class="o">=</span><span class="n">background_dataset</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># For the performance-based contributions,</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># provide the full set of X and y values.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">contrib_ds</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">local_contributions</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;shap&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="n">background_dataset</span><span class="o">=</span><span class="n">background_dataset</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="n">performance_based</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.main_effect_complexity">
+<span class="sig-name descname"><span class="pre">main_effect_complexity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_segments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">approx_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.main_effect_complexity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.main_effect_complexity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the Main Effect Complexity (MEC; Molnar et al. 2019) <a class="footnote-reference brackets" href="#id21" id="id20">5</a>.
+MEC is the number of linear segements required to approximate
+the first-order ALE curves averaged over all features.
+The MEC is weighted-averged by the variance. Higher values indicate
+a more complex estimator (less interpretable).</p>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id21"><span class="brackets">5</span><span class="fn-backref">(<a href="#id19">1</a>,<a href="#id20">2</a>)</span></dt>
+<dd><p>Molnar, C., G. Casalicchio, and B. Bischl, 2019: Quantifying estimator Complexity via
+Functional Decomposition for Better Post-Hoc Interpretability. ArXiv.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ale</strong> (<em>xarray.Dataset</em>) – Results of <a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.ale" title="skexplain.main.explain_toolkit.ExplainToolkit.ale"><code class="xref py py-func docutils literal notranslate"><span class="pre">ale()</span></code></a>. Must be computed for all features in X.</p></li>
+<li><p><strong>estimator_names</strong> (<em>string</em><em>, </em><em>list of strings</em>) – If using multiple estimators, you can pass a single (or subset of) estimator name(s)
+to compute the MEC for.</p></li>
+<li><p><strong>max_segments</strong> (<em>integer; default=10</em>) – Maximum number of linear segments used to approximate the main/first-order
+effect of a feature. default is 10. Used to limit the computational runtime.</p></li>
+<li><p><strong>approx_error</strong> (<em>float; default=0.05</em>) – The accepted error of the R squared between the piece-wise linear function
+and the true ALE curve. If the R square is within the approx_error, then
+no additional segments are added.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>mec_dict</strong> – mec_dict = {estimator_name0 : mec0, estimator_name1 : mec2, …, estimator_nameN : mecN,}</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dictionary</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ale</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">ale</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">n_bins</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">subsample</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n_bootstrap</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Compute Main Effect Complexity (MEC)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mec_ds</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">main_effect_complexity</span><span class="p">(</span><span class="n">ale</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">mes_ds</span><span class="p">)</span>
+<span class="go">{&#39;Random Forest&#39;: 2.6792782503392756,</span>
+<span class="go"> &#39;Gradient Boosting&#39;: 2.692392706080586,</span>
+<span class="go"> &#39;Logistic Regression&#39;: 1.6338281469152958}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.pd">
+<span class="sig-name descname"><span class="pre">pd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsample</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.pd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.pd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the 1D or 2D centered partial dependence (PD) <a class="footnote-reference brackets" href="#id23" id="id22">8</a>.</p>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id23"><span class="brackets"><a class="fn-backref" href="#id22">8</a></span></dt>
+<dd><p><a class="reference external" href="https://christophm.github.io/interpretable-ml-book/pdp.html">https://christophm.github.io/interpretable-ml-book/pdp.html</a></p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>features</strong> (<em>string</em><em> or </em><em>list of strings</em><em> or </em><em>'all'</em>) – Features to compute the PD for.  if ‘all’, the method will compute
+the PD for all features.</p></li>
+<li><p><strong>n_bins</strong> (<em>integer</em><em> (</em><em>default=30</em><em>)</em>) – Number of bins used to compute the PD for. Bins are decided based
+on percentile intervals to ensure the same number of samples are in
+each bin.</p></li>
+<li><p><strong>n_jobs</strong> (<em>float</em><em> or </em><em>integer</em><em> (</em><em>default=1</em><em>)</em>) – <ul>
+<li><p>if integer, interpreted as the number of processors to use for multiprocessing</p></li>
+<li><p>if float, interpreted as the fraction of proceesors to use for multiprocessing</p></li>
+</ul>
+</p></li>
+<li><p><strong>subsample</strong> (<em>float</em><em> or </em><em>integer</em><em> (</em><em>default=1.0</em><em>)</em>) – <ul>
+<li><p>if value between 0-1 interpreted as fraction of total X to use</p></li>
+<li><p>if value &gt; 1, interpreted as the absolute number of random samples of X.</p></li>
+</ul>
+</p></li>
+<li><p><strong>n_bootstrap</strong> (<em>integer</em><em> (</em><em>default=1; no bootstrapping</em><em>)</em>) – Number of bootstrap resamples for computing confidence intervals on the PD curves.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results</strong> – Partial dependence result dataset</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.DataSet</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pd</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">pd</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.perm_based_interaction">
+<span class="sig-name descname"><span class="pre">perm_based_interaction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsample</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.perm_based_interaction"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.perm_based_interaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the performance-based feature interactions from Oh (2019) <a class="footnote-reference brackets" href="#id25" id="id24">6</a>.
+For a pair of features, the loss of skill is recorded for permuting
+each feature separately and permuting both. If there is no feature interaction
+and the covariance between the two features is close to zero, the sum of the
+individual losses will approximately equal the loss of skill from permuting
+both features. Otherwise, a non-zero difference indicates some interaction.
+The differences for different pairs of features can be used to rank the
+strength of any feature interactions.</p>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id25"><span class="brackets"><a class="fn-backref" href="#id24">6</a></span></dt>
+<dd><p>Oh, Sejong, 2019. Feature Interaction in Terms of Prediction Performance
+<a class="reference external" href="https://www.mdpi.com/2076-3417/9/23/5191">https://www.mdpi.com/2076-3417/9/23/5191</a></p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>features</strong> (<em>list of 2-tuple of strings</em>) – Pairs of features to compute the interaction strength for.</p></li>
+<li><p><strong>evaluation_fn</strong> (<em>string</em><em> or </em><em>callable</em>) – <p>evaluation/scoring function for evaluating the loss of skill once a feature is permuted.
+evaluation_fn can be set to one of the following strings:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;auc&quot;</span></code>, Area under the Curve</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;auprc&quot;</span></code>, Area under the Precision-Recall Curve</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;bss&quot;</span></code>, Brier Skill Score</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;mse&quot;</span></code>, Mean Square Error</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;norm_aupdc&quot;</span></code>,  Normalized Area under the Performance Diagram (Precision-Recall) Curve</p></li>
+</ul>
+</div></blockquote>
+<p>Otherwise, evaluation_fn can be any function of form,
+<cite>evaluation_fn(targets, predictions)</cite> and must return a scalar value</p>
+</p></li>
+<li><p><strong>estimator_names</strong> (<em>string</em><em>, </em><em>list of strings</em>) – If using multiple estimators, you can pass a single (or subset of) estimator name(s)
+to compute for.</p></li>
+<li><p><strong>subsample</strong> (<em>float</em><em> or </em><em>integer</em><em> (</em><em>default=1.0 for no subsampling</em><em>)</em>) – <ul>
+<li><p>if value is between 0-1, it is interpreted as fraction of total X to use</p></li>
+<li><p>if value &gt; 1, interpreted as the absolute number of random samples of X.</p></li>
+</ul>
+</p></li>
+<li><p><strong>n_jobs</strong> (<em>interger</em><em> or </em><em>float</em><em> (</em><em>default=1; no multiprocessing</em><em>)</em>) – <ul>
+<li><p>if integer, interpreted as the number of processors to use for multiprocessing</p></li>
+<li><p>if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing</p></li>
+</ul>
+</p></li>
+<li><p><strong>n_bootstrap</strong> (<em>integer</em><em> (</em><em>default=None for no bootstrapping</em><em>)</em>) – Number of bootstrap resamples for computing confidence intervals on the feature pair rankings.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results_ds</strong> – Permutation importance-based feature interaction strength results</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.Dataset</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">important_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sfc_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;temp2m&#39;</span><span class="p">,</span> <span class="s1">&#39;sfcT_hrs_bl_frez&#39;</span><span class="p">,</span> <span class="s1">&#39;tmp2m_hrs_bl_frez&#39;</span><span class="p">,</span>
+<span class="gp">... </span>     <span class="s1">&#39;uplwav_flux&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">important_vars_2d</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">important_vars</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">perm_based_interact_ds</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">perm_based_interaction</span><span class="p">(</span>
+<span class="gp">... </span>                         <span class="n">important_vars_2d</span><span class="p">,</span> <span class="n">evaluation_fn</span><span class="o">=</span><span class="s1">&#39;norm_aupdc&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                        <span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.permutation_importance">
+<span class="sig-name descname"><span class="pre">permutation_importance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_vars</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluation_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'backward'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsample</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_permute</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scoring_strategy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_importance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.permutation_importance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.permutation_importance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs single-pass and/or multi-pass permutation importance using a modified version of the
+PermutationImportance package (skexplain.PermutationImportance) <a href="#id42"><span class="problematic" id="id26">[1]_</span></a>. The single-pass approach was first
+developed in Brieman (2001) <a class="footnote-reference brackets" href="#id30" id="id27">2</a> and then improved upon in Lakshmanan et al. (2015) <a class="footnote-reference brackets" href="#id31" id="id28">3</a>.</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>The permutation importance rankings can be sensitive to the evaluation function used.
+Consider re-computing with multiple evaluation functions.</p>
+</div>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>The permutation importance rankings can be sensitive to the direction used.
+Consider re-computing with both forward- and backward-based methods.</p>
+</div>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p>Since the permutation importance is a marginal-based method, you can often use
+subsample &lt;&lt; 1.0 without substantially altering the feature rankings.
+Using a subsample &lt;&lt; 1.0 can reduce the computation time for larger datasets (e.g., &gt;100 K X),
+especially since 100-1000s of bootstrap iterations are often required for reliable rankings.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_vars</strong> (<em>integer</em>) – number of variables to calculate the multipass permutation importance for. If <code class="docutils literal notranslate"><span class="pre">n_vars=1</span></code>, then
+only the single-pass permutation importance is computed. If <code class="docutils literal notranslate"><span class="pre">n_vars&gt;1</span></code>, both the single-pass
+and multiple-pass are computed.</p></li>
+<li><p><strong>evaluation_fn</strong> (<em>string</em><em> or </em><em>callable</em>) – <p>evaluation/scoring function for evaluating the loss of skill once a feature is permuted.
+evaluation_fn can be set to one of the following strings:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;auc&quot;</span></code>, Area under the Curve</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;auprc&quot;</span></code>, Area under the Precision-Recall Curve</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;bss&quot;</span></code>, Brier Skill Score</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;mse&quot;</span></code>, Mean Square Error</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;norm_aupdc&quot;</span></code>,  Normalized Area under the Performance Diagram (Precision-Recall) Curve</p></li>
+</ul>
+</div></blockquote>
+<p>Otherwise, evaluation_fn can be any function of form,
+<cite>evaluation_fn(targets, predictions)</cite> and must return a scalar value</p>
+<p>When using a custom function, you must also set the scoring strategy (see below).</p>
+</p></li>
+<li><p><strong>scoring_strategy</strong> (<em>string</em><em> (</em><em>default=None</em><em>)</em>) – <p>This argument is only required if you are using a non-default evaluation_fn (see above)</p>
+<p>If the evaluation_fn is positively-oriented (a higher value is better),
+then set <code class="docutils literal notranslate"><span class="pre">scoring_strategy</span> <span class="pre">=</span> <span class="pre">&quot;minimize&quot;</span></code> (i.e., a lower score after permutation
+indicates higher importance) and if it is negatively-oriented-
+(a lower value is better), then set <code class="docutils literal notranslate"><span class="pre">scoring_strategy</span> <span class="pre">=</span> <span class="pre">&quot;maximize&quot;</span></code></p>
+</p></li>
+<li><p><strong>direction</strong> (<code class="docutils literal notranslate"><span class="pre">&quot;forward&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;backward&quot;</span></code>) – For the multi-pass method. For <code class="docutils literal notranslate"><span class="pre">&quot;backward&quot;</span></code>, the top feature is left permuted before determining
+the second-most important feature (and so on). For <code class="docutils literal notranslate"><span class="pre">&quot;forward&quot;</span></code>, all features are permuted
+and then the top features are progressively left unpermuted. For real-world datasets, the two
+methods often do not produce the same feature rankings and is worth exploring both.</p></li>
+<li><p><strong>subsample</strong> (<em>float</em><em> or </em><em>integer</em><em> (</em><em>default=1.0 for no subsampling</em><em>)</em>) – if value is between 0-1, it is interpreted as fraction of total X to use
+if value &gt; 1, interpreted as the number of X to randomly sample
+from the original dataset.</p></li>
+<li><p><strong>n_jobs</strong> (<em>interger</em><em> or </em><em>float</em><em> (</em><em>default=1; no multiprocessing</em><em>)</em>) – if integer, interpreted as the number of processors to use for multiprocessing
+if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing</p></li>
+<li><p><strong>n_permute</strong> (<em>integer</em><em> (</em><em>default=1 for only one permutation per feature</em><em>)</em>) – Number of permutations for computing confidence intervals on the feature rankings.</p></li>
+<li><p><strong>random_seed</strong> (<em>int</em><em>, </em><em>RandomState instance</em><em>, </em><em>default=None</em>) – Pseudo-random number generator to control the permutations of each
+feature. Pass an int to get reproducible results across function calls.</p></li>
+<li><p><strong>verbose</strong> (<em>boolean</em>) – True for print statements on the progress</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results</strong> – Permutation importance results. Includes the both multi-pass and single-pass
+feature rankings and the scores with the various features permuted.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.DataSet</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id29"><span class="brackets">1</span></dt>
+<dd><p><a class="reference external" href="https://github.com/gelijergensen/PermutationImportance">https://github.com/gelijergensen/PermutationImportance</a></p>
+</dd>
+<dt class="label" id="id30"><span class="brackets"><a class="fn-backref" href="#id27">2</a></span></dt>
+<dd><ol class="upperalpha simple" start="12">
+<li><p>Breiman, “Random Forests”, Machine Learning, 45(1), 5-32, 2001.</p></li>
+</ol>
+</dd>
+<dt class="label" id="id31"><span class="brackets"><a class="fn-backref" href="#id28">3</a></span></dt>
+<dd><p>Lakshmanan, V., C. Karstens, J. Krause, K. Elmore, A. Ryzhkov, and S. Berkseth, 2015:
+Which Polarimetric Variables Are Important for Weather/No-Weather Discrimination?
+Journal of Atmospheric and Oceanic Technology, 32, 1209–1223,
+<a class="reference external" href="https://doi.org/10.1175/jtech-d-13-00205.1">https://doi.org/10.1175/jtech-d-13-00205.1</a>.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Only compute for the first model</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">perm_imp_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">permutation_importance</span><span class="p">(</span>
+<span class="gp">... </span>                      <span class="n">n_vars</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">evaluation_fn</span> <span class="o">=</span> <span class="s1">&#39;norm_aupdc&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">subsample</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">n_permute</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">perm_imp_results</span><span class="p">)</span>
+<span class="go">&lt;xarray.Dataset&gt;</span>
+<span class="go">    Dimensions:           (n_permute: 20, n_vars_multipass: 10, n_vars_singlepass: 30)</span>
+<span class="go">    Dimensions without coordinates: n_permute, n_vars_multipass, n_vars_singlepass</span>
+<span class="go">    Data variables:</span>
+<span class="go">        multipass_rankings__Random Forest   (n_vars_multipass) &lt;U17 &#39;sfc_te...</span>
+<span class="go">        multipass_scores__Random Forest     (n_vars_multipass, n_permute) float64 ...</span>
+<span class="go">        singlepass_rankings__Random Forest  (n_vars_singlepass) &lt;U17 &#39;sfc_t...</span>
+<span class="go">        singlepass_scores__Random Forest    (n_vars_singlepass, n_permute) float64 ...</span>
+<span class="go">        original_score__Random Forest       (n_permute) float64 0.9851 .....</span>
+<span class="go">    Attributes:</span>
+<span class="go">        estimator_output:  probability</span>
+<span class="go">        estimators used:   [&#39;Random Forest&#39;]</span>
+<span class="go">        n_multipass_vars:  10</span>
+<span class="go">        method:            permutation_importance</span>
+<span class="go">        direction:         backward</span>
+<span class="go">        evaluation_fn:     norm_aupdc</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.plot_ale">
+<span class="sig-name descname"><span class="pre">plot_ale</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_hist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_probability</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_kws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.plot_ale"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.plot_ale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the 1D and 2D accumulated local effects plotting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ale</strong> (<em>xarray.Dataset</em>) – Results of <a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.ale" title="skexplain.main.explain_toolkit.ExplainToolkit.ale"><code class="xref py py-func docutils literal notranslate"><span class="pre">ale()</span></code></a> for
+<code class="docutils literal notranslate"><span class="pre">features</span></code>.</p></li>
+<li><p><strong>features</strong> (<em>string</em><em>, </em><em>list of strings</em><em>, </em><em>list of 2-tuple of strings</em>) – Features to plot the PD for.  To plot for 2D PD,
+pass a list of 2-tuples of features.</p></li>
+<li><p><strong>estimator_names</strong> (<em>string</em><em>, </em><em>list of strings</em><em> (</em><em>default is None</em><em>)</em>) – If using multiple estimators, you can pass a single (or subset of) estimator name(s)
+to plot for.</p></li>
+<li><p><strong>add_hist</strong> (<em>True/False</em><em> (</em><em>default=True</em><em>)</em>) – If True, adds the histogram of a feature’s values behind the interpret curves.</p></li>
+<li><p><strong>display_feature_names</strong> (<em>dict</em>) – <p>For plotting purposes. Dictionary that maps the feature names
+in the pandas.DataFrame to display-friendly versions.
+E.g., <code class="docutils literal notranslate"><span class="pre">display_feature_names</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">'dwpt2m'</span> <span class="pre">:</span> <span class="pre">'$T_{d}$',</span> <span class="pre">}</span></code></p>
+<p>The plotting code can handle latex-style formatting.</p>
+</p></li>
+<li><p><strong>display_units</strong> (<em>dict</em>) – For plotting purposes. Dictionary that maps the feature names
+to their units.
+E.g., <code class="docutils literal notranslate"><span class="pre">display_units</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">'dwpt2m'</span> <span class="pre">:</span> <span class="pre">'$^\circ$C',</span> <span class="pre">}</span></code></p></li>
+<li><p><strong>line_colors</strong> (<em>str</em><em> or </em><em>list of strs of len</em><em>(</em><em>estimators</em><em>)</em>) – User-defined colors for curve plotting.</p></li>
+<li><p><strong>to_probability</strong> (<em>boolean</em>) – If True, the values are multipled by 100.</p></li>
+<li><p><strong>matplotlib.</strong> (<em>Keyword arguments include arguments typically used for</em>) – E.g.,
+figsize, hist_color,</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>fig, axes</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>matplotlib figure instance and the corresponding axes</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ale</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">ale</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Provide a small subset of features to plot</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">important_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sfc_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;temp2m&#39;</span><span class="p">,</span> <span class="s1">&#39;sfcT_hrs_bl_frez&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s1">&#39;tmp2m_hrs_bl_frez&#39;</span><span class="p">,</span><span class="s1">&#39;uplwav_flux&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span><span class="o">.</span><span class="n">plot_ale</span><span class="p">(</span><span class="n">ale</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="n">important_vars</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/ale_1d.png" src="_images/ale_1d.png" />
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.plot_box_and_whisker">
+<span class="sig-name descname"><span class="pre">plot_box_and_whisker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">important_vars</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">example</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.plot_box_and_whisker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.plot_box_and_whisker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the training dataset distribution for a given set of important variables
+as a box-and-whisker plot. The user provides a single example, which is highlighted
+over those examples. Useful for real-time explainability.</p>
+<dl class="simple">
+<dt>important_vars<span class="classifier">str or list of strings</span></dt><dd><p>List of features to plot</p>
+</dd>
+<dt>example<span class="classifier">Pandas Series, shape = (important_vars,)</span></dt><dd><p>Single row dataframe to be overlaid, must have columns equal to
+the given important_vars</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.plot_contributions">
+<span class="sig-name descname"><span class="pre">plot_contributions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contrib</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.plot_contributions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.plot_contributions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the feature contributions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>contrib</strong> (<em>Nested pandas.DataFrame</em>) – Results of <a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.local_contributions" title="skexplain.main.explain_toolkit.ExplainToolkit.local_contributions"><code class="xref py py-func docutils literal notranslate"><span class="pre">local_contributions()</span></code></a></p></li>
+<li><p><strong>features</strong> (<em>string</em><em> or </em><em>list of strings</em><em> (</em><em>default=None</em><em>)</em>) – Features to plot. If None, all features are eligible to be plotted.
+However, the default number of features to plot is 10. Can be set
+by n_vars (see keyword arguments).</p></li>
+<li><p><strong>estimator_names</strong> (<em>string</em><em>, </em><em>list of strings</em><em> (</em><em>default is None</em><em>)</em>) – If using multiple estimators, you can pass a single (or subset of) estimator name(s)
+to compute the IAS for.</p></li>
+<li><p><strong>display_feature_names</strong> (<em>dict</em>) – For plotting purposes. Dictionary that maps the feature names
+in the pandas.DataFrame to display-friendly versions.
+E.g., display_feature_names = { ‘dwpt2m’ : ‘T$_{d}$’, }
+The plotting code can handle latex-style formatting.</p></li>
+<li><p><strong>matplotlib</strong> (<em>Keyword arguments include arguments typically used for</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>fig</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>matplotlib figure instance</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">shap</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span> <span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Only give the X you want contributions for.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># In this case, we are using a single example.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">single_example</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">iloc</span><span class="p">[[</span><span class="mi">0</span><span class="p">]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">single_example</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a background dataset; randomly sample 100 X</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">background_dataset</span> <span class="o">=</span> <span class="n">shap</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">contrib_ds</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">local_contributions</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;shap&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="n">background_dataset</span><span class="o">=</span><span class="n">background_dataset</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span><span class="o">.</span><span class="n">plot_contributions</span><span class="p">(</span><span class="n">contrib_ds</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/feature_contribution_single.png" src="_images/feature_contribution_single.png" />
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.plot_importance">
+<span class="sig-name descname"><span class="pre">plot_importance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">panels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_correlated_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.plot_importance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.plot_importance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method for plotting the permutation importance and other ranking-based results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>panels</strong> (<em>List of 2-tuple of</em><em> (</em><em>estimator name</em><em>, </em><em>method</em><em>) </em><em>to determine the sub-panel</em>) – <dl class="simple">
+<dt>matrixing for the plotting. E.g., If you wanted to compare multi-pass to</dt><dd><p>single-pass permutation importance for a random forest:</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">panels</span>&#160; <span class="pre">=</span> <span class="pre">[('Random</span> <span class="pre">Forest',</span> <span class="pre">'multipass'),</span> <span class="pre">('Random</span> <span class="pre">Forest',</span> <span class="pre">'singlepass')</span></code></dt><dd><p>The available ranking methods in skexplain include ‘multipass’, ‘singlepass’,
+‘perm_based’, ‘ale_variance’, or ‘ale_variance_interactions’.</p>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>data</strong> (<em>list of xarray.Datasets</em>) – <p>Results from</p>
+<ul>
+<li><p><a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.permutation_importance" title="skexplain.main.explain_toolkit.ExplainToolkit.permutation_importance"><code class="xref py py-func docutils literal notranslate"><span class="pre">permutation_importance()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.ale_variance" title="skexplain.main.explain_toolkit.ExplainToolkit.ale_variance"><code class="xref py py-func docutils literal notranslate"><span class="pre">ale_variance()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.friedman_h_stat" title="skexplain.main.explain_toolkit.ExplainToolkit.friedman_h_stat"><code class="xref py py-func docutils literal notranslate"><span class="pre">friedman_h_stat()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.perm_based_interaction" title="skexplain.main.explain_toolkit.ExplainToolkit.perm_based_interaction"><code class="xref py py-func docutils literal notranslate"><span class="pre">perm_based_interaction()</span></code></a></p></li>
+</ul>
+<p>For each element in panels, there needs to be a corresponding element in data.</p>
+</p></li>
+<li><p><strong>columns</strong> (<em>list of strings</em>) – What will be the columns of the plot? These can be x-axis label (default is
+the different estimator names)</p></li>
+<li><p><strong>rows</strong> (<em>list of strings</em>) – Y-axis label or multiple labels for each row in a multi-panel plot. (default is None).</p></li>
+<li><p><strong>plot_correlated_features</strong> (<em>boolean</em>) – If True, pairs of features with a linear correlation coefficient &gt; 0.8
+are annotate/paired by bars or color-coding. This is useful for identifying
+spurious rankings due to the correlations.</p></li>
+<li><p><strong>kwargs</strong> (<em>keyword arguments</em>) – </p></li>
+<li><p><strong>num_vars_to_plot</strong> (<em>integer</em>) – Number of features to plot from permutation importance calculation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>fig</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>matplotlib figure instance</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">perm_imp_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">permutation_importance</span><span class="p">(</span>
+<span class="gp">... </span>                      <span class="n">n_vars</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">evaluation_fn</span> <span class="o">=</span> <span class="s1">&#39;norm_aupdc&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">direction</span> <span class="o">=</span> <span class="s1">&#39;backward&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">subsample</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">n_bootstrap</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">perm_imp_results</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;multipass&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1">#If we want to annonate pairs of highly correlated feature pairs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">perm_imp_results</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;multipass&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                    <span class="n">plot_correlated_features</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/multi_pass_perm_imp.png" src="_images/multi_pass_perm_imp.png" />
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.plot_pd">
+<span class="sig-name descname"><span class="pre">plot_pd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_hist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_probability</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_kws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.plot_pd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.plot_pd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the 1D and 2D partial dependence plotting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pd</strong> (<em>xarray.Dataset</em>) – Results of <a class="reference internal" href="#skexplain.main.explain_toolkit.ExplainToolkit.pd" title="skexplain.main.explain_toolkit.ExplainToolkit.pd"><code class="xref py py-func docutils literal notranslate"><span class="pre">pd()</span></code></a> for
+<code class="docutils literal notranslate"><span class="pre">features</span></code>.</p></li>
+<li><p><strong>features</strong> (<em>string</em><em>, </em><em>list of strings</em><em>, </em><em>list of 2-tuple of strings</em>) – Features to plot the PD for.  To plot for 2D PD,
+pass a list of 2-tuples of features.</p></li>
+<li><p><strong>estimator_names</strong> (<em>string</em><em>, </em><em>list of strings</em><em> (</em><em>default is None</em><em>)</em>) – If using multiple estimators, you can pass a single (or subset of) estimator name(s)
+to plot for.</p></li>
+<li><p><strong>add_hist</strong> (<em>True/False</em><em> (</em><em>default=True</em><em>)</em>) – If True, adds the histogram of a feature’s values behind the interpret curves.</p></li>
+<li><p><strong>display_feature_names</strong> (<em>dict</em>) – <p>For plotting purposes. Dictionary that maps the feature names
+in the pandas.DataFrame to display-friendly versions.
+E.g., <code class="docutils literal notranslate"><span class="pre">display_feature_names</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">'dwpt2m'</span> <span class="pre">:</span> <span class="pre">'$T_{d}$',</span> <span class="pre">}</span></code></p>
+<p>The plotting code can handle latex-style formatting.</p>
+</p></li>
+<li><p><strong>display_units</strong> (<em>dict</em>) – For plotting purposes. Dictionary that maps the feature names
+to their units.
+E.g., <code class="docutils literal notranslate"><span class="pre">display_units</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">'dwpt2m'</span> <span class="pre">:</span> <span class="pre">'$^\circ$C',</span> <span class="pre">}</span></code></p></li>
+<li><p><strong>line_colors</strong> (<em>str</em><em> or </em><em>list of strs of len</em><em>(</em><em>estimators</em><em>)</em>) – User-defined colors for curve plotting.</p></li>
+<li><p><strong>to_probability</strong> (<em>boolean</em>) – If True, the values are multipled by 100.</p></li>
+<li><p><strong>matplotlib.</strong> (<em>Keyword arguments include arguments typically used for</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>fig, axes</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>matplotlib figure instance and the corresponding axes</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span> <span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pd</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">calc_pd</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Provide a small subset of features to plot</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">important_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sfc_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;temp2m&#39;</span><span class="p">,</span> <span class="s1">&#39;sfcT_hrs_bl_frez&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s1">&#39;tmp2m_hrs_bl_frez&#39;</span><span class="p">,</span><span class="s1">&#39;uplwav_flux&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span><span class="o">.</span><span class="n">plot_pd</span><span class="p">(</span><span class="n">pd</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="n">important_vars</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.plot_scatter">
+<span class="sig-name descname"><span class="pre">plot_scatter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kde</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsample</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.plot_scatter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.plot_scatter" title="Permalink to this definition">¶</a></dt>
+<dd><p>2-D Scatter plot of ML model predictions. If kde=True, it will plot KDE contours
+overlays to show highest concentrations. If the model type is classification, then
+the code will plot KDE contours per class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.plot_shap">
+<span class="sig-name descname"><span class="pre">plot_shap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shap_values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'summary'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.plot_shap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.plot_shap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the SHapley Additive Explanations (SHAP) <a class="footnote-reference brackets" href="#id38" id="id32">13</a> <a class="footnote-reference brackets" href="#id39" id="id33">14</a> <a class="footnote-reference brackets" href="#id40" id="id34">15</a> summary plot or dependence
+plots for various features.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>plot_type</strong> (<code class="docutils literal notranslate"><span class="pre">'summary'</span></code> or <code class="docutils literal notranslate"><span class="pre">'dependence'</span></code>) – if ‘summary’, plots a feature importance-style plot
+if ‘dependence’, plots a partial depedence style plot</p></li>
+<li><p><strong>shap_values</strong> (<em>array of shape</em><em> (</em><em>n_samples</em><em>, </em><em>n_features</em><em>)</em>) – SHAP values</p></li>
+<li><p><strong>features</strong> (<em>string</em><em> or </em><em>list of strings</em><em> (</em><em>default=None</em><em>)</em>) – features to plots if plot_type is ‘dependence’.</p></li>
+<li><p><strong>display_feature_names</strong> (<em>dict</em>) – For plotting purposes. Dictionary that maps the feature names
+in the pandas.DataFrame to display-friendly versions.
+E.g., <code class="docutils literal notranslate"><span class="pre">display_feature_names</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">'dwpt2m'</span> <span class="pre">:</span> <span class="pre">'$T_{d}$',</span> <span class="pre">}</span></code>
+The plotting code can handle latex-style formatting.</p></li>
+<li><p><strong>display_units</strong> (<em>dict</em>) – For plotting purposes. Dictionary that maps the feature names
+to their units.
+E.g., <code class="docutils literal notranslate"><span class="pre">display_units</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">'dwpt2m'</span> <span class="pre">:</span> <span class="pre">'$^\circ$C',</span> <span class="pre">}</span></code></p></li>
+<li><p><strong>to_probability</strong> (<em>boolean</em>) – if True, values are multiplied by 100.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>fig</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>matplotlib figure instance</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">shap</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a background dataset; randomly sample 100 X</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">background_dataset</span> <span class="o">=</span> <span class="n">shap</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shap_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">shap</span><span class="p">(</span><span class="n">background_dataset</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">estimator_names</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">[</span><span class="s1">&#39;Random Forest&#39;</span><span class="p">,</span> <span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shap_values</span><span class="p">,</span> <span class="n">bias</span> <span class="o">=</span> <span class="n">shap_results</span><span class="p">[</span><span class="n">estimator_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Plot the SHAP-summary style plot</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span><span class="o">.</span><span class="n">plot_shap</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">&#39;summary&#39;</span><span class="p">,</span><span class="n">shap_values</span><span class="o">=</span><span class="n">shap_values</span><span class="p">,)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Plot the SHAP-dependence style plot</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">important_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sfc_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;temp2m&#39;</span><span class="p">,</span> <span class="s1">&#39;sfcT_hrs_bl_frez&#39;</span><span class="p">,</span> <span class="s1">&#39;tmp2m_hrs_bl_frez&#39;</span><span class="p">,</span><span class="s1">&#39;uplwav_flux&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span><span class="o">.</span><span class="n">plot_shap</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">&#39;dependence&#39;</span><span class="p">,</span>
+<span class="gp">... </span>           <span class="n">shap_values</span><span class="o">=</span><span class="n">shap_values</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="n">important_vars</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/shap_dependence.png" src="_images/shap_dependence.png" />
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save results of a computation (permutation importance, calc_ale, calc_pd, etc)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fname</strong> (<em>string</em>) – filename to store the results in (including path)</p></li>
+<li><p><strong>data</strong> (<em>ExplainToolkit results</em>) – the results of a ExplainToolkit calculation. Can be a dataframe or dataset.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span> <span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">perm_imp_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">calc_permutation_importance</span><span class="p">(</span>
+<span class="gp">... </span>                      <span class="n">n_vars</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">evaluation_fn</span> <span class="o">=</span> <span class="s1">&#39;norm_aupdc&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">direction</span> <span class="o">=</span> <span class="s1">&#39;backward&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">subsample</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="n">n_bootstrap</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fname</span> <span class="o">=</span> <span class="s1">&#39;path/to/save/the/file&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="n">perm_imp_results</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skexplain.main.explain_toolkit.ExplainToolkit.shap">
+<span class="sig-name descname"><span class="pre">shap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shap_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'algorithm':</span> <span class="pre">'auto',</span> <span class="pre">'masker':</span> <span class="pre">None}</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/skexplain/main/explain_toolkit.html#ExplainToolkit.shap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#skexplain.main.explain_toolkit.ExplainToolkit.shap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the SHapley Additive Explanations (SHAP) values <a class="footnote-reference brackets" href="#id38" id="id35">13</a> <a class="footnote-reference brackets" href="#id39" id="id36">14</a> <a class="footnote-reference brackets" href="#id40" id="id37">15</a>.
+By default, we set algorithm = <code class="docutils literal notranslate"><span class="pre">'auto'</span></code>, so that the best algorithm
+for a model is determined internally in the SHAP package.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>shap_kwargs</strong> (<em>dict</em>) – <p>Arguments passed to the shap.Explainer object. See
+<a class="reference external" href="https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer">https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer</a>
+for details. The main two arguments supported in skexplain is the masker and
+algorithm options. By default, the masker option uses
+masker = shap.maskers.Partition(X, max_samples=100, clustering=”correlation”) for
+hierarchical clustering by correlations. You can also provide a background dataset
+e.g., background_dataset = shap.sample(X, 100).reset_index(drop=True). The algorithm
+option is set to “auto” by default.</p>
+<ul class="simple">
+<li><p>masker</p></li>
+<li><p>algorithm</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>results</strong> – A dataset containing shap values [(n_samples, n_features)] for each estimator
+(e.g., ‘shap_values__estimator_name’), the bias (‘bias__estimator_name’)
+of shape (n_examples, 1), and the X and y values the shap values were determined from.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>xarray.Dataset</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id38"><span class="brackets">13</span><span class="fn-backref">(<a href="#id32">1</a>,<a href="#id35">2</a>)</span></dt>
+<dd><p><a class="reference external" href="https://christophm.github.io/interpretable-ml-book/shap.html">https://christophm.github.io/interpretable-ml-book/shap.html</a></p>
+</dd>
+<dt class="label" id="id39"><span class="brackets">14</span><span class="fn-backref">(<a href="#id33">1</a>,<a href="#id36">2</a>)</span></dt>
+<dd><p>Lundberg, S. M., G. G. Erion, and S.-I. Lee, 2018: Consistent Individualized
+Feature Attribution for Tree Ensembles. Arxiv,.</p>
+</dd>
+<dt class="label" id="id40"><span class="brackets">15</span><span class="fn-backref">(<a href="#id34">1</a>,<a href="#id37">2</a>)</span></dt>
+<dd><p>Lundberg, S. M., and Coauthors, 2020: From local explanations to global understanding
+with explainable AI for trees. Nat Mach Intell, 2, 56–67, <a class="reference external" href="https://doi.org/10.1038/s42256-019-0138-9">https://doi.org/10.1038/s42256-019-0138-9</a>.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">shap</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># pre-fit estimators within skexplain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span> <span class="c1"># training data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X_subset</span> <span class="o">=</span> <span class="n">shap</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">22</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span>
+<span class="gp">... </span>                            <span class="n">X</span><span class="o">=</span><span class="n">X_subset</span><span class="p">,)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">shap</span><span class="p">(</span><span class="n">shap_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;masker&#39;</span> <span class="p">:</span>
+<span class="gp">... </span>                         <span class="n">shap</span><span class="o">.</span><span class="n">maskers</span><span class="o">.</span><span class="n">Partition</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">max_samples</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">clustering</span><span class="o">=</span><span class="s2">&quot;correlation&quot;</span><span class="p">),</span>
+<span class="gp">... </span>                         <span class="s1">&#39;algorithm&#39;</span> <span class="p">:</span> <span class="s1">&#39;auto&#39;</span><span class="p">})</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<div class="toctree-wrapper compound">
+</div>
+<section id="contribute">
+<h2>Contribute<a class="headerlink" href="#contribute" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Issue Tracker: github.com/monte-flora/scikit-explain/issues</p></li>
+<li><p>Source Code: github.com/monte-flora/scikit-explain</p></li>
+</ul>
+</section>
+<section id="support">
+<h2>Support<a class="headerlink" href="#support" title="Permalink to this headline">¶</a></h2>
+<p>If you are having issues, please let us know.
+We have a mailing list located at: <a class="reference external" href="mailto:monte&#46;flora&#37;&#52;&#48;noaa&#46;gov">monte<span>&#46;</span>flora<span>&#64;</span>noaa<span>&#46;</span>gov</a></p>
+</section>
+<section id="license">
+<h2>License<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h2>
+<p>The project is licensed under the BSD license.</p>
+</section>
+<section id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><cite>genindex</cite></p></li>
+<li><p><cite>modindex</cite></p></li>
+<li><p><cite>search</cite></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">Scikit-Explain</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Montgomery Flora; Shawn Handler.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,397 @@
+
+<!DOCTYPE html>
+
+<html lang="">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>main.PermutationImportance package &#8212; Scikit-Explain v0.0.4 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="main-permutationimportance-package">
+<h1>main.PermutationImportance package<a class="headerlink" href="#main-permutationimportance-package" title="Permalink to this headline">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="main-permutationimportance-abstract-runner-module">
+<h2>main.PermutationImportance.abstract_runner module<a class="headerlink" href="#main-permutationimportance-abstract-runner-module" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-main.PermutationImportance.data_verification">
+<span id="main-permutationimportance-data-verification-module"></span><h2>main.PermutationImportance.data_verification module<a class="headerlink" href="#module-main.PermutationImportance.data_verification" title="Permalink to this headline">¶</a></h2>
+<p>These utilities are designed to check whether the given data and variable
+names match the expected format. For the training or scoring data, we accept
+either a pandas dataframe with the target column indicated, two different
+dataframes, or two numpy arrays</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="main.PermutationImportance.data_verification.determine_variable_names">
+<span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.data_verification.</span></span><span class="sig-name descname"><span class="pre">determine_variable_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variable_names</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/data_verification.html#determine_variable_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.data_verification.determine_variable_names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses <code class="docutils literal notranslate"><span class="pre">data</span></code> and/or the <code class="docutils literal notranslate"><span class="pre">variable_names</span></code> to determine what the
+variable names are. If <code class="docutils literal notranslate"><span class="pre">variable_names</span></code> is not specified and <code class="docutils literal notranslate"><span class="pre">data</span></code> is
+not a pandas dataframe, defaults to the column indices</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – a 2-tuple where the input data is the first item</p></li>
+<li><p><strong>variable_names</strong> – either a list of variable names or None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a list of variable names</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="main.PermutationImportance.data_verification.verify_data">
+<span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.data_verification.</span></span><span class="sig-name descname"><span class="pre">verify_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/data_verification.html#verify_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.data_verification.verify_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verifies that the data tuple is of the right format and coerces it to
+numpy arrays for the code under the hood</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data</strong> – one of the following:
+(pandas dataframe, string for target column),
+(pandas dataframe for inputs, pandas dataframe for outputs),
+(numpy array for inputs, numpy array for outputs)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(numpy array for input, numpy array for output) or
+(pandas dataframe for input, pandas dataframe for output)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-main.PermutationImportance.error_handling">
+<span id="main-permutationimportance-error-handling-module"></span><h2>main.PermutationImportance.error_handling module<a class="headerlink" href="#module-main.PermutationImportance.error_handling" title="Permalink to this headline">¶</a></h2>
+<p>There are a handful of different errors and warnings that we can report. This
+houses all of them and provides information regarding ways to fix them.</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="main.PermutationImportance.error_handling.AmbiguousProbabilisticForecastsException">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.error_handling.</span></span><span class="sig-name descname"><span class="pre">AmbiguousProbabilisticForecastsException</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">truths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predictions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/error_handling.html#AmbiguousProbabilisticForecastsException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.error_handling.AmbiguousProbabilisticForecastsException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Thrown when classes were not provided for converting probabilistic
+predictions to deterministic ones but are required</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="main.PermutationImportance.error_handling.FullImportanceResultWarning">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.error_handling.</span></span><span class="sig-name descname"><span class="pre">FullImportanceResultWarning</span></span><a class="reference internal" href="_modules/main/PermutationImportance/error_handling.html#FullImportanceResultWarning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.error_handling.FullImportanceResultWarning" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Warning</span></code></p>
+<p>Thrown when we try to add a result to a full
+<code class="xref py py-class docutils literal notranslate"><span class="pre">PermutationImportance.result.ImportanceResult</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="main.PermutationImportance.error_handling.InvalidDataException">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.error_handling.</span></span><span class="sig-name descname"><span class="pre">InvalidDataException</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/error_handling.html#InvalidDataException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.error_handling.InvalidDataException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Thrown when the training or scoring data is not of the right type</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="main.PermutationImportance.error_handling.InvalidInputException">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.error_handling.</span></span><span class="sig-name descname"><span class="pre">InvalidInputException</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/error_handling.html#InvalidInputException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.error_handling.InvalidInputException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Thrown when the input to the program does not match expectations</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="main.PermutationImportance.error_handling.InvalidStrategyException">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.error_handling.</span></span><span class="sig-name descname"><span class="pre">InvalidStrategyException</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">strategy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/error_handling.html#InvalidStrategyException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.error_handling.InvalidStrategyException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Thrown when a scoring strategy is invalid</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="main.PermutationImportance.error_handling.UnmatchedLengthPredictionsException">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.error_handling.</span></span><span class="sig-name descname"><span class="pre">UnmatchedLengthPredictionsException</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">truths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predictions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/error_handling.html#UnmatchedLengthPredictionsException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.error_handling.UnmatchedLengthPredictionsException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Thrown when the number of predictions doesn’t match truths</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="main.PermutationImportance.error_handling.UnmatchingProbabilisticForecastsException">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.error_handling.</span></span><span class="sig-name descname"><span class="pre">UnmatchingProbabilisticForecastsException</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">truths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predictions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/error_handling.html#UnmatchingProbabilisticForecastsException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.error_handling.UnmatchingProbabilisticForecastsException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Thrown when the shape of probabilisic predictions doesn’t match the truths</p>
+</dd></dl>
+
+</section>
+<section id="main-permutationimportance-metrics-module">
+<h2>main.PermutationImportance.metrics module<a class="headerlink" href="#main-permutationimportance-metrics-module" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-main.PermutationImportance.multiprocessing_utils">
+<span id="main-permutationimportance-multiprocessing-utils-module"></span><h2>main.PermutationImportance.multiprocessing_utils module<a class="headerlink" href="#module-main.PermutationImportance.multiprocessing_utils" title="Permalink to this headline">¶</a></h2>
+<p>These are utilities designed for carefully handling communication between
+processes while multithreading.</p>
+<p>The code for <code class="docutils literal notranslate"><span class="pre">pool_imap_unordered</span></code> is copied nearly wholesale from GrantJ’s
+<a class="reference external" href="https://stackoverflow.com/questions/5318936/python-multiprocessing-pool-lazy-iteration?noredirect=1&amp;lq=1">Stack Overflow answer here</a>.
+It allows for a lazy imap over an iterable and the return of very large objects</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="main.PermutationImportance.multiprocessing_utils.pool_imap_unordered">
+<span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.multiprocessing_utils.</span></span><span class="sig-name descname"><span class="pre">pool_imap_unordered</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iterable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">procs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/multiprocessing_utils.html#pool_imap_unordered"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.multiprocessing_utils.pool_imap_unordered" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lazily imaps in an unordered manner over an iterable in parallel as a
+generator</p>
+<dl class="field-list simple">
+<dt class="field-odd">Author</dt>
+<dd class="field-odd"><p>Grant Jenks &lt;<a class="reference external" href="https://stackoverflow.com/users/232571/grantj">https://stackoverflow.com/users/232571/grantj</a>&gt;</p>
+</dd>
+<dt class="field-even">Parameters</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>func</strong> – function to perform on each iterable</p></li>
+<li><p><strong>iterable</strong> – iterable which has items to map over</p></li>
+<li><p><strong>procs</strong> – number of workers in the pool. Defaults to the cpu count</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Yields</dt>
+<dd class="field-odd"><p>the results of the mapping</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="main-permutationimportance-permutation-importance-module">
+<h2>main.PermutationImportance.permutation_importance module<a class="headerlink" href="#main-permutationimportance-permutation-importance-module" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-main.PermutationImportance.result">
+<span id="main-permutationimportance-result-module"></span><h2>main.PermutationImportance.result module<a class="headerlink" href="#module-main.PermutationImportance.result" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">ImportanceResult</span></code> is an object which keeps track of the full context
+and scoring determined by a variable importance method. Because the variable
+importance methods iteratively determine the next most important variable, this
+yields a sequence of pairs of “contexts” (i.e. the previous ranks/scores of
+variables) and “results” (i.e. the current ranks/scores of variables). This
+object keeps track of those pairs and additionally provides methods for the easy
+retrieve of both the results with empty context (singlepass, Breiman) and the
+most complete context (multipass, Lakshmanan). Further, it enables iteration
+over the <code class="docutils literal notranslate"><span class="pre">(context,</span> <span class="pre">results)</span></code> pairs and for indexing into the list of pairs.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="main.PermutationImportance.result.ImportanceResult">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.result.</span></span><span class="sig-name descname"><span class="pre">ImportanceResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variable_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">original_score</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/result.html#ImportanceResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.result.ImportanceResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Houses the result of any importance method, which consists of a
+sequence of contexts and results. An individual result can only be truly
+interpreted correctly in light of the corresponding context. This object
+allows for indexing into the contexts and results and also provides
+convenience methods for retrieving the results with no context and the
+most complete context</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="main.PermutationImportance.result.ImportanceResult.add_new_results">
+<span class="sig-name descname"><span class="pre">add_new_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_important_variable</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/result.html#ImportanceResult.add_new_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.result.ImportanceResult.add_new_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a new round of results. Warns if the ImportanceResult is already
+complete</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>new_results</strong> – a dictionary with keys of variable names and values
+of <code class="docutils literal notranslate"><span class="pre">(rank,</span> <span class="pre">score)</span></code></p></li>
+<li><p><strong>next_important_variable</strong> – variable name of the next most important
+variable. If not given, will select the variable with the smallest
+rank</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="main.PermutationImportance.result.ImportanceResult.retrieve_all_iterations">
+<span class="sig-name descname"><span class="pre">retrieve_all_iterations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/result.html#ImportanceResult.retrieve_all_iterations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.result.ImportanceResult.retrieve_all_iterations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the singlepass results for all multipass iterations</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="main.PermutationImportance.result.ImportanceResult.retrieve_multipass">
+<span class="sig-name descname"><span class="pre">retrieve_multipass</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/result.html#ImportanceResult.retrieve_multipass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.result.ImportanceResult.retrieve_multipass" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the multipass results as a dictionary with keys of variable
+names and values of <code class="docutils literal notranslate"><span class="pre">(rank,</span> <span class="pre">score)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="main.PermutationImportance.result.ImportanceResult.retrieve_singlepass">
+<span class="sig-name descname"><span class="pre">retrieve_singlepass</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/result.html#ImportanceResult.retrieve_singlepass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.result.ImportanceResult.retrieve_singlepass" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the singlepass results as a dictionary with keys of variable
+names and values of <code class="docutils literal notranslate"><span class="pre">(rank,</span> <span class="pre">score)</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-main.PermutationImportance.scoring_strategies">
+<span id="main-permutationimportance-scoring-strategies-module"></span><h2>main.PermutationImportance.scoring_strategies module<a class="headerlink" href="#module-main.PermutationImportance.scoring_strategies" title="Permalink to this headline">¶</a></h2>
+<p>In a variable importance method, the <code class="docutils literal notranslate"><span class="pre">scoring_strategy</span></code> is a function which
+is used to determine which of the scores corresponding to a given variable
+indicates that the variable is “most important”. This will be dependent on the
+particular type of object which is returned as a score.</p>
+<p>Here, we provide a few functions which can be used directly as scoring
+strategies as well as some utilities for construction scoring strategies.
+Moreover, we also provide a dictionary of aliases for several commonly used
+strategies in <code class="docutils literal notranslate"><span class="pre">VALID_SCORING_STRATEGIES</span></code>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="main.PermutationImportance.scoring_strategies.indexer_of_converter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.scoring_strategies.</span></span><span class="sig-name descname"><span class="pre">indexer_of_converter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indexer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">converter</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/scoring_strategies.html#indexer_of_converter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.scoring_strategies.indexer_of_converter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This object is designed to help construct a scoring strategy by breaking
+the process of determining an optimal score into two pieces:
+First, each of the scores are converted to a simpler representation. For
+instance, an array of scores resulting from a bootstrapped evaluation method
+may be converted to just their mean.
+Second, each of the simpler representations are compared to determine the
+index of the one which is most optimal. This is typically just an <code class="docutils literal notranslate"><span class="pre">argmin</span></code>
+or <code class="docutils literal notranslate"><span class="pre">argmax</span></code> call.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="main.PermutationImportance.scoring_strategies.verify_scoring_strategy">
+<span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.scoring_strategies.</span></span><span class="sig-name descname"><span class="pre">verify_scoring_strategy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scoring_strategy</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/scoring_strategies.html#verify_scoring_strategy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.scoring_strategies.verify_scoring_strategy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asserts that the scoring strategy is valid and interprets various strings</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>scoring_strategy</strong> – a function to be used for determining optimal
+variables or a string. If a function, should be of the form
+<code class="docutils literal notranslate"><span class="pre">([some</span> <span class="pre">value])</span> <span class="pre">-&gt;</span> <span class="pre">index</span></code>. If a string, must be one of the options in
+<code class="docutils literal notranslate"><span class="pre">VALID_SCORING_STRATEGIES</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a function to be used for determining optimal variables</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="main-permutationimportance-selection-strategies-module">
+<h2>main.PermutationImportance.selection_strategies module<a class="headerlink" href="#main-permutationimportance-selection-strategies-module" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="main-permutationimportance-sequential-selection-module">
+<h2>main.PermutationImportance.sequential_selection module<a class="headerlink" href="#main-permutationimportance-sequential-selection-module" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="main-permutationimportance-sklearn-api-module">
+<h2>main.PermutationImportance.sklearn_api module<a class="headerlink" href="#main-permutationimportance-sklearn-api-module" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-main.PermutationImportance.utils">
+<span id="main-permutationimportance-utils-module"></span><h2>main.PermutationImportance.utils module<a class="headerlink" href="#module-main.PermutationImportance.utils" title="Permalink to this headline">¶</a></h2>
+<p>Various and sundry useful functions which are handy for manipulating data or
+results of the variable importance</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="main.PermutationImportance.utils.add_ranks_to_dict">
+<span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.utils.</span></span><span class="sig-name descname"><span class="pre">add_ranks_to_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variable_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scoring_strategy</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/utils.html#add_ranks_to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.utils.add_ranks_to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a list of (var, score) and converts to a dictionary of
+{var: (rank, score)}
+:param result: a dict of {var_index: score}
+:param variable_names: a list of variable names
+:param scoring_strategy: a function to be used for determining optimal</p>
+<blockquote>
+<div><p>variables. Should be of the form ([floats]) -&gt; index</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="main.PermutationImportance.utils.get_data_subset">
+<span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.utils.</span></span><span class="sig-name descname"><span class="pre">get_data_subset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/utils.html#get_data_subset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.utils.get_data_subset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a subset of the data corresponding to the desired rows and
+columns
+:param data: either a pandas dataframe or a numpy array
+:param rows: a list of row indices
+:param columns: a list of column indices
+:returns: data_subset (same type as data)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="main.PermutationImportance.utils.make_data_from_columns">
+<span class="sig-prename descclassname"><span class="pre">main.PermutationImportance.utils.</span></span><span class="sig-name descname"><span class="pre">make_data_from_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main/PermutationImportance/utils.html#make_data_from_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#main.PermutationImportance.utils.make_data_from_columns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Synthesizes a dataset out of a list of columns
+:param columns_list: a list of either pandas series or numpy arrays
+:returns: a pandas dataframe or a numpy array</p>
+</dd></dl>
+
+</section>
+<section id="module-contents">
+<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Scikit-Explain</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Montgomery Flora; Shawn Handler.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/main.PermutationImportance.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

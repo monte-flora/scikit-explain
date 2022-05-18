@@ -17,7 +17,7 @@ import sys
 current_dir = os.getcwd()
 path = dirname(dirname(current_dir))
 sys.path.append(path)
-sys.path.append(os.path.join(path, 'sklearn'))
+sys.path.append(os.path.join(path, 'skexplain'))
 sys.path.insert(0, os.path.abspath('../../'))
 sys.path.insert(0, os.path.abspath('sphinxext'))
     
@@ -28,7 +28,7 @@ copyright = '2021, Montgomery Flora; Shawn Handler'
 author = 'Montgomery Flora; Shawn Handler'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.0.1'
+release = 'v0.0.4'
 
 # -- General configuration ---------------------------------------------------
 
