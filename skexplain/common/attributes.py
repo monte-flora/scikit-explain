@@ -49,10 +49,8 @@ class Attributes:
 
         # Check that the estimator objects have been fit!
         if not estimator_is_none:
-            if not all([check_is_fitted(m)==None for m in estimator_objs]):
-                raise ValueError(
-                    "One or more of the estimators given has NOT been fit!"
-                )
+            for m in estimator_objs:
+                check_is_fitted(m)
 
         # Create a dictionary from the estimator_objs and estimator_names.
         # Then set the attributes.
