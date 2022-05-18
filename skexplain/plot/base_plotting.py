@@ -22,7 +22,7 @@ class PlotStructure:
     Plot handles figure and subplot generation
     """
 
-    def __init__(self, BASE_FONT_SIZE=12, set_seaborn=True):
+    def __init__(self, BASE_FONT_SIZE=12, seaborn_kws=None):
         
         GENERIC_FONT_SIZE_NAMES = [
             "teensie",
@@ -40,8 +40,12 @@ class PlotStructure:
                 name: size for name, size in zip(GENERIC_FONT_SIZE_NAMES, FONT_SIZES_ARRAY)
             }
         
-        if set_seaborn:
-            sns.set_theme()
+        if seaborn_kws is None:
+            custom_params = {"axes.spines.right": False, "axes.spines.top": False}
+            sns.set_theme(style="ticks", rc=custom_params)
+        else:
+            if seaborn_kws is not None and isinstance(seaborn_kws, dict):
+                sns.set_theme(**seaborn_kws)
         
         # Setting the font style to serif
         rcParams["font.family"] = "serif"

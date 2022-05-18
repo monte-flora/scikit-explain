@@ -401,8 +401,8 @@ class PlotFeatureContributions(PlotStructure):
     plots, which include summary and dependence plots.
     """
 
-    def __init__(self, BASE_FONT_SIZE=12):
-        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE, set_seaborn=False)
+    def __init__(self, BASE_FONT_SIZE=12, seaborn_kws=None):
+        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE, seaborn_kws=seaborn_kws)
         sns.set_style("white")
         
     def plot_contributions(

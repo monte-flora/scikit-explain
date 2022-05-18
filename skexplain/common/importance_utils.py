@@ -299,9 +299,11 @@ def retrieve_important_vars(results, estimator_names, multipass=True):
     """
     perm_method = "multipass" if multipass else "singlepass"
 
+    direction = results.attrs['direction']
+    
     important_vars_dict = {}
     for estimator_name in estimator_names:
-        top_features = list(results[f"{perm_method}_rankings__{estimator_name}"].values)
+        top_features = list(results[f"{direction}_{perm_method}_rankings__{estimator_name}"].values)
         important_vars_dict[estimator_name] = top_features
 
     return important_vars_dict
