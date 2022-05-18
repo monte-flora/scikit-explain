@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
-from .utils import is_list, to_list, is_fitted
+from .utils import is_list, to_list
+from sklearn.utils.validation import check_is_fitted
 
 
 class Attributes:
@@ -48,7 +49,7 @@ class Attributes:
 
         # Check that the estimator objects have been fit!
         if not estimator_is_none:
-            if not all([is_fitted(m) for m in estimator_objs]):
+            if not all([check_is_fitted(m)==None for m in estimator_objs]):
                 raise ValueError(
                     "One or more of the estimators given has NOT been fit!"
                 )
