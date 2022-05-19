@@ -277,7 +277,7 @@ class ExplainToolkit(Attributes):
 
             When using a custom function, you must also set the scoring strategy (see below).
 
-        scoring_strategy : string (default=None)
+        scoring_strategy : 'maximize', 'minimize', or None (default=None)
 
             This argument is only required if you are using a non-default evaluation_fn (see above)
 
@@ -469,7 +469,7 @@ class ExplainToolkit(Attributes):
 
         sample_size : integer (default=100)
             Number of random samples to determine the correlation for the feature clusterings
-
+            
         subsample: float or integer (default=1.0 for no subsampling)
             if value is between 0-1, it is interpreted as fraction of total X to use
             if value > 1, interpreted as the number of X to randomly sample
@@ -2222,8 +2222,8 @@ class ExplainToolkit(Attributes):
         as a box-and-whisker plot. The user provides a single example, which is highlighted
         over those examples. Useful for real-time explainability.
 
-        Parameters:
-        ----------------
+        Parameters
+        -------------
 
         important_vars : str or list of strings
             List of features to plot
