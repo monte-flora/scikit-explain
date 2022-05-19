@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Permutation Importance Documentation &mdash; Scikit-Explain latest documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Comparing Different Ranking Methods" href="compare_ranking_methods.html" />
+    <link rel="prev" title="Permutation Importance Methods" href="../pimp.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #343131" >
+            <a href="../index.html" class="icon icon-home"> Scikit-Explain
+          </a>
+              <div class="version">
+                latest
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../explain_toolkit.html">ExplainToolkit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ale.html">Accumulated Local Effects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pd.html">Partial Dependence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../feature_attributions.html">Feature Attributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../shap.html">SHAP-Style</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../pimp.html">Permutation Importance</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../pimp.html#general-use">General Use</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Permutation Importance Documentation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Loading-the-training-data-and-pre-fit-models-for-the-classification-problem">Loading the training data and pre-fit models for the classification problem</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#ExplainToolkit">ExplainToolkit</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Re-loading-results">Re-loading results</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Changing-the-x-axis-label">Changing the x-axis label</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Plotting-results-from-multiple-estimators">Plotting results from multiple estimators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Changing-the-facecolor">Changing the facecolor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Compare-Multi-pass-vs. Single-pass">Compare Multi-pass vs. Single-pass</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Plotting-Permutation-Importance-for-Multiple-Metrics">Plotting Permutation Importance for Multiple Metrics</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../pimp.html#comparing-methods">Comparing Methods</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #343131" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Scikit-Explain</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../pimp.html">Permutation Importance Methods</a> &raquo;</li>
+      <li>Permutation Importance Documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/permutation_importance_tutorial.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt *,
+div.nbinput.container div.input_area pre,
+div.nboutput.container div.output_area pre,
+div.nbinput.container div.input_area .highlight,
+div.nboutput.container div.output_area .highlight {
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+div.nbinput.container > div[class*=highlight],
+div.nboutput.container > div[class*=highlight] {
+    margin: 0;
+}
+
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt * {
+    background: none;
+}
+
+div.nboutput.container div.output_area .highlight,
+div.nboutput.container div.output_area pre {
+    background: unset;
+}
+
+div.nboutput.container div.output_area div.highlight {
+    color: unset;  /* override Pygments text color */
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    /*background: #f5f5f5;*/
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+    margin: 0;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt .copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="Permutation-Importance-Documentation">
+<h1>Permutation Importance Documentation<a class="headerlink" href="#Permutation-Importance-Documentation" title="Permalink to this headline"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">scikit-explain</span></code> includes <a class="reference external" href="https://christophm.github.io/interpretable-ml-book/feature-importance.html">single-pass</a>, <a class="reference external" href="https://journals.ametsoc.org/view/journals/bams/100/11/bams-d-18-0195.1.xml">multi-pass</a>, <a class="reference external" href="https://www.mdpi.com/2076-3417/9/23/5191">second-order</a>, and <a class="reference external" href="https://arxiv.org/abs/2104.11688">grouped permutation importance</a>, respectively. In this notebook, we highlight how to compute these methods and plot their results. In the first set of examples, two tree-based
+models (random forest and gradient-boosting) and logistic regression from scikit-learn were trained on a portion of the road surface temperature data from <a class="reference external" href="https://journals.ametsoc.org/view/journals/wefo/35/5/wafD190159.xml">Handler et al. (2020)</a>. The goal is to predict whether road surface temperatures will be above or below freezing (32 F) in the next hour. This dataset has 100 K examples with a class skew of 39%.</p>
+<p>A regression-based example is also shown using the Californina housing dataset available in scikit-learn.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()))</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">skexplain</span>
+<span class="kn">import</span> <span class="nn">plotting_config</span>
+</pre></div>
+</div>
+</div>
+<section id="Loading-the-training-data-and-pre-fit-models-for-the-classification-problem">
+<h2>Loading the training data and pre-fit models for the classification problem<a class="headerlink" href="#Loading-the-training-data-and-pre-fit-models-for-the-classification-problem" title="Permalink to this headline"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">estimators</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_models</span><span class="p">()</span>
+<span class="n">X</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">estimators</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;X Shape : </span><span class="si">{</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;y Skew : </span><span class="si">{</span><span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">*</span><span class="mi">100</span><span class="si">}</span><span class="s1">%&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[(&#39;Random Forest&#39;, RandomForestClassifier(min_samples_leaf=5, n_estimators=200, n_jobs=5)), (&#39;Gradient Boosting&#39;, GradientBoostingClassifier()), (&#39;Logistic Regression&#39;, LogisticRegression(C=1))]
+X Shape : (100000, 30)
+y Skew : 39.173%
+</pre></div></div>
+</div>
+</section>
+</section>
+<section id="ExplainToolkit">
+<h1>ExplainToolkit<a class="headerlink" href="#ExplainToolkit" title="Permalink to this headline"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">ExplainToolkit</span></code> is the main interface of <code class="docutils literal notranslate"><span class="pre">scikit-explain</span></code>. After initializing <code class="docutils literal notranslate"><span class="pre">ExplainToolkit</span></code> with an estimator and some data, all the explainability methods and their respective plotting modules are called from <code class="docutils literal notranslate"><span class="pre">ExplainToolkit</span></code>. To initialize <code class="docutils literal notranslate"><span class="pre">ExplainToolkit</span></code> requires:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">estimators</span></code>, a tuple of (estimator name, pre-fit estimator object) (or list thereof).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> (to evaluate the model on)</p>
+<ul>
+<li><p>Can be <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> or <code class="docutils literal notranslate"><span class="pre">numpy.array</span></code>. If you use an <code class="docutils literal notranslate"><span class="pre">numpy.array</span></code>, then you must provide the feature names (<code class="docutils literal notranslate"><span class="pre">'feature_names'</span></code>).</p></li>
+</ul>
+</li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="o">=</span><span class="n">estimators</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,)</span>
+</pre></div>
+</div>
+</div>
+<p>Feature/predictor ranking is often a first step in model interpretability and a popular model-agnostic approach is the permutation importance method. In this method the data for each feature is permuted (shuffled) and the permuted feature causing the greatest loss of skill (based on some error metric) is deemed the most important (and each feature is ranked subsequently). This describes what is known as the single-pass permuation importance method (McGovern et al. 2019; Fig 1. &#64;
+<a class="reference external" href="https://permutationimportance.readthedocs.io/en/latest/methods.html#permutation-importance">https://permutationimportance.readthedocs.io/en/latest/methods.html#permutation-importance</a> for an illustration). This method is appropriate for datasets with independent features (where little to no correlations exist between features). For datasets with physical or statistically dependent features, the more reliable method is the multi-pass permutation method (Lakshmanan et al. 2015, JOAT; see Fig.2 &#64; the above link) where the top feature remains permuted before assessing the second most
+important predictor, and so on for the third predictor and beyond. By keeping features permuted, it ought to break the interfeature correlations.</p>
+<p><code class="docutils literal notranslate"><span class="pre">scikit-explain</span></code> uses a stripped-down version of the python package <code class="docutils literal notranslate"><span class="pre">PermutationImportance</span></code> to compute both the single and multipass permutation importance (see <a class="reference external" href="https://permutationimportance.readthedocs.io/en/latest/">https://permutationimportance.readthedocs.io/en/latest/</a> for additional details).</p>
+<p><code class="docutils literal notranslate"><span class="pre">skexplain.calc_permutation_importance</span></code> requires the following args: * <code class="docutils literal notranslate"><span class="pre">n_vars</span></code>, the number of predictor to compute for the multi-pass method. * <code class="docutils literal notranslate"><span class="pre">evaluation_fn</span></code>, the error function used to assess loss of skill. * <code class="docutils literal notranslate"><span class="pre">mintpy</span></code> has 5 built-in error metrics for evaluating predictor importance: * Area under the Curve (<code class="docutils literal notranslate"><span class="pre">'auc'</span></code>) * Area under the Precision-Recall Curve (<code class="docutils literal notranslate"><span class="pre">'aupdrc'</span></code>) * Normalized Area under the Performance Diagram Curve (<code class="docutils literal notranslate"><span class="pre">'norm_aupdc'</span></code>) * Brier Skill Score (<code class="docutils literal notranslate"><span class="pre">'bss'</span></code>) *
+Mean Square Error (<code class="docutils literal notranslate"><span class="pre">'mse'</span></code>) * <code class="docutils literal notranslate"><span class="pre">n_permute</span></code>, number of times to repeat permutations for confidence intervals * <code class="docutils literal notranslate"><span class="pre">subsample</span></code>, can be a float between 0-1 or an integer, which is interpreted as the percentage of examples or exact number of random samples to use, respectively. * <code class="docutils literal notranslate"><span class="pre">n_jobs</span></code>, number of processor to run the script on. * Could be the exact number or percentage of the total available to use (0-1) similar to subsample * <code class="docutils literal notranslate"><span class="pre">verbose</span></code>, allows for a print out of the progress. *
+<code class="docutils literal notranslate"><span class="pre">random_state</span></code>, Pass an int to get reproducible results across function calls. * <code class="docutils literal notranslate"><span class="pre">direction</span></code>, Whether features are progressively unpermuted (<code class="docutils literal notranslate"><span class="pre">'forward'</span></code>) or features are left permuted for second-, third-most important features (<code class="docutils literal notranslate"><span class="pre">'backward'</span></code>). The results are often not identical.</p>
+<p><strong>Note</strong>: <code class="docutils literal notranslate"><span class="pre">evaluation_fn</span></code> can also be any user-defined function of the form <code class="docutils literal notranslate"><span class="pre">evaluation_fn(targets,predictions)</span></code> where a single value is returned. However, when using your own function, then you must also set the scoring strategy argument. If a metric is positively-oriented (a higher value is better), then set <code class="docutils literal notranslate"><span class="pre">scoring_strategy</span> <span class="pre">=</span> <span class="pre">&quot;argmin_of_mean&quot;</span></code> and if it is negatively-oriented-oriented (a lower value is better), then set <code class="docutils literal notranslate"><span class="pre">scoring_strategy</span> <span class="pre">=</span> <span class="pre">&quot;argmax_of_mean&quot;</span></code>.</p>
+<p>In this example, we want to know the top 10 predictors for all of our models. We are using normalized area under the precision-recall curve (NAUPDC; Flora et al. 2021) as the error metric. To produce confidence intervals, we are using 5 bootstrap iterations (kept small for illustration purposes, but should typically be 100-1000). The multipass permutation importance method can be computationally expensive for larger datasets or computing for a large number of top predictors. Thus, we’ve included
+a method to <code class="docutils literal notranslate"><span class="pre">skexplain</span></code> to store the results for later use. The results are stored in <code class="docutils literal notranslate"><span class="pre">xarray.Dataset</span></code>s and saved as netcdf files.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">permutation_importance</span><span class="p">(</span>
+                                           <span class="n">n_vars</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                                           <span class="n">evaluation_fn</span><span class="o">=</span><span class="s1">&#39;norm_aupdc&#39;</span><span class="p">,</span>
+                                           <span class="n">n_permute</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                                           <span class="n">subsample</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                                           <span class="n">n_jobs</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+                                           <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                           <span class="n">random_seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+                                           <span class="n">direction</span><span class="o">=</span><span class="s1">&#39;backward&#39;</span><span class="p">,</span>
+                                              <span class="p">)</span>
+
+<span class="c1"># Save the permutation importance results as a netcdf file using the bulit-in function within scikit-explain</span>
+<span class="n">explainer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">fname</span><span class="o">=</span><span class="s1">&#39;multipass_importance_naupdc.nc&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">results</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Multi-pass iteration 1 out of 10...
+Multi-pass iteration 2 out of 10...
+Multi-pass iteration 3 out of 10...
+Multi-pass iteration 4 out of 10...
+Multi-pass iteration 5 out of 10...
+Multi-pass iteration 6 out of 10...
+Multi-pass iteration 7 out of 10...
+Multi-pass iteration 8 out of 10...
+Multi-pass iteration 9 out of 10...
+Multi-pass iteration 10 out of 10...
+Multi-pass iteration 1 out of 10...
+Multi-pass iteration 2 out of 10...
+Multi-pass iteration 3 out of 10...
+Multi-pass iteration 4 out of 10...
+Multi-pass iteration 5 out of 10...
+Multi-pass iteration 6 out of 10...
+Multi-pass iteration 7 out of 10...
+Multi-pass iteration 8 out of 10...
+Multi-pass iteration 9 out of 10...
+Multi-pass iteration 10 out of 10...
+Multi-pass iteration 1 out of 10...
+Multi-pass iteration 2 out of 10...
+Multi-pass iteration 3 out of 10...
+Multi-pass iteration 4 out of 10...
+Multi-pass iteration 5 out of 10...
+Multi-pass iteration 6 out of 10...
+Multi-pass iteration 7 out of 10...
+Multi-pass iteration 8 out of 10...
+Multi-pass iteration 9 out of 10...
+Multi-pass iteration 10 out of 10...
+</pre></div></div>
+</div>
+<section id="Re-loading-results">
+<h2>Re-loading results<a class="headerlink" href="#Re-loading-results" title="Permalink to this headline"></a></h2>
+<p>There are I/O methods built into <code class="docutils literal notranslate"><span class="pre">scikit-explain</span></code> that allows for loading and saving <code class="docutils literal notranslate"><span class="pre">ExplainToolikit</span></code> results. For example, we might want one script for computing the explainability results and another for loading them to plot the results. To do so, we initialize an empty <code class="docutils literal notranslate"><span class="pre">ExplainToolkit</span></code> and call the <code class="docutils literal notranslate"><span class="pre">load</span></code> method. Their are attributes saved in each output netCDF file that are used as an attributes for <code class="docutils literal notranslate"><span class="pre">ExplainToolkit</span></code>, which makes using <code class="docutils literal notranslate"><span class="pre">scikit-explain</span></code> more streamlined. Though it
+is not demonstrated here, you can also pass a list of filenames and the datasets are merged into one when being loaded.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">()</span>
+<span class="c1"># Load the results file; gets load as a class attribute</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fnames</span><span class="o">=</span><span class="s1">&#39;multipass_importance_naupdc.nc&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Plotting-Single-Pass-Permutation-Importance">
+<h3>Plotting Single-Pass Permutation Importance<a class="headerlink" href="#Plotting-Single-Pass-Permutation-Importance" title="Permalink to this headline"></a></h3>
+<p>The first iteration of the multi-pass permutation method is the single-pass method and is therefore saved by default. Feature ranking plotting in <code class="docutils literal notranslate"><span class="pre">scikit-explain</span></code> is highly flexible, so if we want show multiple panels, then we need to declare what to show in each panel (i.e., (method, estimator name)). For example, to only plot the singlepass results from the random forest, we set <code class="docutils literal notranslate"><span class="pre">panels=[('singlepass',</span> <span class="pre">'Random</span> <span class="pre">Forest')]</span></code>. The single-pass method ranks all features, so for readability, you
+can set <code class="docutils literal notranslate"><span class="pre">num_vars_to_plot</span></code> (default=15).</p>
+</div><div class="alert alert-block alert-warning"><p>Note: Importance in the backward method is based on deviation from the original score. The original score is shown as the vertical dashed line.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">results</span><span class="p">,</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_singlepass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">)],</span>
+                                <span class="n">num_vars_to_plot</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+                                 <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_12_0.png" src="../_images/notebooks_permutation_importance_tutorial_12_0.png" />
+</div>
+</div>
+</section>
+</section>
+<section id="Changing-the-x-axis-label">
+<h2>Changing the x-axis label<a class="headerlink" href="#Changing-the-x-axis-label" title="Permalink to this headline"></a></h2>
+<p>By default, skexplain uses the method name given as the x-axis label. However, we can also pass in <code class="docutils literal notranslate"><span class="pre">xlabels</span></code> for custom x-axis labeling. In this case, we might just want “Single-Pass”.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">results</span><span class="p">,</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_singlepass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">)],</span>
+                                <span class="n">num_vars_to_plot</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+                                <span class="n">xlabels</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Single-Pass&#39;</span><span class="p">]</span>
+                                 <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_14_0.png" src="../_images/notebooks_permutation_importance_tutorial_14_0.png" />
+</div>
+</div>
+</section>
+<section id="Plotting-results-from-multiple-estimators">
+<h2>Plotting results from multiple estimators<a class="headerlink" href="#Plotting-results-from-multiple-estimators" title="Permalink to this headline"></a></h2>
+<p>We computed permutation importance results for 3 different ML models and we can display them in a single plot by adding to the <code class="docutils literal notranslate"><span class="pre">panels</span></code> arg.</p>
+</div><div class="alert alert-block alert-warning"><p>Warning: When using multiple panels, len(panels)==len(data). In this case, I repeat the same dataset 3 times. If you wanted to plot single-pass and multi-pass, the dataset would need to be repeated twice.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">results</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_singlepass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_singlepass&#39;</span><span class="p">,</span> <span class="s1">&#39;Gradient Boosting&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_singlepass&#39;</span><span class="p">,</span> <span class="s1">&#39;Logistic Regression&#39;</span><span class="p">),</span>
+                                       <span class="p">],</span>
+                                <span class="n">num_vars_to_plot</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_16_0.png" src="../_images/notebooks_permutation_importance_tutorial_16_0.png" />
+</div>
+</div>
+</section>
+<section id="Changing-the-facecolor">
+<h2>Changing the facecolor<a class="headerlink" href="#Changing-the-facecolor" title="Permalink to this headline"></a></h2>
+<p>By default, skexplain uses a light blue color for the facecolors. The user, though, does have the option to provide a different color using <code class="docutils literal notranslate"><span class="pre">feature_colors</span></code>, which can be a single color or as we will see below a dictionary that could map individual features to particular colors (e.g., if features can be clustered).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span>
+                                <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">results</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_singlepass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_singlepass&#39;</span><span class="p">,</span> <span class="s1">&#39;Gradient Boosting&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_singlepass&#39;</span><span class="p">,</span> <span class="s1">&#39;Logistic Regression&#39;</span><span class="p">),</span>
+                                       <span class="p">],</span>
+                                <span class="n">num_vars_to_plot</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+                                <span class="n">feature_colors</span> <span class="o">=</span> <span class="s1">&#39;xkcd:medium green&#39;</span><span class="p">,</span>
+                                <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+                                    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_18_0.png" src="../_images/notebooks_permutation_importance_tutorial_18_0.png" />
+</div>
+</div>
+<section id="Plotting-Multi-Pass-Permutation-Importance">
+<h3>Plotting Multi-Pass Permutation Importance<a class="headerlink" href="#Plotting-Multi-Pass-Permutation-Importance" title="Permalink to this headline"></a></h3>
+<p>To plot the multi-pass results, simply changing the method (the first part of the tuple) to <code class="docutils literal notranslate"><span class="pre">multipass</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">results</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Logistic Regression&#39;</span><span class="p">),</span>
+                                       <span class="p">],</span> <span class="n">num_vars_to_plot</span><span class="o">=</span><span class="mi">10</span><span class="p">,)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_20_0.png" src="../_images/notebooks_permutation_importance_tutorial_20_0.png" />
+</div>
+</div>
+</section>
+</section>
+<section id="Compare-Multi-pass-vs. Single-pass">
+<h2>Compare Multi-pass vs. Single-pass<a class="headerlink" href="#Compare-Multi-pass-vs. Single-pass" title="Permalink to this headline"></a></h2>
+<p>We can also plot results from different ranking methods. In this example, we can compare the multi-pass vs. the single-pass permutation importance for the random forest.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">results</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_singlepass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                       <span class="p">],</span> <span class="n">num_vars_to_plot</span><span class="o">=</span><span class="mi">10</span><span class="p">,)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_22_0.png" src="../_images/notebooks_permutation_importance_tutorial_22_0.png" />
+</div>
+</div>
+<section id="Plotting-Permutation-Importance-(with-Color-Coding-and-Readable-Predictor-Names)">
+<h3>Plotting Permutation Importance (with Color Coding and Readable Predictor Names)<a class="headerlink" href="#Plotting-Permutation-Importance-(with-Color-Coding-and-Readable-Predictor-Names)" title="Permalink to this headline"></a></h3>
+<p>To personalize your plots, you can pass a dict <code class="docutils literal notranslate"><span class="pre">display_feature_names</span></code>, which should map the feature names with a prettier, more interpretable name. Additionally, you can color code your predictors with <code class="docutils literal notranslate"><span class="pre">feature_colors</span></code>, which maps the stored feature names to a color (see <a class="reference external" href="https://i.stack.imgur.com/nCk6u.jpg">https://i.stack.imgur.com/nCk6u.jpg</a> for a extension map of named colors in python). To see our example of <code class="docutils literal notranslate"><span class="pre">display_feature_names</span></code> and <code class="docutils literal notranslate"><span class="pre">feature_colors</span></code>, look in <code class="docutils literal notranslate"><span class="pre">plotting_config.py</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">results</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Logistic Regression&#39;</span><span class="p">),</span> <span class="p">],</span>
+                                    <span class="n">display_feature_names</span><span class="o">=</span><span class="n">plotting_config</span><span class="o">.</span><span class="n">display_feature_names</span><span class="p">,</span>
+                                    <span class="n">feature_colors</span><span class="o">=</span><span class="n">plotting_config</span><span class="o">.</span><span class="n">color_dict</span><span class="p">,</span>
+                                   <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_24_0.png" src="../_images/notebooks_permutation_importance_tutorial_24_0.png" />
+</div>
+</div>
+</section>
+<section id="Annotating-Correlated-Features">
+<h3>Annotating Correlated Features<a class="headerlink" href="#Annotating-Correlated-Features" title="Permalink to this headline"></a></h3>
+<p>One limitation of the permutation importance method is the assumption that features are independent. If there are strong statistical or physical correlations between features, then the marginal-based shuffling of values can create unphysical/unrealistic examples, which will force the ML model to extrapolate. Correlated features can also distort the feature rankings. Therefore, there is a argument in <code class="docutils literal notranslate"><span class="pre">plot_importance</span></code> where we can annotate if any of the feature shown have a strong linear
+correlation. To use this, set <code class="docutils literal notranslate"><span class="pre">plot_correlated_features=True</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="p">,</span><span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,)</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">results</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Gradient Boosting&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Logistic Regression&#39;</span><span class="p">),</span> <span class="p">],</span>
+                                    <span class="n">display_feature_names</span><span class="o">=</span><span class="n">plotting_config</span><span class="o">.</span><span class="n">display_feature_names</span><span class="p">,</span>
+                                    <span class="n">feature_colors</span><span class="o">=</span><span class="n">plotting_config</span><span class="o">.</span><span class="n">color_dict</span><span class="p">,</span>
+                                    <span class="n">plot_correlated_features</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="n">rho_threshold</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+                                <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+                                   <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_26_0.png" src="../_images/notebooks_permutation_importance_tutorial_26_0.png" />
+</div>
+</div>
+<p>As we can see, the random forest (panel a) has multiple correlated pairs (<span class="math notranslate nohighlight">\(\rho\)</span> &gt; 0.6) in the top 10 features. Additionally, we could compute the variance inflation factor to determine if features were multicollinear. If you send in <code class="docutils literal notranslate"><span class="pre">colinear_features</span></code> into <code class="docutils literal notranslate"><span class="pre">plot_importance</span></code> those features will have blue text.</p>
+</section>
+</section>
+<section id="Plotting-Permutation-Importance-for-Multiple-Metrics">
+<h2>Plotting Permutation Importance for Multiple Metrics<a class="headerlink" href="#Plotting-Permutation-Importance-for-Multiple-Metrics" title="Permalink to this headline"></a></h2>
+<p>The feature ranking can be sensitive to the error metric used. We can compute the permutation importance again, but this time with Area under the Precision-Recall Curve (AUPRC; also known as Area under the Performance Diagram for meteorologists). To plot results for both metrics, set <code class="docutils literal notranslate"><span class="pre">data</span></code> to a list of both results. Also, to label each row, set the argument <code class="docutils literal notranslate"><span class="pre">ylabels</span></code>. In our case, We’ve set <code class="docutils literal notranslate"><span class="pre">ylabels</span> <span class="pre">=</span> <span class="pre">['AUC',</span> <span class="pre">'AUPRC']</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">(</span><span class="n">estimators</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,)</span>
+<span class="n">auc_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">permutation_importance</span><span class="p">(</span>
+                                               <span class="n">n_vars</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                                               <span class="n">evaluation_fn</span><span class="o">=</span><span class="s1">&#39;auc&#39;</span><span class="p">,</span>
+                                               <span class="n">n_permute</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                                               <span class="n">subsample</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+                                               <span class="n">n_jobs</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+                                              <span class="p">)</span>
+<span class="n">explainer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">fname</span><span class="o">=</span><span class="s1">&#39;multipass_importance_auc.nc&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">auc_results</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">auc_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fnames</span><span class="o">=</span><span class="s1">&#39;multipass_importance_auc.nc&#39;</span><span class="p">)</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span>
+                                 <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">results</span><span class="p">,</span> <span class="n">results</span><span class="p">,</span> <span class="n">results</span><span class="p">,</span>
+                                         <span class="n">auc_results</span><span class="p">,</span> <span class="n">auc_results</span><span class="p">,</span> <span class="n">auc_results</span><span class="p">,],</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Gradient Boosting&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Logistic Regression&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Gradient Boosting&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Logistic Regression&#39;</span><span class="p">),</span>
+                                       <span class="p">],</span>
+                                 <span class="n">display_feature_names</span><span class="o">=</span><span class="n">plotting_config</span><span class="o">.</span><span class="n">display_feature_names</span><span class="p">,</span>
+                                 <span class="n">feature_colors</span><span class="o">=</span><span class="n">plotting_config</span><span class="o">.</span><span class="n">color_dict</span><span class="p">,</span>
+                                 <span class="n">ylabels</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;NAUPDC&#39;</span><span class="p">,</span> <span class="s1">&#39;AUC&#39;</span><span class="p">],</span>
+                                 <span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span>
+                                 <span class="n">hspace</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span> <span class="n">wspace</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+                                   <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_30_0.png" src="../_images/notebooks_permutation_importance_tutorial_30_0.png" />
+</div>
+</div>
+</div><div class="alert alert-block alert-warning"><p><strong>Tip</strong>: Though we have tried to generalize the multipanel plotting behavior, we realize that many people will want to fidgit with stuff. The plotting functions in scikit-explain do allow for keyword args that are passed on to the underlying matplotlib functions. For example, in the plot above, we set the figsize, hspace, and wspace to improve the figure quality.</p>
+<p>There are some differences, but overall the feature ranking are roughly similar. This bolsters our confidence in the feature ranking and helps triangulate the most important predictors.</p>
+<section id="Comparing-Forward-vs. Backward-Multi-pass-Permutation-Importance">
+<h3>Comparing Forward vs. Backward Multi-pass Permutation Importance<a class="headerlink" href="#Comparing-Forward-vs. Backward-Multi-pass-Permutation-Importance" title="Permalink to this headline"></a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">forward_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">permutation_importance</span><span class="p">(</span>
+                                               <span class="n">n_vars</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                                               <span class="n">evaluation_fn</span><span class="o">=</span><span class="s1">&#39;norm_aupdc&#39;</span><span class="p">,</span>
+                                               <span class="n">n_permute</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                                               <span class="n">subsample</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                                               <span class="n">n_jobs</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+                                               <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                <span class="n">random_seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+                                               <span class="n">direction</span><span class="o">=</span><span class="s1">&#39;forward&#39;</span>
+                                              <span class="p">)</span>
+
+<span class="c1"># Save the permutation importance results as a netcdf file using the bulit-in function within mintpy</span>
+<span class="n">explainer</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">fname</span><span class="o">=</span><span class="s1">&#39;multipass_importance_forward_naupdc.nc&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">forward_results</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Multi-pass iteration 1 out of 10...
+Multi-pass iteration 2 out of 10...
+Multi-pass iteration 3 out of 10...
+Multi-pass iteration 4 out of 10...
+Multi-pass iteration 5 out of 10...
+Multi-pass iteration 6 out of 10...
+Multi-pass iteration 7 out of 10...
+Multi-pass iteration 8 out of 10...
+Multi-pass iteration 9 out of 10...
+Multi-pass iteration 10 out of 10...
+Multi-pass iteration 1 out of 10...
+Multi-pass iteration 2 out of 10...
+Multi-pass iteration 3 out of 10...
+Multi-pass iteration 4 out of 10...
+Multi-pass iteration 5 out of 10...
+Multi-pass iteration 6 out of 10...
+Multi-pass iteration 7 out of 10...
+Multi-pass iteration 8 out of 10...
+Multi-pass iteration 9 out of 10...
+Multi-pass iteration 10 out of 10...
+Multi-pass iteration 1 out of 10...
+Multi-pass iteration 2 out of 10...
+Multi-pass iteration 3 out of 10...
+Multi-pass iteration 4 out of 10...
+Multi-pass iteration 5 out of 10...
+Multi-pass iteration 6 out of 10...
+Multi-pass iteration 7 out of 10...
+Multi-pass iteration 8 out of 10...
+Multi-pass iteration 9 out of 10...
+Multi-pass iteration 10 out of 10...
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">forward_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fnames</span><span class="o">=</span><span class="s1">&#39;multipass_importance_forward_naupdc.nc&#39;</span><span class="p">)</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span>
+                                    <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">results</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span> <span class="o">+</span> <span class="p">[</span><span class="n">forward_results</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span>
+                                <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Gradient Boosting&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Logistic Regression&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;forward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;forward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Gradient Boosting&#39;</span><span class="p">),</span>
+                                        <span class="p">(</span><span class="s1">&#39;forward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Logistic Regression&#39;</span><span class="p">),</span>
+                                       <span class="p">],</span>
+                                    <span class="n">display_feature_names</span><span class="o">=</span><span class="n">plotting_config</span><span class="o">.</span><span class="n">display_feature_names</span><span class="p">,</span>
+                                    <span class="n">feature_colors</span><span class="o">=</span><span class="n">plotting_config</span><span class="o">.</span><span class="n">color_dict</span><span class="p">,</span>
+                                    <span class="n">ylabels</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Backward&#39;</span><span class="p">,</span> <span class="s1">&#39;Forward&#39;</span><span class="p">],</span>
+                                    <span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span>
+                                    <span class="n">hspace</span> <span class="o">=</span> <span class="mf">0.2</span>
+                                   <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_35_0.png" src="../_images/notebooks_permutation_importance_tutorial_35_0.png" />
+</div>
+</div>
+</div><div class="alert alert-block alert-warning"><p>Note: Importance in the forward method (bottom row) is based on deviation from the score when all features are jointly permuted. That score is shown as the vertical dashed line.</p>
+</section>
+<section id="Permutation-Importance-for-Regression-Problems">
+<h3>Permutation Importance for Regression Problems<a class="headerlink" href="#Permutation-Importance-for-Regression-Problems" title="Permalink to this headline"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">fetch_california_housing</span>
+<span class="kn">from</span> <span class="nn">sklearn.ensemble</span> <span class="kn">import</span> <span class="n">RandomForestRegressor</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">fetch_california_housing</span><span class="p">()</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span>
+<span class="n">feature_names</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;feature_names&#39;</span><span class="p">]</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">RandomForestRegressor</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+RandomForestRegressor()
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">explainer</span> <span class="o">=</span> <span class="n">skexplain</span><span class="o">.</span><span class="n">ExplainToolkit</span><span class="p">((</span><span class="s1">&#39;Random Forest&#39;</span><span class="p">,</span> <span class="n">model</span><span class="p">),</span><span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">feature_names</span><span class="p">)</span>
+<span class="n">reg_results</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">permutation_importance</span><span class="p">(</span>
+                                               <span class="n">n_vars</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+                                               <span class="n">evaluation_fn</span><span class="o">=</span><span class="s1">&#39;mse&#39;</span><span class="p">,</span>
+                                               <span class="n">n_permute</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                                               <span class="n">subsample</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+                                               <span class="n">n_jobs</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+                                               <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                               <span class="n">random_seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+                                              <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Multi-pass iteration 1 out of 8...
+Multi-pass iteration 2 out of 8...
+Multi-pass iteration 3 out of 8...
+Multi-pass iteration 4 out of 8...
+Multi-pass iteration 5 out of 8...
+Multi-pass iteration 6 out of 8...
+Multi-pass iteration 7 out of 8...
+Multi-pass iteration 8 out of 8...
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">plot_importance</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">reg_results</span><span class="p">,</span> <span class="n">panels</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;backward_multipass&#39;</span><span class="p">,</span> <span class="s1">&#39;Random Forest&#39;</span><span class="p">)],</span>
+                                <span class="n">num_vars_to_plot</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_permutation_importance_tutorial_41_0.png" src="../_images/notebooks_permutation_importance_tutorial_41_0.png" />
+</div>
+</div>
+<p>References:</p>
+<p>Handler, S. L., H. D. Reeves, and A. McGovern, Development of a Probabilistic Subfreezing Road Temperature Nowcast and Forecast Using Machine Learning. Wea. Forecasting, doi: <a class="reference external" href="https://doi.org/10.1175/WAF-D-19-0159.1">https://doi.org/10.1175/WAF-D-19-0159.1</a></p>
+<p>McGovern, A., R. Lagerquist, D. John Gagne, G. E. Jergensen, K. L. Elmore, C. R. Homeyer, and T. Smith, 2019: Making the Black Box More Transparent: Understanding the Physical Implications of Machine Learning. Bull. Amer. Meteor. Soc., 100, 2175–2199, <a class="reference external" href="https://doi.org/10.1175/BAMS-D-18-0195.1">https://doi.org/10.1175/BAMS-D-18-0195.1</a>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../pimp.html" class="btn btn-neutral float-left" title="Permutation Importance Methods" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="compare_ranking_methods.html" class="btn btn-neutral float-right" title="Comparing Different Ranking Methods" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Montgomery Flora; Shawn Handler.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
