@@ -101,7 +101,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build']
+exclude_patterns = []
 
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -140,8 +140,6 @@ html_theme_options = {
     'includehidden': True,
     'titles_only': False
 }
-
-
 
 # on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
