@@ -55,8 +55,8 @@ class Attributes:
         # Check that the estimator objects have predict or predict_proba. 
         if not estimator_is_none:
             for m in estimator_objs:
-                if not hasattr(m, 'predict') or not hasattr(m, 'predict_proba'):
-                    raise AttributeError(f'{m} does have .predict or .predict_proba')
+                if not (hasattr(m, 'predict') or  hasattr(m, 'predict_proba')):
+                    raise AttributeError(f'{m} does not have .predict or .predict_proba')
                 
         # Create a dictionary from the estimator_objs and estimator_names.
         # Then set the attributes.
