@@ -224,6 +224,9 @@ class LocalExplainer(Attributes):
         FOR INTERNAL PURPOSES ONLY.
 
         """
+        if shap_kwargs is None:
+            shap_kwargs = {}
+        
         masker = shap_kwargs.get("masker", None)
         algorithm = shap_kwargs.get("algorithm", "auto")
 
@@ -288,6 +291,10 @@ class LocalExplainer(Attributes):
         """
         if lime_kws is None:
             raise KeyError('lime_kws is None, but lime_kws must contain training_data!')
+        
+        # Convert dataframe to array.
+        if isinstance(lime_kws['training_data'], pd.DataFrame):
+            lime_kws['training_data'] = lime_kws['training_data'].values
         
         lime_kws['feature_names'] = X.columns
         

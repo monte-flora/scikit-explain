@@ -223,7 +223,7 @@ class PlotImportance(PlotStructure):
 
             if 'forward' in method:
                 ax.axvline(results[f'all_permuted_score__{estimator_name}'].mean(),color='k',ls=':')
-            else:
+            elif 'backward' in method:
                 ax.axvline(results[f'original_score__{estimator_name}'].mean(),color='k',ls='--')    
                 
                 
