@@ -2069,7 +2069,7 @@ class GlobalExplainer(Attributes):
                         )
 
                         estimator_set = [
-                            LinearRegression(normalize=True)
+                            LinearRegression()
                             for _ in range(len(idxs_set))
                         ]
 
