@@ -1430,8 +1430,7 @@ class GlobalExplainer(Attributes):
             func=func,
             args_iterator=args_iterator,
             kwargs=kwargs,
-            nprocs_to_use=n_jobs,
-            total=total,
+            n_jobs=n_jobs,
         )
 
         results = merge_dict(results)
@@ -1893,7 +1892,7 @@ class GlobalExplainer(Attributes):
             func=self._feature_interaction_worker,
             args_iterator=args_iterator,
             kwargs={},
-            nprocs_to_use=n_jobs,
+            n_jobs=n_jobs,
         )
 
         results = merge_dict(results)
