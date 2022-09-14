@@ -1137,6 +1137,7 @@ class ExplainToolkit(Attributes):
         subsample=1.0,
         n_bootstrap=1,
         random_seed=42,
+        class_index=1, 
     ):
         """
         Compute the 1D or 2D centered accumulated local effects (ALE) [9]_ [10]_.
@@ -1219,6 +1220,7 @@ class ExplainToolkit(Attributes):
             subsample=subsample,
             n_bootstrap=n_bootstrap,
             random_seed=random_seed,
+            class_index=class_index, 
         )
 
         dimension = "2D" if isinstance(list(features)[0], tuple) else "1D"
