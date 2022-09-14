@@ -414,8 +414,8 @@ class GlobalExplainer(Attributes):
                 func=func,
                 args_iterator=args_iterator,
                 kwargs={},
-                nprocs_to_use=n_jobs,
-                total=total,
+                n_jobs=n_jobs,
+                description = f"{method.upper()} Numerical Features"
             )
 
         if len(cat_features) > 0:
@@ -439,8 +439,8 @@ class GlobalExplainer(Attributes):
                 func=func,
                 args_iterator=args_iterator,
                 kwargs={},
-                nprocs_to_use=n_jobs,
-                total=total,
+                n_jobs=n_jobs,
+                description = f"{method.upper()} Categorical Features"
             )
 
         results = cat_results + results
