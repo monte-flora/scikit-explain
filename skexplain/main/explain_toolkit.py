@@ -581,6 +581,7 @@ class ExplainToolkit(Attributes):
         features=None,
         estimator_names=None,
         interaction=False,
+        method='ale',
     ):
         """
         Compute the standard deviation (std) of the ALE values for each
@@ -742,9 +743,10 @@ class ExplainToolkit(Attributes):
         if interaction:
             func = self.global_obj.compute_interaction_rankings
         else:
-            func = self.global_obj.compute_ale_variance
+            func = self.global_obj.compute_variance
 
         results_ds = func(
+            method=method,
             data=ale,
             estimator_names=estimator_names,
             features=features,
@@ -763,6 +765,27 @@ class ExplainToolkit(Attributes):
 
         return results_ds
 
+    def pd_variance(
+        self,
+        pd,
+        features=None,
+        estimator_names=None,
+        interaction=False,
+    ):
+        """ See ale_variance for documentation."""
+        results_ds = self.ale_variance(
+            pd,
+            features=features,
+            estimator_names=estimator_names,
+            interaction=interaction,
+            method='pd',
+            )
+        
+        self.attrs_dict["method"] = "pd_variance"
+        results_ds = self._append_attributes(results_ds) 
+        
+        return results_ds
+    
     def main_effect_complexity(
         self, ale, estimator_names=None, max_segments=10, approx_error=0.05
     ):
