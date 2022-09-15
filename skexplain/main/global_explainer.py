@@ -1574,13 +1574,14 @@ class GlobalExplainer(Attributes):
 
         return {f"{estimator_name}_ias": (["n_bootstrap"], np.array(ias))}
 
-    def compute_ale_variance(self, data, estimator_names, features=None, **kwargs):
+    def compute_variance(self, method, data, estimator_names, features=None, **kwargs):
         """
-        Compute the standard deviation of the ALE values
+        Compute the standard deviation of the ALE/PD values
         for each feature and rank then for predictor importance.
 
         Parameters
         ----------
+        method : 'pd' or 'ale'
         data : xarray.Dataset
         estimator_names : list of strings
         features : str
@@ -1613,7 +1614,7 @@ class GlobalExplainer(Attributes):
             # Input shape : (n_bootstrap, n_bins)
             ale_std = np.array(
                 [
-                    _std(data[f"{f}__{estimator_name}__ale"].values, f, cat_features)
+                    _std(data[f"{f}__{estimator_name}__{method}"].values, f, cat_features)
                     for f in feature_names
                 ]
             )
@@ -1624,11 +1625,11 @@ class GlobalExplainer(Attributes):
             feature_names_sorted = np.array(feature_names)[idx]
             ale_std_sorted = ale_std[idx, :]
 
-            results[f"ale_variance_rankings__{estimator_name}"] = (
+            results[f"{method}_variance_rankings__{estimator_name}"] = (
                 [f"n_vars_ale_variance"],
                 feature_names_sorted,
             )
-            results[f"ale_variance_scores__{estimator_name}"] = (
+            results[f"{method}_variance_scores__{estimator_name}"] = (
                 [f"n_vars_ale_variance", "n_bootstrap"],
                 ale_std_sorted,
             )
