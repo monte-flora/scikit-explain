@@ -9,9 +9,12 @@ from .dependence import dependence_plot
 from matplotlib.lines import Line2D
 import matplotlib
 import seaborn as sns
+from copy import copy
 
 import re
 from shap.plots import colors
+import itertools 
+import warnings 
 
 
 def format_value(s, format_str):
@@ -56,7 +59,7 @@ def waterfall(
         to be customized further after it has been created.
     """
     max_display = kwargs.get("max_display")
-    all_features = data.attrs["feature_names"]
+    all_features = data.attrs["features"]
     feature_names = np.array([display_feature_names.get(f, f) for f in features])
     units = np.array([display_units.get(f, "") for f in features])
 
@@ -71,7 +74,8 @@ def waterfall(
     upper_bounds = getattr(values, "upper_bounds", None)
 
     # init variables we use for tracking the plot locations
-    num_features = min(max_display, len(values))
+    
+    num_features = kwargs.get('num_features', min(max_display, len(values)))
     row_height = 0.5
     rng = range(num_features - 1, -1, -1)
     order = np.argsort(-np.abs(values))
@@ -424,11 +428,14 @@ class PlotFeatureContributions(PlotStructure):
                 a single row/example from the
                 result dataframe from tree_interpreter_simple
         """
+        methods = list(data.keys())
+        
         kwargs["max_display"] = kwargs.get("max_display", 10)
         estimator_output = kwargs.get("estimator_output", None)
 
         only_one_model = True if len(estimator_names) == 1 else False
-        outer_indexs = list(set([f[0] for f in data.index.values]))
+        outer_indexs = list(set([f[0] for f in data[methods[0]].index.values]))
+        only_one_method = True if len(methods) == 1 else False
 
         if estimator_output == "probability" and "non_performance" not in outer_indexs:
             outer_indexs = [
@@ -445,9 +452,9 @@ class PlotFeatureContributions(PlotStructure):
 
         n_perf_keys = len(perf_keys)
         n_panels = (
-            len(estimator_names)
+            len(estimator_names)*len(methods)
             if "non_performance" in outer_indexs
-            else len(estimator_names) * n_perf_keys
+            else len(estimator_names) * n_perf_keys * len(methods)
         )
 
         figsize = (
@@ -486,14 +493,15 @@ class PlotFeatureContributions(PlotStructure):
 
         # try for all_data/average data
         if "non_performance" in outer_indexs:
-            for i, model_name in enumerate(estimator_names):
+            for i, (model_name, method) in enumerate(itertools.product(estimator_names, methods)):
+                ###print(model_name, method)
                 if n_panels > 1:
                     ax = ax_iterator[i]
                 else:
                     ax = axes
                 # self._contribution
                 final_pred, bias = waterfall(
-                    data=data,
+                    data=data[method],
                     features=features,
                     model_name=model_name,
                     to_only_varname=to_only_varname,
@@ -506,13 +514,27 @@ class PlotFeatureContributions(PlotStructure):
                     **kwargs,
                 )
 
-                if not only_one_model:
+                if not only_one_model and only_one_method:
                     ax.set_title(
                         model_name,
                         alpha=0.8,
                         fontdict={"fontsize": self.FONT_SIZES["teensie"]},
                     )
-
+                elif not only_one_method: 
+                    if not only_one_model and i < len(estimator_names)-1:
+                            ax.set_title(
+                            method.replace('_', ' ').upper(),
+                            alpha=0.8,
+                            fontdict={"fontsize": self.FONT_SIZES["tiny"]},
+                        )
+                    else:
+                            ax.set_title(
+                                method.replace('_', ' ').upper(),
+                                alpha=0.8,
+                                fontdict={"fontsize": self.FONT_SIZES["tiny"]},
+                        )
+             
+                    
         else:
             # Hard coded in to maintain correct ordering
             if estimator_output == "probability":
@@ -526,12 +548,13 @@ class PlotFeatureContributions(PlotStructure):
                 outer_indexs = ["Least Error Predictions", "Most Error Predictions"]
             # loop over each model creating one panel per model
             c = 0
-            for i, model_name in enumerate(estimator_names):
+            #for i, model_name in enumerate(estimator_names):
+            for i, (model_name, method) in enumerate(itertools.product(estimator_names, methods)):
                 perf_keys = kwargs.get("perf_keys", outer_indexs)
                 for k, perf_key in enumerate(perf_keys):
                     ax = axes[k, i] if not only_one_model else ax_iterator[c]
                     waterfall(
-                        data=data,
+                        data=data[method],
                         ax=ax,
                         fig=fig,
                         key=perf_key,
@@ -574,7 +597,16 @@ class PlotFeatureContributions(PlotStructure):
                 pad=1.5,
                 fontsize=self.FONT_SIZES["tiny"],
             )
-
+        elif "non_performance" in outer_indexs and not only_one_model:
+            self.set_row_labels(
+                labels=estimator_names,
+                axes=axes,
+                pos=-1,
+                rotation=270,
+                pad=1.5,
+                fontsize=self.FONT_SIZES["tiny"],
+            )
+            
         if "non_performance" in outer_indexs:
             pos = (0.95, 0.05)
         else:
@@ -587,23 +619,32 @@ class PlotFeatureContributions(PlotStructure):
 
         return fig, axes
 
-    def plot_shap(
+    def scatter_plot(
         self,
-        shap_values,
+        attr_values,
         X,
         features,
+        methods,
         plot_type,
         display_feature_names={},
         display_units={},
         feature_values=None,
         target_values=None,
         interaction_index="auto",
+        estimator_name=None, 
+        to_probability=False,
         **kwargs,
     ):
         """
-        Plot SHAP summary or dependence plot.
+        Plot SHAP-style summary or dependence plot.
 
         """
+        if len(methods)>1:
+            interaction_index=None
+            warnings.warn("When plotting multiple methods, the color-coding for feature interactions is turned off.")
+        
+        markers = kwargs.get('markers', ['o', 'v', 'x', 'D']) 
+        
         self.display_units = display_units
         self.display_feature_names = display_feature_names
 
@@ -613,7 +654,7 @@ class PlotFeatureContributions(PlotStructure):
 
         if plot_type == "summary":
             shap.summary_plot(
-                shap_values,
+                attr_values,
                 features=X,
                 feature_names=display_feature_names_list,
                 max_display=15,
@@ -626,13 +667,15 @@ class PlotFeatureContributions(PlotStructure):
         elif plot_type == "dependence":
             # Set up the font sizes for matplotlib
             self.display_feature_names = display_feature_names
-            left_yaxis_label = "SHAP values (%)\n(Feature Contributions)"
+            left_yaxis_label = kwargs.get('ylabel', "Attribution Value")
             n_panels = len(features)
             if n_panels <= 6:
                 figsize = (8, 5)
             else:
                 figsize = (10, 8)
 
+            figsize = kwargs.get('figsize', figsize)    
+                
             using_internal_ax = True
             if kwargs.get("ax") is not None:
                 using_internal_ax = False
@@ -653,49 +696,59 @@ class PlotFeatureContributions(PlotStructure):
             ax_iterator = self.axes_to_iterator(n_panels, axes)
             nticks = 5 if n_panels < 10 else 3
             
-            for ax, feature in zip(ax_iterator, features):
-                dependence_plot(
-                    feature=feature,
-                    shap_values=shap_values,
-                    X=X,
-                    display_feature_names=display_feature_names_list,
-                    interaction_index=interaction_index,
-                    target_values=target_values,
-                    ax=ax,
-                    fig=fig,
-                    **kwargs,
-                )
-
-                if using_internal_ax:
-                    self.set_n_ticks(ax, nticks)
-                    if n_panels < 10:
-                        self.set_minor_ticks(ax)
-                    self.set_axis_label(
-                        ax, xaxis_label="".join(feature), yaxis_label=""
-                    )
-                    ax.axhline(
-                        y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed"
-                    )
-                    ###ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=False))
-                    self.set_n_ticks(ax, nticks)
-                    ax.tick_params(axis="both", labelsize=8)
-                    vertices = ax.collections[0].get_offsets()
-                    self._to_sci_notation(
+            for method, marker in zip(methods, markers):
+                for ax, feature in zip(ax_iterator, features):
+                    dependence_plot(
+                        feature=feature,
+                        method=method,
+                        attr_values=attr_values[f'{method}_values__{estimator_name}'].values,
+                        X=X,
+                        display_feature_names=display_feature_names_list,
+                        interaction_index=interaction_index,
+                        target_values=target_values,
                         ax=ax,
-                        ydata=vertices[:, 1],
-                        xdata=vertices[:, 0],
-                        colorbar=False,
+                        fig=fig,
+                        marker=marker, 
+                        **kwargs,
                     )
+
+                    if using_internal_ax:
+                        self.set_n_ticks(ax, nticks)
+                        if n_panels < 10:
+                            self.set_minor_ticks(ax)
+                        self.set_axis_label(
+                            ax, xaxis_label="".join(feature), yaxis_label=""
+                        )
+                        ax.axhline(
+                            y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed"
+                        )
+                        ###ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=False))
+                        self.set_n_ticks(ax, nticks)
+                        ax.tick_params(axis="both", labelsize=8)
+                        vertices = ax.collections[0].get_offsets()
+                        self._to_sci_notation(
+                            ax=ax,
+                            ydata=vertices[:, 1],
+                            xdata=vertices[:, 0],
+                            colorbar=False,
+                        )
 
             if using_internal_ax:
+                histdata = kwargs.get("histdata", None)
+                ylabel_right= '' if histdata is None else 'Probability Density'
                 major_ax = self.set_major_axis_labels(
                     fig,
                     xlabel=None,
                     ylabel_left=left_yaxis_label,
+                    ylabel_right=ylabel_right,
                     labelpad=25,
                     **kwargs,
                 )
 
                 self.add_alphabet_label(n_panels, axes)
+                
+                if len(methods)>1:
+                    self.set_legend(n_panels, fig, ax, major_ax)
+                
 
             return fig, axes

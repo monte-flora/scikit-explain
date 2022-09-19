@@ -44,9 +44,9 @@ labels = {
 
 def dependence_plot(
     feature,
-    shap_values,
+    attr_values,
     X,
-    feature_values=None,
+    method,
     display_feature_names=None,
     interaction_index="auto",
     target_values=None,
@@ -68,7 +68,7 @@ def dependence_plot(
     feature : string
         name of the feature to plot.
 
-    shap_values : numpy.array
+    attr_values : numpy.array
         Matrix of SHAP values (# samples x # features).
 
     X : pandas.DataFrame
@@ -109,6 +109,8 @@ def dependence_plot(
     unnormalize = kwargs.get("unnormalize", None)
     cmap = kwargs.get("cmap", colors.red_blue)
     feature_names = list(X.columns)
+     
+    X = X.values
 
     color = kwargs.get("color", "#1E88E5")
     axis_color = kwargs.get("axis_color", "#333333")
@@ -121,43 +123,41 @@ def dependence_plot(
     histdata = kwargs.get("histdata", None)
     target = kwargs.get("target", None)
 
-    if feature_values is None:
-        feature_values = X.values
-
     # allow vectors to be passed
-    if len(shap_values.shape) == 1:
-        shap_values = np.reshape(shap_values, len(shap_values), 1)
+    if len(attr_values.shape) == 1:
+        attr_values = np.reshape(attr_values, len(attr_values), 1)
     if len(X.shape) == 1:
         X = np.reshape(X, len(X), 1)
 
-    feature_ind = convert_name(feature, shap_values, feature_names)
+    feature_ind = convert_name(feature, attr_values, feature_names)
 
     # guess what other feature as the stongest interaction with the plotted feature
     interaction_index = get_interaction_index(
-        feature_ind, interaction_index, shap_values, feature_values, feature_names
+        feature_ind, interaction_index, attr_values, X, feature_names
     )
 
     assert (
-        shap_values.shape[0] == X.shape[0]
-    ), "'shap_values' and 'features' values must have the same number of rows!"
+        attr_values.shape[0] == X.shape[0]
+    ), "'attr_values' and 'features' values must have the same number of rows!"
     assert (
-        shap_values.shape[1] == X.shape[1]
-    ), "'shap_values' must have the same number of columns as 'features'!"
+        attr_values.shape[1] == X.shape[1]
+    ), "'attr_values' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values
-    oinds = np.arange(shap_values.shape[0])
+    oinds = np.arange(attr_values.shape[0])
 
     # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
-
-    xdata = feature_values[oinds, feature_ind].astype(np.float64)
-    s = shap_values[oinds, feature_ind]
+    X = X[oinds, :]
+    s = attr_values[oinds, feature_ind]
+    
+    xdata = X[:,feature_ind].astype(np.float64)
     if target_values is not None:
         target_values = target_values[oinds]
 
     # get both the raw and display color values
     if interaction_index is not None:
-        cdata = feature_values[oinds, interaction_index]
+        cdata = X[:,interaction_index]
         clow = np.nanpercentile(cdata.astype(np.float), 5)
         chigh = np.nanpercentile(cdata.astype(np.float), 95)
         if clow == chigh:
@@ -222,7 +222,7 @@ def dependence_plot(
             vmin=clow,
             vmax=chigh,
             rasterized=len(xdata) > 500,
-            label="SHAP",
+            label=method,
             zorder=0,
         )
         p.set_array(cdata[xdata_notnan])
@@ -239,7 +239,7 @@ def dependence_plot(
             vmin=np.min(target_values),
             vmax=np.max(target_values),
             rasterized=len(xdata) > 500,
-            label="SHAP",
+            label=method,
             zorder=0,
         )
 
@@ -266,7 +266,7 @@ def dependence_plot(
                 vmax=chigh,
                 rasterized=len(xdata) > 500,
                 marker=marker,
-                label="SHAP",
+                label=method,
                 zorder=0,
             )
 
@@ -280,7 +280,7 @@ def dependence_plot(
             alpha=alpha,
             rasterized=len(xdata) > 500,
             marker=marker,
-            label="SHAP",
+            label=method,
             zorder=0,
         )
 
@@ -288,13 +288,13 @@ def dependence_plot(
         # draw the color bar
         pad = 0.05 if histdata is None else 0.18
         pad = kwargs.get('colorbar_pad', pad) 
-        cb = pl.colorbar(p, ticks=MaxNLocator(5), ax=ax, pad=pad)
+        cb = pl.colorbar(p, ticks=MaxNLocator(5), ax=ax, pad=pad, )
         cb.set_label(display_feature_names[interaction_index], size=8)
         cb.ax.tick_params(labelsize=8)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
         bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.7) * 20)
+        cb.ax.set_aspect((bbox.height - 0.95) * 0.5)
         base_plot._to_sci_notation(ax=None, colorbar=cb, ydata=cdata)
 
     # plot any nan feature values as tick marks along the y-axis
@@ -347,16 +347,17 @@ def dependence_plot(
 
 
 def get_interaction_index(
-    feature_ind, interaction_index, shap_values, feature_values, feature_names
+    feature_ind, interaction_index, attr_values, X, feature_names
 ):
     """ """
     # guess what other feature as the stongest interaction with the plotted feature
     if not hasattr(feature_ind, "__len__"):
         if interaction_index == "auto":
             interaction_index = approximate_interactions(
-                feature_ind, shap_values, feature_values
+                feature_ind, attr_values, X
             )[0]
-        interaction_index = convert_name(interaction_index, shap_values, feature_names)
+            
+        interaction_index = convert_name(interaction_index, attr_values, feature_names)
 
     return interaction_index
 
