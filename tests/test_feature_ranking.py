@@ -86,14 +86,15 @@ class TestRankings(TestLR, TestRF):
 
 
         # TODO: coefficients
-        shap_results = explainer.shap(
-            shap_kwargs={
+        shap_results = explainer.local_attributions('shap',
+            shap_kws={
                 "masker": shap.maskers.Partition(
                     self.X, max_samples=100, clustering="correlation"
                 ),
                 "algorithm": "auto",
             }
         )
+        
 
         # Implicit test of the to_sklearn_importance method.
         shap_imp = to_skexplain_importance(
