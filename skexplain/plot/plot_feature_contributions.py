@@ -639,6 +639,8 @@ class PlotFeatureContributions(PlotStructure):
         Plot SHAP-style summary or dependence plot.
 
         """
+        
+        
         if len(methods)>1:
             interaction_index=None
             warnings.warn("When plotting multiple methods, the color-coding for feature interactions is turned off.")
@@ -684,24 +686,31 @@ class PlotFeatureContributions(PlotStructure):
                 n_panels = 1
                 kwargs.pop("ax")
             else:
+                wspace = 0.4 if interaction_index is None else 0.7
+                hspace = 0.5 if interaction_index is None else 0.6
+                
+                wspace = kwargs.get('wspace', wspace)
+                hspace = kwargs.get('hspace', hspace)
+                
                 fig, axes = self.create_subplots(
                     n_panels=n_panels,
                     sharex=False,
                     sharey=False,
                     figsize=figsize,
-                    wspace=0.4,
-                    hspace=0.5,
+                    wspace=wspace,
+                    hspace=hspace,
                 )
 
             ax_iterator = self.axes_to_iterator(n_panels, axes)
             nticks = 5 if n_panels < 10 else 3
             
             for method, marker in zip(methods, markers):
+                values = attr_values[f'{method}_values__{estimator_name}'].values
                 for ax, feature in zip(ax_iterator, features):
                     dependence_plot(
                         feature=feature,
                         method=method,
-                        attr_values=attr_values[f'{method}_values__{estimator_name}'].values,
+                        attr_values=values,
                         X=X,
                         display_feature_names=display_feature_names_list,
                         interaction_index=interaction_index,

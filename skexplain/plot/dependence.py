@@ -22,6 +22,7 @@ from matplotlib.ticker import MaxNLocator
 from math import log10
 
 from .base_plotting import PlotStructure
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 base_plot = PlotStructure()
 
@@ -211,6 +212,7 @@ def dependence_plot(
         cdata_imp[np.isnan(cdata)] = (clow + chigh) / 2.0
         cdata[cdata_imp > chigh] = chigh
         cdata[cdata_imp < clow] = clow
+        
         p = ax.scatter(
             xdata[xdata_notnan],
             s[xdata_notnan],
@@ -287,14 +289,29 @@ def dependence_plot(
     if interaction_index != feature_ind and interaction_index is not None:
         # draw the color bar
         pad = 0.05 if histdata is None else 0.18
-        pad = kwargs.get('colorbar_pad', pad) 
-        cb = pl.colorbar(p, ticks=MaxNLocator(5), ax=ax, pad=pad, )
+        pad = kwargs.get('colorbar_pad', pad)
+        
+        divider = make_axes_locatable(ax)
+        if histdata is None:
+            orientation='vertial'
+            cax = divider.append_axes('right', size='5%', pad=pad)
+        else:
+            orientation='horizontal'
+            cax = divider.append_axes('top', size='5%', pad=pad)
+        fig = ax.get_figure()
+        cb = fig.colorbar(p, cax=cax, ticks=MaxNLocator(5), orientation=orientation)
+        
+        #cb = pl.colorbar(p, ticks=MaxNLocator(5), ax=ax, pad=pad, )
         cb.set_label(display_feature_names[interaction_index], size=8)
         cb.ax.tick_params(labelsize=8)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.95) * 0.5)
+        if orientation=='horizontal':
+            cb.ax.xaxis.set_ticks_position("top")
+            cb.ax.xaxis.set_label_position('top')
+        
+        #bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        #cb.ax.set_aspect((bbox.height - 0.95) * 0.5)
         base_plot._to_sci_notation(ax=None, colorbar=cb, ydata=cdata)
 
     # plot any nan feature values as tick marks along the y-axis
