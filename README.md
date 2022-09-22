@@ -12,7 +12,7 @@
 [![Documentation Status](https://readthedocs.org/projects/scikit-explain/badge/?version=latest)](https://scikit-explain.readthedocs.io/en/latest/?badge=latest)
 
 
-scikit-explain is a user-friendly Python module for machine learning explainability. Current explainability products includes
+scikit-explain is a user-friendly Python module for tabular-style machine learning explainability. Current explainability products includes
 * Feature importance: 
   * [Single- and Multi-pass Permutation Importance](https://permutationimportance.readthedocs.io/en/latest/methods.html#permutation-importance) ([Brieman et al. 2001](https://link.springer.com/article/10.1023/A:1010933404324)], [Lakshmanan et al. 2015](https://journals.ametsoc.org/view/journals/atot/32/6/jtech-d-13-00205_1.xml?rskey=hlSyXu&result=2))
   * [SHAP](https://christophm.github.io/interpretable-ml-book/shap.html) 
@@ -23,7 +23,7 @@ scikit-explain is a user-friendly Python module for machine learning explainabil
   * [Partial Dependence](https://christophm.github.io/interpretable-ml-book/pdp.html) (PD), 
   * [Accumulated local effects](https://christophm.github.io/interpretable-ml-book/ale.html) (ALE), 
   * Random forest-based feature contributions ([treeinterpreter](http://blog.datadive.net/interpreting-random-forests/))
-  * SHAP 
+  * [SHAP](https://christophm.github.io/interpretable-ml-book/shap.html) 
   * [LIME](https://christophm.github.io/interpretable-ml-book/lime.html#lime)
   * Main Effect Complexity (MEC; [Molnar et al. 2019](https://arxiv.org/abs/1904.03867))
 
@@ -38,13 +38,15 @@ These explainability methods are discussed at length in Christoph Molnar's [Inte
 
 The package is under active development and will likely contain bugs or errors. Feel free to raise issues!
 
-This package is largely original code, but also includes snippets or chunks of code from preexisting packages. Our goal is not take credit from other code authors, but to make a single source for computing several machine learning interpretation methods. Here is a list of packages used in scikit-explain: 
+This package is largely original code, but also includes snippets or chunks of code from preexisting packages. Our goal is not take credit from other code authors, but to make a single source for computing several machine learning explanation methods. Here is a list of packages used in scikit-explain: 
 [**PyALE**](https://github.com/DanaJomar/PyALE),
 [**PermutationImportance**](https://github.com/gelijergensen/PermutationImportance),
 [**ALEPython**](https://github.com/blent-ai/ALEPython),
 [**SHAP**](https://github.com/slundberg/shap/), 
-[**scikit-learn**](https://github.com/scikit-learn/scikit-learn)
-[**LIME**](https://github.com/marcotcr/lime)
+[**scikit-learn**](https://github.com/scikit-learn/scikit-learn),
+[**LIME**](https://github.com/marcotcr/lime),
+[**Faster-LIME**](https://github.com/seansaito/Faster-LIME), 
+[**treeinterpreter**](https://github.com/andosa/treeinterpreter)
 
 If you employ scikit-explain in your research, please cite this github and the relevant packages listed above. 
 
