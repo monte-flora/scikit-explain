@@ -32,11 +32,12 @@ class TestFeatureContributions(TestSingleExampleContributions):
     def test_plot_ti_contributions(self):
         # Test plotting the treeinterpret results.
         # Should be vaild for SHAP as well.
-        for method in [
-            "tree_interpreter",
-        ]:
+        for method in ["tree_interpreter"]:
             contrib_ds = self.explainer.local_attributions(method=method)
-
+            # Test that the parallelization code runs. 
+            contrib_ds = self.explainer.local_attributions(method=method, n_jobs=2)    
+            
+            
         self.explainer.plot_contributions(
             contrib=contrib_ds,
         )
@@ -66,7 +67,7 @@ class TestFeatureContributions(TestSingleExampleContributions):
     def test_bad_method(self):
         with self.assertRaises(Exception) as ex:
             contrib_ds = self.explainer.local_attributions( method="nonsense", )
-        except_msg = "Invalid method! Method must be 'shap', 'tree_interpreter', 'lime'"
+        except_msg = f"Invalid method (nonsense)! Method must be one of the following: 'shap', 'tree_interpreter', 'lime'"
         self.assertEqual(ex.exception.args[0], except_msg)
 
 

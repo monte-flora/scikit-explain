@@ -112,6 +112,7 @@ class TestSHAP(TestMultiExampleContributions):
             dataset=self.results,
             estimator_name=self.rf_estimator_name,
             histdata=histdata,
+            interaction_index=None,
         )
 
         # Plot interaction index == None, but with target_dataset
@@ -121,7 +122,7 @@ class TestSHAP(TestMultiExampleContributions):
             dataset=self.results,
             estimator_name=self.rf_estimator_name,
             histdata=histdata,
-            target_dataset=self.y_sub.dataset,
+            target_dataset=self.y_sub,
             interaction_index=None,
         )
 

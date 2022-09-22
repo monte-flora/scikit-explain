@@ -1693,7 +1693,7 @@ class ExplainToolkit(Attributes):
                       DeprecationWarning, stacklevel=2)
         return self.local_attributions(**kws) 
         
-    def local_attributions(self, method, shap_kws=None, lime_kws=None):
+    def local_attributions(self, method, shap_kws=None, lime_kws=None, n_jobs=1):
         """
         Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_, 
         Local Interpretable Model Explanations (LIME) or the Tree Interpreter local
@@ -1709,7 +1709,7 @@ class ExplainToolkit(Attributes):
             SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
             select decision-tree based estimators in scikit-learn (e.g., random forests). 
         
-        shap_kws : dict
+        shap_kws : dict (default is None)
             Arguments passed to the shap.Explainer object. See
             https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
             for details. The main two arguments supported in skexplain is the masker and
@@ -1722,7 +1722,7 @@ class ExplainToolkit(Attributes):
             - masker
             - algorithm
 
-        lime_kws : dict 
+        lime_kws : dict (default is None)
             Arguments passed to the LimeTabularExplainer object. See https://github.com/marcotcr/lime
             for details. Generally, you'll pass the in the following:
             
@@ -1731,7 +1731,15 @@ class ExplainToolkit(Attributes):
                                  if it is not passed in)
             - random_state (for reproduciability) 
     
+        n_jobs : float or integer (default=1)
 
+            - if integer, interpreted as the number of processors to use for multiprocessing
+            - if float, interpreted as the fraction of proceesors to use for multiprocessing
+            
+            For treeinterpreter, parallelization is used to process the trees of a random forest 
+            in parallel. For LIME, each example is computed in parallel. We do not apply 
+            parallelization to SHAP as we found it is faster without it. 
+            
         Returns
         -------------------
 
@@ -1793,6 +1801,7 @@ class ExplainToolkit(Attributes):
                     X=self.X,
                     shap_kws=shap_kws,
                     lime_kws=lime_kws, 
+                    n_jobs=n_jobs, 
                     method = method, 
                     estimator_output=self.estimator_output
                 )
@@ -1829,7 +1838,8 @@ class ExplainToolkit(Attributes):
         performance_based=False,
         n_samples=100,
         shap_kws=None, 
-        lime_kws=None, 
+        lime_kws=None,
+        n_jobs=1
     ):
         """
         Computes the individual feature contributions to a predicted outcome for
@@ -1921,7 +1931,8 @@ class ExplainToolkit(Attributes):
                 performance_based=performance_based,
                 n_samples=n_samples,
                 shap_kws=shap_kws, 
-                lime_kws=lime_kws, 
+                lime_kws=lime_kws,
+                n_jobs=n_jobs
             )
 
             # Add metadata

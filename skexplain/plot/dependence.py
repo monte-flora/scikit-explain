@@ -293,7 +293,7 @@ def dependence_plot(
         
         divider = make_axes_locatable(ax)
         if histdata is None:
-            orientation='vertial'
+            orientation='vertical'
             cax = divider.append_axes('right', size='5%', pad=pad)
         else:
             orientation='horizontal'

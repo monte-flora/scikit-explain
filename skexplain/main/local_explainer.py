@@ -3,6 +3,8 @@ import traceback
 from .tree_interpreter import TreeInterpreter
 import pandas as pd
 import numpy as np
+from tqdm import tqdm 
+#from joblib import delayed, Parallel 
 
 from lime.lime_tabular import LimeTabularExplainer
 
@@ -10,6 +12,7 @@ from ..common.attributes import Attributes
 from ..common.importance_utils import retrieve_important_vars
 from ..common.utils import to_dataframe, determine_feature_dtype
 from ..common.metrics import brier_skill_score
+from ..common.multiprocessing_utils import tqdm_joblib, delayed, Parallel 
 
 
 from ..common.contrib_utils import (
@@ -118,6 +121,7 @@ class LocalExplainer(Attributes):
         n_samples=100,
         shap_kws=None,
         lime_kws=None, 
+        n_jobs=1
     ):
         """
         Explain individual predictions using SHAP (SHapley Additive exPlanations;
@@ -188,6 +192,7 @@ class LocalExplainer(Attributes):
                         shap_kws=shap_kws,
                         lime_kws=lime_kws,
                         method=method, 
+                        n_jobs=n_jobs
                         )
 
                     contributions_dict[estimator_name][key] = cont_dict
@@ -204,6 +209,7 @@ class LocalExplainer(Attributes):
                     shap_kws=shap_kws,
                     lime_kws=lime_kws,
                     method=method, 
+                    n_jobs=n_jobs
                     )
                     X = self.X
 
@@ -282,7 +288,8 @@ class LocalExplainer(Attributes):
                             """
             )
 
-        ti = TreeInterpreter(estimator, X)
+        # TODO: generalize for the joint_contributions=True.
+        ti = TreeInterpreter(estimator, X, n_jobs=self._n_jobs)
 
         prediction, bias, contributions = ti.predict()
 
@@ -294,6 +301,18 @@ class LocalExplainer(Attributes):
 
         return contributions, bias
 
+    
+    def _explain_lime(self, explainer, predict_fn, X):
+        """Get explanation from LIME"""
+        
+        num_features = len(X)
+        explanation = explainer.explain_instance(X, predict_fn, num_features=num_features)
+        sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
+        contrib = np.array([[val[1] for val in sorted_exp]])[0,:]
+        bias = explanation.intercept[1]
+        
+        return contrib, bias 
+    
     
     def _get_lime_values(self, estimator, X, lime_kws):
         """
@@ -314,7 +333,6 @@ class LocalExplainer(Attributes):
             lime_kws['categorical_names'] = cat_features
         
         # Determine whether its a classification or regression task.
-        #mode = 'regression' 
         if lime_kws.get('mode', None) is None:
             mode = 'classification' if hasattr(estimator, 'predict_proba') else 'regression'
             lime_kws['mode'] = mode
@@ -330,18 +348,30 @@ class LocalExplainer(Attributes):
         else:
             predict_fn = estimator.predict 
         
-        n_examples = len(X)
+        n_examples = X.shape[0]
         contributions = np.zeros(X.shape)
         bias = np.zeros((n_examples))
-        for i in range(n_examples):
-            explanation = explainer.explain_instance(X.values[i,:], predict_fn, num_features=X.shape[1],)
-            sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
-            contributions[i,:] = np.array([[val[1] for val in sorted_exp]])[0,:]
-            bias[i] = explanation.intercept[1] 
+        
+        X_values = X.values 
+        parallel = Parallel(n_jobs=self._n_jobs)
+        with tqdm_joblib(tqdm(desc="LIME", total=n_examples)) as progress_bar:
+            results = parallel(delayed(self._explain_lime)(explainer, predict_fn, X_values[i,:]) 
+                   for i in range(n_examples))
+       
+        for j, (contrib, b) in enumerate(results):
+            contributions[j,:] = contrib 
+            bias[j] = b
+
+        #for i in range(n_examples):
+        #    explanation = explainer.explain_instance(X.values[i,:], predict_fn, num_features=X.shape[1],)
+        #    sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
+        #    contributions[i,:] = np.array([[val[1] for val in sorted_exp]])[0,:]
+        #    bias[i] = explanation.intercept[1] 
         
         return contributions, bias
         
-    def _get_feature_contributions(self, estimator, X, shap_kws=None, lime_kws=None, method=None, estimator_output=None):
+    def _get_feature_contributions(self, estimator, X, n_jobs=1, shap_kws=None, 
+                                   lime_kws=None,  method=None, estimator_output=None):
         """
         FOR INTERNAL PURPOSES ONLY.
 
@@ -353,6 +383,8 @@ class LocalExplainer(Attributes):
         X : pandas.DataFrame of shape (n_samples, n_features)
 
         """
+        self._n_jobs=n_jobs
+        
         if method is not None:
             self.method = method
         
