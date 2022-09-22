@@ -4,9 +4,17 @@ from .tree_interpreter import TreeInterpreter
 import pandas as pd
 import numpy as np
 from tqdm import tqdm 
-#from joblib import delayed, Parallel 
+
+from joblib import delayed, Parallel 
+from joblib import wrap_non_picklable_objects
+from joblib.externals.loky import set_loky_pickler
+
+# This should allow for more shared memory for the LIME calcuations. 
+import os
+os.environ['JOBLIB_TEMP_FOLDER'] = '/tmp'
 
 from lime.lime_tabular import LimeTabularExplainer
+from .lime_fast import FastLimeTabularExplainer
 
 from ..common.attributes import Attributes
 from ..common.importance_utils import retrieve_important_vars
@@ -301,16 +309,22 @@ class LocalExplainer(Attributes):
 
         return contributions, bias
 
-    
-    def _explain_lime(self, explainer, predict_fn, X):
+    #@delayed
+    #@wrap_non_picklable_objects
+    def _explain_lime(self, explainer, predict_fn, X, label):
         """Get explanation from LIME"""
         
         num_features = len(X)
-        explanation = explainer.explain_instance(X, predict_fn, num_features=num_features)
-        sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
-        contrib = np.array([[val[1] for val in sorted_exp]])[0,:]
-        bias = explanation.intercept[1]
+        explanation = explainer.explain_instance(X, predict_fn, label=label, 
+                                                 num_features=num_features, num_samples=2500)
         
+        if isinstance(explainer, LimeTabularExplainer):
+            sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
+            contrib = np.array([[val[1] for val in sorted_exp]])[0,:]
+            bias = explanation.intercept[1]
+        else:
+            contrib, bias = explanation
+
         return contrib, bias 
     
     
@@ -318,6 +332,8 @@ class LocalExplainer(Attributes):
         """
         Compute the Local Interpretable Model-Agnostic Explanations
         """
+        lime_kws['fast_lime'] = True
+        
         if lime_kws is None:
             raise KeyError('lime_kws is None, but lime_kws must contain training_data!')
         
@@ -325,7 +341,7 @@ class LocalExplainer(Attributes):
         if isinstance(lime_kws['training_data'], pd.DataFrame):
             lime_kws['training_data'] = lime_kws['training_data'].values
         
-        lime_kws['feature_names'] = X.columns
+        lime_kws['feature_names'] = list(X.columns)
         
         # Determine categorical features
         if lime_kws.get('categorical_names', None) is None and lime_kws.get('categorical_features', None) is None:
@@ -341,32 +357,42 @@ class LocalExplainer(Attributes):
         if lime_kws.get('random_state', None) is None:
             lime_kws['random_state'] = 123 
         
-        explainer = LimeTabularExplainer(**lime_kws)
+        if lime_kws['fast_lime']:
+            del lime_kws['fast_lime']
+            lime_kws['feature_names'] = self.feature_names
+            explainer = FastLimeTabularExplainer(**lime_kws)
+        else:
+            del lime_kws['fast_lime']
+            explainer = LimeTabularExplainer(**lime_kws)
         
         if lime_kws['mode'] == 'classification' and hasattr(estimator, 'predict_proba'):
             predict_fn = estimator.predict_proba 
+            label = 1 
         else:
             predict_fn = estimator.predict 
+            label = 0 
         
         n_examples = X.shape[0]
         contributions = np.zeros(X.shape)
         bias = np.zeros((n_examples))
         
         X_values = X.values 
-        parallel = Parallel(n_jobs=self._n_jobs)
-        with tqdm_joblib(tqdm(desc="LIME", total=n_examples)) as progress_bar:
-            results = parallel(delayed(self._explain_lime)(explainer, predict_fn, X_values[i,:]) 
-                   for i in range(n_examples))
+    
+        # With the FAST-Lime code, parallelization is unneccsary. 
+        if self._n_jobs == -1:
+            parallel = Parallel(n_jobs=self._n_jobs, backend='loky')
+            with tqdm_joblib(tqdm(desc="LIME", total=n_examples)) as progress_bar:
+                results = parallel(delayed(self._explain_lime)(explainer, predict_fn, X_values[i,:], label) 
+                       for i in range(n_examples))
        
-        for j, (contrib, b) in enumerate(results):
-            contributions[j,:] = contrib 
-            bias[j] = b
-
-        #for i in range(n_examples):
-        #    explanation = explainer.explain_instance(X.values[i,:], predict_fn, num_features=X.shape[1],)
-        #    sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
-        #    contributions[i,:] = np.array([[val[1] for val in sorted_exp]])[0,:]
-        #    bias[i] = explanation.intercept[1] 
+            for j, (contrib, b) in enumerate(results):
+                contributions[j,:] = contrib 
+                bias[j] = b
+        else:
+            for i in tqdm(range(n_examples), desc='LIME'):
+                contrib, b = self._explain_lime(explainer, predict_fn, X.values[i,:], label)
+                contributions[i,:] = contrib
+                bias[i] = b
         
         return contributions, bias
         
