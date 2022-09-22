@@ -10,7 +10,7 @@ from operator import add
 import traceback
 from copy import copy
 from inspect import currentframe, getframeinfo
-from pandas.core.common import SettingWithCopyError
+##from pandas.core.common import SettingWithCopyError
 from joblib import delayed, Parallel
 
 

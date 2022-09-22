@@ -190,6 +190,19 @@ def to_skexplain_importance(
     """
     Convert the feature ranking-based scores from non-permutation-importance methods
     into a importance dataset for plotting purposes
+    
+    Parameters
+    ---------------
+    importances : array-like 
+    
+    estimator_name : str 
+    
+    feature_names : array-like of shape (n_features)
+    
+    method : 'sage', 'coefs', 'shap_std', 'shap_sum', 'tree_interpreter', 'lime' or str
+    
+    normalize : True/False
+    
     """
 
     bootstrap = False
@@ -201,7 +214,7 @@ def to_skexplain_importance(
     elif method == "shap_std":
         # Compute the std(SHAP)
         importances = np.std(importances, axis=0)
-    elif method == "shap_sum":
+    elif method == "shap_sum" or method == "tree_interpreter" or method == 'lime':
         # Compute sum of abs values
         importances = np.sum(np.absolute(importances), axis=0)
     else:

@@ -3,8 +3,8 @@ import itertools
 from multiprocessing.pool import Pool
 from datetime import datetime
 
-# from tqdm import tqdm
-from tqdm.notebook import tqdm
+from tqdm import tqdm
+#from tqdm.notebook import tqdm
 import traceback
 from collections import ChainMap
 import warnings
@@ -12,11 +12,30 @@ from copy import copy
 
 from joblib._parallel_backends import SafeFunction
 from joblib import delayed, Parallel
+import joblib 
 import time
+import contextlib
 
 # Ignore the warning for joblib to set njobs=1 for
 # models like RandomForest
 warnings.simplefilter("ignore", UserWarning)
+
+@contextlib.contextmanager
+def tqdm_joblib(tqdm_object):
+    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
+        def __call__(self, *args, **kwargs):
+            tqdm_object.update(n=self.batch_size)
+            return super().__call__(*args, **kwargs)
+
+    old_batch_callback = joblib.parallel.BatchCompletionCallBack
+    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
+    try:
+        yield tqdm_object
+    finally:
+        joblib.parallel.BatchCompletionCallBack = old_batch_callback
+        tqdm_object.close()
+
 
 def text_progessbar(seq, total=None):
     step = 1

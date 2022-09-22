@@ -1688,36 +1688,28 @@ class ExplainToolkit(Attributes):
             **kwargs,
         )
 
-    def local_contributions(
-        self,
-        method="shap",
-        performance_based=False,
-        n_samples=100,
-        shap_kwargs=None,
-        lime_kws=None
-    ):
+    def local_contributions(self, **kws):
+        warnings.warn(f'ExplainToolkit.local_contributions is deprecated. Use local_attributions in the future.', 
+                      DeprecationWarning, stacklevel=2)
+        return self.local_attributions(**kws) 
+        
+    def local_attributions(self, method, shap_kws=None, lime_kws=None, n_jobs=1):
         """
-        Computes the individual feature contributions to a predicted outcome for
-        a series of examples either based on tree interpreter (only Tree-based methods)
-        , Shapley Additive Explanations, or Local Interpretable Model-Agnostic Explanations (LIME). 
+        Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_, 
+        Local Interpretable Model Explanations (LIME) or the Tree Interpreter local
+        attributions for a set of examples. 
+        . 
+        By default, we set the SHAP algorithm = ``'auto'``, so that the best algorithm 
+        for a model is determined internally in the SHAP package. 
 
         Parameters
-        -----------
-
-        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'``
-            Can use SHAP, treeinterpreter, or LIME to compute the feature contributions.
+        ------------------
+        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` or list 
+            Can use SHAP, treeinterpreter, or LIME to compute the feature attributions.
             SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
             select decision-tree based estimators in scikit-learn (e.g., random forests). 
-            
-        performance_based : boolean (default=False)
-            If True, will average feature contributions over the best and worst
-            performing of the given X. The number of examples to average over
-            is given by n_samples
-
-        n_samples : interger (default=100)
-            Number of samples to compute average over if performance_based = True
-
-        shap_kwargs : dict
+        
+        shap_kws : dict (default is None)
             Arguments passed to the shap.Explainer object. See
             https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
             for details. The main two arguments supported in skexplain is the masker and
@@ -1730,7 +1722,7 @@ class ExplainToolkit(Attributes):
             - masker
             - algorithm
 
-        lime_kws : dict 
+        lime_kws : dict (default is None)
             Arguments passed to the LimeTabularExplainer object. See https://github.com/marcotcr/lime
             for details. Generally, you'll pass the in the following:
             
@@ -1738,7 +1730,147 @@ class ExplainToolkit(Attributes):
             - categorical_names (scikit-explain will attempt to determine it internally, 
                                  if it is not passed in)
             - random_state (for reproduciability) 
-           
+    
+        n_jobs : float or integer (default=1)
+
+            - if integer, interpreted as the number of processors to use for multiprocessing
+            - if float, interpreted as the fraction of proceesors to use for multiprocessing
+            
+            For treeinterpreter, parallelization is used to process the trees of a random forest 
+            in parallel. For LIME, each example is computed in parallel. We do not apply 
+            parallelization to SHAP as we found it is faster without it. 
+            
+        Returns
+        -------------------
+
+        results : xarray.Dataset
+            A dataset containing shap values [(n_samples, n_features)] for each estimator
+            (e.g., 'shap_values__estimator_name'), the bias ('bias__estimator_name')
+            of shape (n_examples, 1), and the X and y values the shap values were determined from.
+
+        References
+        ------------
+        .. [13] https://christophm.github.io/interpretable-ml-book/shap.html
+        .. [14] Lundberg, S. M., G. G. Erion, and S.-I. Lee, 2018: Consistent Individualized
+                Feature Attribution for Tree Ensembles. Arxiv,.
+        .. [15] Lundberg, S. M., and Coauthors, 2020: From local explanations to global understanding
+                with explainable AI for trees. Nat Mach Intell, 2, 56–67, https://doi.org/10.1038/s42256-019-0138-9.
+
+
+        Examples
+        ---------
+        >>> import skexplain
+        >>> import shap
+        >>> # pre-fit estimators within skexplain
+        >>> estimators = skexplain.load_models()
+        >>> X, _ = skexplain.load_data() # training data
+        >>> X_subset = shap.sample(X, 50, random_state=22)
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators
+        ...                             X=X_subset,)
+        >>> results = explainer.local_attributions(shap_kws={'masker' :
+        ...                          shap.maskers.Partition(X, max_samples=100, clustering="correlation"),
+        ...                          'algorithm' : 'auto'})
+        """
+        dataset = {}
+        include_ys = True
+        if len(self.y) < 1:
+            warnings.warn(
+                """No y values were provided! 
+                          The y values are useful for color-coding in the shap dependence plots."""
+            )
+            include_ys = False
+        
+        if not is_list(method):
+            methods = [method]
+        else:
+            methods = method 
+        
+        correct_names = ["shap", "tree_interpreter", "lime"]
+        r = [[m in correct_names][0] for m in methods]
+        if not all(r):
+            ind = r.index(False)
+            raise ValueError(
+                f"Invalid method ({methods[ind]})! Method must be one of the following: 'shap', 'tree_interpreter', 'lime'"
+            )
+        
+        for estimator_name, estimator in self.estimators.items():
+            for method in methods: 
+            
+                df = self.local_obj._get_feature_contributions(
+                    estimator=estimator,
+                    X=self.X,
+                    shap_kws=shap_kws,
+                    lime_kws=lime_kws, 
+                    n_jobs=n_jobs, 
+                    method = method, 
+                    estimator_output=self.estimator_output
+                )
+            
+                values = df[self.feature_names]
+                bias = df['Bias'] 
+            
+                dataset[f"{method}_values__{estimator_name}"] = (
+                    ["n_examples", "n_features"],
+                    values,
+                )
+                dataset[f"{method}_bias__{estimator_name}"] = (
+                    ["n_examples"],
+                    bias.astype(np.float64),
+                )
+
+        dataset["X"] = (["n_examples", "n_features"], self.X.values)
+
+        # Y may not be given. Need to check!
+        if include_ys:
+            dataset["y"] = (["n_examples"], self.y)
+
+        results_ds = to_xarray(dataset)
+        self.attrs_dict["features"] = self.feature_names
+        self.attrs_dict['method'] = methods
+        results_ds = self._append_attributes(results_ds)
+
+        return results_ds
+        
+    def average_attributions(
+        self,
+        method=None,
+        data=None,
+        performance_based=False,
+        n_samples=100,
+        shap_kws=None, 
+        lime_kws=None,
+        n_jobs=1
+    ):
+        """
+        Computes the individual feature contributions to a predicted outcome for
+        a series of examples either based on tree interpreter (only Tree-based methods)
+        , Shapley Additive Explanations, or Local Interpretable Model-Agnostic Explanations (LIME).
+        
+        The primary difference between average_attributions and local_attributions is the 
+        performance-based determiniation of examples to compute the local attributions from. 
+        average_attributions can start with the full dataset and determine the top n_samples
+        to compute explanations for. 
+
+        Parameters
+        -----------
+        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` (default is None)
+            Can use SHAP, treeinterpreter, or LIME to compute the feature attributions.
+            SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
+            select decision-tree based estimators in scikit-learn (e.g., random forests). 
+
+        data : dataframe or a list of dataframes, shape (n_examples, n_features) (Default is None)
+            Local attribution data for each estimator. 
+            Results from explainer.local_attributions. If None, then the local attributions are computed
+            internally. 
+            
+        performance_based : boolean (default=False)
+            If True, will average feature contributions over the best and worst
+            performing of the given X. The number of examples to average over
+            is given by n_samples
+
+        n_samples : interger (default=100)
+            Number of samples to compute average over if performance_based = True
+
         Returns
         --------
 
@@ -1763,7 +1895,7 @@ class ExplainToolkit(Attributes):
         ...                            )
         >>> # Create a background dataset; randomly sample 100 X
         >>> background_dataset = shap.sample(X, 100)
-        >>> contrib_ds = explainer.local_contributions(method='shap',
+        >>> contrib_ds = explainer.average_contributions(method='shap',
         ...                   background_dataset=background_dataset)
 
         >>> # For the performance-based contributions,
@@ -1772,32 +1904,47 @@ class ExplainToolkit(Attributes):
         ...                             X=X,
         ...                            y=y,
         ...                            )
-        >>> contrib_ds = explainer.local_contributions(method='shap',
+        >>> contrib_ds = explainer.average_contributions(method='shap',
         ...                   background_dataset=background_dataset,
         ...                   performance_based=True, n_samples=100)
 
         """
-        if method not in ["shap", "tree_interpreter", "lime"]:
-            raise ValueError(
-                "Invalid method! Method must be 'shap', 'tree_interpreter', 'lime'"
+        if data is not None:
+            if not is_dataset(data):
+                raise ValueError('Data needs to be a xarray.Dataset from ExplainToolkit.local_attributions.')
+            methods = data.attrs['method']
+        else:
+            if method is None:
+                raise ValueError('Set the method if not providing a Dataset.')
+        
+            if not is_list(method):
+                methods = [method]
+            else:
+                methods = method 
+        
+        results = {}
+        
+        for method in methods: 
+            results_df = self.local_obj._average_attributions(
+                data=data,
+                method=method, 
+                performance_based=performance_based,
+                n_samples=n_samples,
+                shap_kws=shap_kws, 
+                lime_kws=lime_kws,
+                n_jobs=n_jobs
             )
 
-        results_df = self.local_obj._get_local_prediction(
-            method=method,
-            performance_based=performance_based,
-            n_samples=n_samples,
-            shap_kwargs=shap_kwargs,
-            lime_kws=lime_kws,
-        )
+            # Add metadata
+            self.attrs_dict["method"] = method
+            self.attrs_dict["n_samples"] = n_samples
+            self.attrs_dict["performance_based"] = str(performance_based)
+            self.attrs_dict["features"] = self.feature_names
+            results_df = self._append_attributes(results_df)
 
-        # Add metadata
-        self.attrs_dict["method"] = method
-        self.attrs_dict["n_samples"] = n_samples
-        self.attrs_dict["performance_based"] = str(performance_based)
-        self.attrs_dict["feature_names"] = self.feature_names
-        results_df = self._append_attributes(results_df)
-
-        return results_df
+            results[method] = results_df
+            
+        return results
 
     def plot_contributions(
         self,
@@ -1812,8 +1959,11 @@ class ExplainToolkit(Attributes):
 
         Parameters
         ------------
-        contrib : Nested pandas.DataFrame
-            Results of :func:`~ExplainToolkit.local_contributions`
+        contrib : Nested pandas.DataFrame or dict of Nested pandas.DataFrame
+            Results of :func:`~ExplainToolkit.local_attributions` or :func:`~ExplainToolkit.average_attributions`
+            :func:`~ExplainToolkit.local_attributions` returns an xarray.Dataset which can be valid for multiple examples.
+            For plotting, :func:`~ExplainToolkit.average_attributions` is used to average attributions and their 
+            feature values. 
 
         features : string or list of strings (default=None)
 
@@ -1860,19 +2010,27 @@ class ExplainToolkit(Attributes):
 
         .. image :: ../../images/feature_contribution_single.png
         """
+        if is_dataset(contrib):
+            contrib = self.average_attributions(data=contrib, performance_based=False)
+            
+        keys = list(contrib.keys())   
+        
         if estimator_names is None:
-            estimator_names = contrib.attrs["estimators used"]
+            estimator_names = contrib[keys[0]].attrs["estimators used"]
+            
         elif is_str(estimator_names):
             estimator_names = [estimator_names]
 
-        estimator_output = contrib.attrs["estimator_output"]
+        estimator_output = contrib[keys[0]].attrs["estimator_output"]
         if features is None:
-            features = contrib.attrs["feature_names"]
+            features = contrib[keys[0]].attrs["features"]
 
         # initialize a plotting object
         only_one_panel = (
-            contrib.index[0][0] == "non_performance" and len(estimator_names) == 1
+            contrib[keys[0]].index[0][0] == "non_performance" and len(estimator_names) == 1
+            and len(keys) == 1
         )
+        
         base_font_size = kwargs.get("base_font_size", 16 if only_one_panel else 11)
         plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
         kwargs["estimator_output"] = self.estimator_output
@@ -1885,7 +2043,7 @@ class ExplainToolkit(Attributes):
             **kwargs,
         )
 
-    def shap(self, shap_kwargs={"masker": None, "algorithm": "auto"}):
+    def shap(self, shap_kws={"masker": None, "algorithm": "auto"}):
         """
         Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_. 
         By default, we set algorithm = ``'auto'``, so that the best algorithm 
@@ -1893,7 +2051,7 @@ class ExplainToolkit(Attributes):
 
         Parameters
         ------------------
-        shap_kwargs : dict
+        shap_kws : dict
             Arguments passed to the shap.Explainer object. See
             https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
             for details. The main two arguments supported in skexplain is the masker and
@@ -1933,10 +2091,13 @@ class ExplainToolkit(Attributes):
         >>> X_subset = shap.sample(X, 50, random_state=22)
         >>> explainer = skexplain.ExplainToolkit(estimators=estimators
         ...                             X=X_subset,)
-        >>> results = explainer.shap(shap_kwargs={'masker' :
+        >>> results = explainer.shap(shap_kws={'masker' :
         ...                          shap.maskers.Partition(X, max_samples=100, clustering="correlation"),
         ...                          'algorithm' : 'auto'})
         """
+        warnings.warn(f'explainer.shap is deprecated. Use explainer.local_attributions in the future', 
+                      DeprecationWarning, stacklevel=2)
+        
         dataset = {}
         include_ys = True
         if len(self.y) < 1:
@@ -1950,7 +2111,7 @@ class ExplainToolkit(Attributes):
             shap_values, bias = self.local_obj._get_shap_values(
                 estimator=estimator,
                 X=self.X,
-                shap_kwargs=shap_kwargs,
+                shap_kws=shap_kws,
             )
 
             dataset[f"shap_values__{estimator_name}"] = (
@@ -1974,10 +2135,11 @@ class ExplainToolkit(Attributes):
 
         return results_ds
 
-    def plot_shap(
+    def scatter_plot(
         self,
-        shap_values,
+        dataset, 
         estimator_name,
+        method=None,
         plot_type="summary",
         features=None,
         display_feature_names={},
@@ -1995,9 +2157,17 @@ class ExplainToolkit(Attributes):
             if 'summary', plots a feature importance-style plot
             if 'dependence', plots a partial depedence style plot
 
-        shap_values : array of shape (n_samples, n_features)
-
-            SHAP values
+        dataset : xarray.Dataset
+            Results from :func:`~ExplainToolkit.local_attributions`. 
+            Dataset containing feature attribution values, their biases, and 
+            the input feature values. 
+            
+        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` (default is None)
+            Can use SHAP, treeinterpreter, or LIME to compute the feature attributions.
+            SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
+            select decision-tree based estimators in scikit-learn (e.g., random forests). 
+            If None, method is determine from the values Dataset. Otherwise, an 
+            error is raised. 
 
         features : string or list of strings (default=None)
             features to plots if plot_type is 'dependence'.
@@ -2048,52 +2218,42 @@ class ExplainToolkit(Attributes):
         .. image :: ../../images/shap_dependence.png
 
         """
+        if method is not None:
+            if is_list(method):
+                methods = method
+            else:
+                methods = [method]
+        else:
+            methods = dataset.attrs['method']
+            
+        X = pd.DataFrame(dataset['X'].values, columns=dataset.attrs['features'])
+        
+        if plot_type == 'summary' and len(methods) > 1:
+            raise ValueError('At the moment, summary plots can only handle one method') 
+        elif plot_type == 'summary':
+            dataset = dataset[f'{methods[0]}_values__{estimator_name}'].values
+        
         if plot_type not in ["summary", "dependence"]:
             raise ValueError("Invalid plot_type! Must be 'summary' or 'dependence'")
-
-        if isinstance(shap_values, xr.Dataset):
-            key = f"shap_values__{estimator_name}"
-            if key not in shap_values.data_vars:
-                raise KeyError(
-                    f"""{key} is not an available variable for this dataset! 
-                                Check that SHAP values were compute for estimator : {estimator_name}
-                                """
-                )
-
-            shap_values = shap_values[f"shap_values__{estimator_name}"].values
-        else:
-            if np.ndim(shap_values) != 2:
-                raise ValueError("shap_values must be 2D array-like data!")
-
-        to_probability = False
-        if self.estimator_output == "probability":
-            to_probability = kwargs.get("to_probability", None)
-            if to_probability is None:
-                to_probability = True        
-                
-        ###to_probability = True if self.estimator_output == 'probability' else False
-        if to_probability:
-            shap_values_copy = np.copy(shap_values)
-            shap_values_copy *= 100.0
-        else:
-            shap_values_copy = shap_values
 
         # initialize a plotting object
         if plot_type == "summary":
             fontsize = 12
         else:
             fontsize = 12 if len(features) <= 6 else 16
-
+            
         base_font_size = kwargs.get("base_font_size", fontsize)
         plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
         plot_obj.feature_names = self.feature_names
-        plot_obj.plot_shap(
-            shap_values=shap_values_copy,
-            X=self.X,
+        plot_obj.scatter_plot(
+            attr_values=dataset,
+            X=X,
             features=features,
             plot_type=plot_type,
             display_feature_names=display_feature_names,
             display_units=display_units,
+            estimator_name=estimator_name,
+            methods=methods, 
             **kwargs,
         )
 
