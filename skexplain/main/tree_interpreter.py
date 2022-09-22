@@ -1,16 +1,19 @@
 import numpy as np
 import sklearn
+from multiprocessing.pool import Pool
 
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, _tree
 from distutils.version import LooseVersion
+
+from tqdm import tqdm
 
 if LooseVersion(sklearn.__version__) < LooseVersion("0.17"):
     raise Exception("treeinterpreter requires scikit-learn 0.17 or later")
 
 
 class TreeInterpreter:
-    def __init__(self, model, examples, joint_contribution=False):
+    def __init__(self, model, examples, joint_contribution=False, n_jobs=1):
         """
         Parameters
         ----------
@@ -31,7 +34,8 @@ class TreeInterpreter:
         self._model = model
         self._examples = examples
         self._joint_contribution = joint_contribution
-
+        self._n_jobs = n_jobs
+        
     def _get_tree_paths(self, tree, node_id, depth=0):
         """
         Returns all paths through the tree as list of node_ids
@@ -178,13 +182,24 @@ class TreeInterpreter:
             )
 
         else:
-            for tree in self._model.estimators_:
-                pred, bias, contribution = self.predict_tree(tree)
+            
+            if self._n_jobs > 1:
+                pool = Pool(processes=self._n_jobs)
+                # iterates return values from the issued tasks
+                iterator = self._model.estimators_
+                for pred, bias, contribution in tqdm(pool.map(self.predict_tree, iterator), desc='Tree'):  
+                    biases.append(bias)
+                    contributions.append(contribution)
+                    predictions.append(pred)
+            
+            else:            
+                for tree in tqdm(self._model.estimators_, desc='Tree'):
+                    pred, bias, contribution = self.predict_tree(tree)
 
-                biases.append(bias)
-                contributions.append(contribution)
-                predictions.append(pred)
-
+                    biases.append(bias)
+                    contributions.append(contribution)
+                    predictions.append(pred)
+  
             return (
                 np.mean(predictions, axis=0),
                 np.mean(biases, axis=0),
