@@ -27,6 +27,8 @@ class PlotImportance(PlotStructure):
         "sage",
         "grouped",
         "grouped_only",
+        "lime",
+        "tree_interpreter",
     ]
 
     DISPLAY_NAMES_DICT = {
@@ -267,9 +269,11 @@ class PlotImportance(PlotStructure):
 
             # Put the variable names _into_ the plot
             if method not in self.SINGLE_VAR_METHODS and plot_correlated_features:
-                results_dict = is_correlated(
-                    corr_matrix, sorted_var_names, rho_threshold=rho_threshold
-                )
+                pass
+                # This is code is not flexible at the moment.
+                #results_dict = is_correlated(
+                #    corr_matrix, sorted_var_names, rho_threshold=rho_threshold
+                #)
 
             if colinear_features is None:
                 fontweight = ["light"] * len(variable_names_to_plot)
