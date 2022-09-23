@@ -2587,9 +2587,14 @@ class ExplainToolkit(Attributes):
                 setattr(s, "estimator_output", results.attrs["estimator_output"])
                 estimator_names = [results.attrs["estimators used"]]
             except:
-                setattr(s, "estimator_output", results.attrs["model_output"])
-                estimator_names = [results.attrs["models used"]]
-
+               
+                try:
+                    setattr(s, "estimator output", results.attrs["estimator output"])
+                    estimator_names = [results.attrs["estimators used"]]
+                except:
+                    setattr(s, "estimator_output", results.attrs["model_output"])
+                    estimator_names = [results.attrs["models used"]]
+                    
             if not is_list(estimator_names):
                 estimator_names = [estimator_names]
 
