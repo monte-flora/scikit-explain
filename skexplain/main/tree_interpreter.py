@@ -192,6 +192,9 @@ class TreeInterpreter:
                     contributions.append(contribution)
                     predictions.append(pred)
             
+                pool.close()
+                pool.join()
+            
             else:            
                 for tree in tqdm(self._model.estimators_, desc='Tree'):
                     pred, bias, contribution = self.predict_tree(tree)
