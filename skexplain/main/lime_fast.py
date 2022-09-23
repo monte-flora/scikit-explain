@@ -158,6 +158,11 @@ class FastLimeTabularExplainer(BaseTabularExplainer):
 
         # Get model predictions (i.e. groundtruth)
         model_pred = predict_fn(data_synthetic_original)
+        
+        # For classification tasks.
+        if np.ndim(model_pred)==2:
+            model_pred=model_pred[:,label]
+
 
         # Get distances between original sample and neighbors
         if self.numerical_features:
@@ -174,7 +179,7 @@ class FastLimeTabularExplainer(BaseTabularExplainer):
         data_synthetic_onehot = OneHotEncoder().fit_transform(data_synthetic_disc)
 
         # Solve
-        tup = (data_synthetic_onehot, model_pred[:, label], weights)
+        tup = (data_synthetic_onehot, model_pred, weights)
         importances, bias = ridge_solve(tup)
         #print(importances.shape, bias.shape)
         
