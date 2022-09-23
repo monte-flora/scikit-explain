@@ -2043,7 +2043,7 @@ class ExplainToolkit(Attributes):
             **kwargs,
         )
 
-    def shap(self, shap_kws={"masker": None, "algorithm": "auto"}):
+    def shap(self, shap_kws={"masker": None, "algorithm": "auto"}, shap_kwargs=None):
         """
         Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_. 
         By default, we set algorithm = ``'auto'``, so that the best algorithm 
@@ -2097,6 +2097,8 @@ class ExplainToolkit(Attributes):
         """
         warnings.warn(f'explainer.shap is deprecated. Use explainer.local_attributions in the future', 
                       DeprecationWarning, stacklevel=2)
+        
+        shap_kwargs=shap_kws
         
         dataset = {}
         include_ys = True

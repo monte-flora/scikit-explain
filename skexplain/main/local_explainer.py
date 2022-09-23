@@ -315,15 +315,15 @@ class LocalExplainer(Attributes):
         """Get explanation from LIME"""
         
         num_features = len(X)
-        explanation = explainer.explain_instance(X, predict_fn, label=label, 
+        contrib, bias = explainer.explain_instance(X, predict_fn, label=label, 
                                                  num_features=num_features, num_samples=2500)
         
-        if isinstance(explainer, LimeTabularExplainer):
-            sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
-            contrib = np.array([[val[1] for val in sorted_exp]])[0,:]
-            bias = explanation.intercept[1]
-        else:
-            contrib, bias = explanation
+        #if isinstance(explainer, LimeTabularExplainer):
+        #    sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
+        #    contrib = np.array([[val[1] for val in sorted_exp]])[0,:]
+        #    bias = explanation.intercept[1]
+        #else:
+        #contrib, bias = explanation
 
         return contrib, bias 
     
@@ -426,10 +426,6 @@ class LocalExplainer(Attributes):
 
         n_samples = len(X)
         columns = self.feature_names + ["Bias"]
-
-        if self.estimator_output == "probability":
-            contributions *= 100.0
-            bias *= 100.
 
         # A single example.
         if isinstance(bias, float):
