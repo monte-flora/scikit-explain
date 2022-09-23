@@ -26,6 +26,6 @@ jobs:
     
     - name: Run the test scripts 
       run: |
-        pytest -s tests/test* --cov=./ --cov-report=xml
+        python -m pytest tests/test* --cov=./ --cov-report=xml
     
 
