@@ -120,8 +120,8 @@ class TestMultiExampleContributions(unittest.TestCase, TestRF):
             X=X_sub, y=self.y_sub
         )
 
-        self.results = self.explainer.shap(
-            shap_kwargs={
+        self.results = self.explainer.local_attributions('shap',
+            shap_kws={
                 "masker": shap.maskers.Partition(
                     self.X, max_samples=100, clustering="correlation"
                 ),
