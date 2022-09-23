@@ -162,7 +162,6 @@ class model_scorer(object):
             else:
                 return np.full((self.n_permute,), self.default_score)
     
-    
     def get_permuted_data(self, idx, var_idx):
         """ Get permuted data """
         X_score_sub = self.X_score
