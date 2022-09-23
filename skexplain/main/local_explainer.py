@@ -13,7 +13,7 @@ from joblib.externals.loky import set_loky_pickler
 import os
 os.environ['JOBLIB_TEMP_FOLDER'] = '/tmp'
 
-from lime.lime_tabular import LimeTabularExplainer
+###from lime.lime_tabular import LimeTabularExplainer
 from .lime_fast import FastLimeTabularExplainer
 
 from ..common.attributes import Attributes
