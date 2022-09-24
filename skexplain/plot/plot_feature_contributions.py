@@ -639,7 +639,8 @@ class PlotFeatureContributions(PlotStructure):
         Plot SHAP-style summary or dependence plot.
 
         """
-        
+        max_display = kwargs.get('max_display', 10) 
+        alpha = kwargs.get('alpha', 0.8) 
         
         if len(methods)>1:
             interaction_index=None
@@ -655,17 +656,22 @@ class PlotFeatureContributions(PlotStructure):
         ]
 
         if plot_type == "summary":
-            shap.summary_plot(
-                attr_values,
-                features=X,
-                feature_names=display_feature_names_list,
-                max_display=15,
-                plot_type="dot",
-                alpha=1,
-                show=False,
-                sort=True,
+            f, ax = plt.subplots(dpi=300)
+            explain_obj = shap._explanation.Explanation(values = attr_values, 
+                                            feature_names = display_feature_names_list,
+                                            data=X,                  
+                                           )
+            
+            shap.plots.beeswarm(
+                explain_obj,
+                max_display=max_display,
+                show=False, 
+                alpha=alpha,
             )
 
+            plt.gcf().axes[-1].set_aspect(100)
+            plt.gcf().axes[-1].set_box_aspect(100)
+            
         elif plot_type == "dependence":
             # Set up the font sizes for matplotlib
             self.display_feature_names = display_feature_names
