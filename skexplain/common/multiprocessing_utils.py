@@ -153,7 +153,7 @@ def run_parallel(
 
     if n_jobs > mp.cpu_count():
         print(f"User requested {n_jobs} processors, but system only has {mp.cpu_count()}! Setting n_jobs to CPU count.")
-        n_jobs = np.cpu_count()
+        n_jobs = mp.cpu_count()
         
         
     pool = Pool(processes=n_jobs)
