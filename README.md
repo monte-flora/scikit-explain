@@ -54,8 +54,9 @@ If you are experiencing issues with loading the tutorial jupyter notebooks, you 
 
 ## Install
 
-scikit-explain can be installed through pip, but we are working on uploading to conda-forge. 
+scikit-explain can be installed through conda-forge or pip. 
 ```
+conda install -c conda-forge scikit-explain
 pip install scikit-explain
 ```
 
