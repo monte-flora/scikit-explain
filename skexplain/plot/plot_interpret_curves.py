@@ -107,7 +107,7 @@ class PlotInterpretCurves(PlotStructure):
             xdata = data[f"{feature}__bin_values"].values
             if add_hist:
                 hist_data = data[f"{feature}"].values
-
+              
                 # add histogram
                 hist_ax = self.make_twin_ax(lineplt_ax)
                 twin_yaxis_label = self.add_histogram_axis(
@@ -119,7 +119,7 @@ class PlotInterpretCurves(PlotStructure):
                     **kwargs,
                 )
                 hist_ax.grid(False)
-
+                
             for i, model_name in enumerate(estimator_names):
                 if ice_curves:
                     kwargs["color_by"] = color_by
@@ -178,7 +178,7 @@ class PlotInterpretCurves(PlotStructure):
                 #)
    
         majoraxis_fontsize = self.FONT_SIZES["teensie"]
-        if fig is not None and add_hist:
+        if fig is not None and add_hist and not using_internal_ax:
             major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=None,
@@ -187,7 +187,6 @@ class PlotInterpretCurves(PlotStructure):
                 **kwargs,
             )
 
-        
         if not only_one_estimator and fig is not None and not using_internal_ax:
             self.set_legend(n_panels, fig, lineplt_ax, major_ax)
 
@@ -284,6 +283,12 @@ class PlotInterpretCurves(PlotStructure):
             zorder=1,
         )
 
+        # We want to set the X-limit as the 
+        # resulting histogram is not concurrent
+        # with the feature effect curves 
+        # and could plot extra regions. 
+        ax.set_xlim([min_value, max_value])
+        
         if density:
             return "Relative Frequency"
         else:

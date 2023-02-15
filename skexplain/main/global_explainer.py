@@ -1218,11 +1218,13 @@ class GlobalExplainer(Attributes):
         ale = []
 
         # for each bootstrap set
-        for k, idx in enumerate(bootstrap_indices):
-            X = self.X.iloc[idx, :].reset_index(drop=True)
+        for k, idx in enumerate(bootstrap_indices):            
+            X = self.X.iloc[idx, :]
+            X.reset_index(drop=True, inplace=True)
+            X = X.copy()
 
             if (X[feature].dtype.name != "category") or (not X[feature].cat.ordered):
-                X[feature] = X[feature].astype(str)
+                X[feature] = X[feature].astype("string")
                 groups_order = order_groups(X, feature)
                 groups = groups_order.index.values
                 X[feature] = X[feature].astype(
@@ -1339,7 +1341,7 @@ class GlobalExplainer(Attributes):
 
             res_df = delta_df.groupby([feature]).mean()
             res_df.loc[:, "ale"] = res_df.loc[:, "eff"].cumsum()
-
+            
             res_df.loc[groups[0]] = 0
             # sort the index (which is at this point an ordered categorical) as a safety measure
             res_df = res_df.sort_index()
