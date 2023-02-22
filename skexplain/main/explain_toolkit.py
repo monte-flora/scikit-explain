@@ -545,6 +545,7 @@ class ExplainToolkit(Attributes):
             perm_method=perm_method,
             n_permute=n_permute,
             groups=groups,
+            scoring_strategy=scoring_strategy,
             sample_size=sample_size,
             subsample=subsample,
             clustering_kwargs=clustering_kwargs,
@@ -553,6 +554,9 @@ class ExplainToolkit(Attributes):
 
         for k, v in groups.items():
             self.attrs_dict[k] = list(v)
+
+        if not is_str(evaluation_fn):
+            evaluation_fn = evaluation_fn.__name__
 
         self.attrs_dict["method"] = "grouped_permutation_importance"
         self.attrs_dict["perm_method"] = perm_method
@@ -1137,6 +1141,7 @@ class ExplainToolkit(Attributes):
         subsample=1.0,
         n_bootstrap=1,
         random_seed=42,
+        class_index=1, 
     ):
         """
         Compute the 1D or 2D centered accumulated local effects (ALE) [9]_ [10]_.
@@ -1219,6 +1224,7 @@ class ExplainToolkit(Attributes):
             subsample=subsample,
             n_bootstrap=n_bootstrap,
             random_seed=random_seed,
+            class_index=class_index, 
         )
 
         dimension = "2D" if isinstance(list(features)[0], tuple) else "1D"
@@ -2406,14 +2412,15 @@ class ExplainToolkit(Attributes):
             setattr(s, "estimators used", estimator_names)
 
             # in the case of shap_values.
-            if "X" in results.data_vars:
-                feature_names = results.attrs["features"]
-                X = pd.DataFrame(results["X"].values, columns=feature_names)
-                setattr(s, "X", X)
-                setattr(s, "feature_names", feature_names)
+            if dtype == 'dataset':
+              if "X" in results.data_vars:
+                  feature_names = results.attrs["features"]
+                  X = pd.DataFrame(results["X"].values, columns=feature_names)
+                  setattr(s, "X", X)
+                  setattr(s, "feature_names", feature_names)
 
-            if "y" in results.data_vars:
-                setattr(s, "y", results["y"])
+              if "y" in results.data_vars:
+                  setattr(s, "y", results["y"])
 
         return results
 

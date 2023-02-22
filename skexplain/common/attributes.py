@@ -47,12 +47,12 @@ class Attributes:
             ), "Number of estimator objects is not equal to the number of estimator names given!"
 
         # Check that the estimator objects have been fit!
-        if not estimator_is_none:
+        '''if not estimator_is_none:
             if not all([is_fitted(m) for m in estimator_objs]):
                 raise ValueError(
                     "One or more of the estimators given has NOT been fit!"
                 )
-
+        '''
         # Create a dictionary from the estimator_objs and estimator_names.
         # Then set the attributes.
         self.estimators = OrderedDict(

@@ -18,7 +18,42 @@ from .error_handling import (
 )
 
 
-__all__ = ["gerrity_score", "peirce_skill_score", "heidke_skill_score"]
+__all__ = ["RPSS", "gerrity_score", "peirce_skill_score", "heidke_skill_score"]
+
+
+def RPS(y_true, y_pred):
+
+  try:
+    y_true = y_true[:,0]
+  except:
+    pass
+  num_samples = y_pred.shape[0]
+  num_classes = y_pred.shape[1]
+  y_true2 = np.zeros(y_pred.shape)
+  for n in range(num_classes):
+    y_true2[:,n] = np.where((y_true==n), 1, 0)
+
+  RPS = np.sum( np.sum( (np.cumsum(y_pred, axis=1) - np.cumsum(y_true2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+
+  return RPS
+
+def RPSS(y_true, y_pred):
+
+  y_true = y_true[:,0]
+  num_samples = y_pred.shape[0]
+  num_classes = y_pred.shape[1]
+  y_true2 = np.zeros(y_pred.shape); y_clim = np.zeros(y_pred.shape)
+  for n in range(num_classes):
+    y_true2[:,n] = np.where((y_true==n), 1, 0)
+    y_clim[:,n] = len(y_true[y_true==n])/len(y_true)
+
+  RPS = np.sum( np.sum( (np.cumsum(y_pred, axis=1) - np.cumsum(y_true2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+
+  RPS_climo = np.sum( np.sum( (np.cumsum(y_clim, axis=1) - np.cumsum(y_true2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+
+  RPSS = 1 - RPS / RPS_climo
+
+  return RPSS
 
 
 def gerrity_score(truths, predictions, classes=None):

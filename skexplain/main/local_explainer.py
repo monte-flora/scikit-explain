@@ -104,7 +104,7 @@ class LocalExplainer(Attributes):
         performance_based=True,
         n_samples=100,
         shap_kwargs=None,
-        lime_kws=None, 
+        lime_kws=None,
     ):
         """
         Explain individual predictions using SHAP (SHapley Additive exPlanations;
@@ -166,6 +166,8 @@ class LocalExplainer(Attributes):
             estimator_name: {} for estimator_name in self.estimator_names
         }
 
+        class_idx = shap_kwargs.get("class_idx", 1)
+
         for estimator_name, estimator in self.estimators.items():
             # create entry for current estimator
             # self.contributions_dict[estimator_name] = {}
@@ -177,6 +179,7 @@ class LocalExplainer(Attributes):
                     y=self.y,
                     n_samples=n_samples,
                     estimator_output=self.estimator_output,
+                    class_idx = class_idx,
                 )
 
                 for key, indices in performance_dict.items():
@@ -226,6 +229,7 @@ class LocalExplainer(Attributes):
         """
         masker = shap_kwargs.get("masker", None)
         algorithm = shap_kwargs.get("algorithm", "auto")
+        class_idx = shap_kwargs.get('class_idx', 1)
 
         if masker is None:
             raise ValueError(
@@ -250,7 +254,7 @@ class LocalExplainer(Attributes):
         shap_results = explainer(X)
 
         if self.estimator_output == "probability":
-            shap_results = shap_results[..., 1]
+            shap_results = shap_results[..., class_idx]
 
         contributions = shap_results.values
         bias = shap_results.base_values

@@ -3,7 +3,7 @@ import pandas as pd
 import pickle
 from collections import ChainMap
 
-from .utils import is_list, is_all_dict
+from .utils import is_list, is_all_dict, flatten_nested_list
 
 
 def load_pickle(fnames):
@@ -86,7 +86,6 @@ def save_netcdf(fname, ds, complevel=5):
     ds.to_netcdf(path=fname, encoding=encoding)
     ds.close()
     del ds
-
 
 def save_dataframe(
     fname,

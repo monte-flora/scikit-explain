@@ -73,7 +73,7 @@ def permutation_importance(
 
     else:
         raise ValueError(f'method must be "conditional", "forward", or "backward"!')
-
+    print (scoring_data[0].shape, scoring_data[1].shape)
     # We don't need the training data, so pass empty arrays to the abstract runner
     if scoring_data is None:
         raise ValueError("Must declare scoring data!")
@@ -143,7 +143,8 @@ def sklearn_permutation_importance(
     """
     # Check if the data is probabilistic
     # if len(scoring_data[1].shape) > 1 and scoring_data[1].shape[1] > 1:
-    if len(np.unique(scoring_data[1])) == 2:
+
+    if len(np.unique(scoring_data[1])) >= 2:
         scoring_fn = score_trained_sklearn_model_with_probabilities(
             model,
             evaluation_fn,
