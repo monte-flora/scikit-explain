@@ -1288,7 +1288,7 @@ class GlobalExplainer(Attributes):
 
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat_plus = estimator.predict_proba(X_plus_coded)[:, 1]
+                    y_hat_plus = estimator.predict_proba(X_plus_coded)[:, class_index]
                 else:
                     y_hat_plus = estimator.predict(X_plus_coded)
 
