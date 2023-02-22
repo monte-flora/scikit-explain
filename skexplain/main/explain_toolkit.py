@@ -1665,8 +1665,8 @@ class ExplainToolkit(Attributes):
         method="shap",
         performance_based=False,
         n_samples=100,
-        shap_kwargs=None,
-        lime_kws=None
+        shap_kwargs={},#None,
+        lime_kws={},#None
     ):
         """
         Computes the individual feature contributions to a predicted outcome for

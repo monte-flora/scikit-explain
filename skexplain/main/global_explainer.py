@@ -434,6 +434,7 @@ class GlobalExplainer(Attributes):
                 [subsample],
                 [n_bootstrap],
                 [feature_encoder],
+                [class_index],
             )
 
             total = len(cat_features) * len(self.estimator_names)
@@ -1156,8 +1157,8 @@ class GlobalExplainer(Attributes):
         feature,
         subsample=1.0,
         n_bootstrap=1,
-        class_index=1, 
         feature_encoder=None,
+        class_index=1,
     ):
         """
         Computes first-order ALE function on a single categorical feature.
