@@ -1328,6 +1328,8 @@ class GlobalExplainer(Attributes):
             Delta_neg = y_hat[ind_neg] - y_hat_neg
 
             # compute the mean of the difference per group
+            print (feature_codes[ind_plus] + 1)
+            print (groups)
             delta_df = pd.concat(
                 [
                     pd.DataFrame(
