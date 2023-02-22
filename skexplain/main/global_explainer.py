@@ -776,7 +776,6 @@ class GlobalExplainer(Attributes):
             results : nested dictionary
 
         """
-        ##print(f'{class_index=}')
         
         estimator = self.estimators[estimator_name]
         # check to make sure feature is valid
@@ -2130,7 +2129,7 @@ class GlobalExplainer(Attributes):
 
     def scorer(self, estimator, X, y, evaluation_fn):
         if hasattr(estimator, 'predict_proba'):
-            prediction = estimator.predict_proba(X)#[:, 1]
+            prediction = estimator.predict_proba(X)
             if prediction.shape[1] == 2:
               prediction = prediction[:, 1]
         elif hasattr(estimator, 'predict'):

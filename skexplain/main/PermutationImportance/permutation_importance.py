@@ -73,7 +73,6 @@ def permutation_importance(
 
     else:
         raise ValueError(f'method must be "conditional", "forward", or "backward"!')
-    print (scoring_data[0].shape, scoring_data[1].shape)
     # We don't need the training data, so pass empty arrays to the abstract runner
     if scoring_data is None:
         raise ValueError("Must declare scoring data!")

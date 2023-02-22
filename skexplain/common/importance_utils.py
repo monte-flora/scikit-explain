@@ -362,7 +362,7 @@ def all_permuted_score(estimator, X, y, evaluation_fn, n_permute, subsample, ran
         X_permuted = np.array([ X_sampled[inds, i] for i in range(X.shape[1])]).T
     
         if hasattr(estimator, 'predict_proba'):
-            predictions = estimator.predict_proba(X_permuted)[:]#,1]
+            predictions = estimator.predict_proba(X_permuted)[:]
             #print (predictions.shape)
         elif hasattr(estimator, 'predict'):
             predictions = estimator.predict(X_permuted)[:]

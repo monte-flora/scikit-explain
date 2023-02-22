@@ -142,7 +142,7 @@ class model_scorer(object):
 
     def _scorer(self, X, y):
         predictions = self.prediction_fn(self.model, X)
-        return self.evaluation_fn(y,predictions)#, labels=list(set(list(predictions))))
+        return self.evaluation_fn(y,predictions)
     
     def get_subsample_size(self, full_size):
         return (
@@ -309,7 +309,6 @@ def score_trained_sklearn_model(
     :returns: a callable which accepts ``(training_data, scoring_data)`` and
         returns some value (probably a float or an array of floats)
     """
-    print ('BBBBBBBBBBBBBB')
     return model_scorer(
         model,
         training_fn=get_model,
