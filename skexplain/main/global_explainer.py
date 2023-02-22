@@ -1330,6 +1330,7 @@ class GlobalExplainer(Attributes):
             # compute the mean of the difference per group
             print (feature_codes[ind_plus] + 1)
             print (groups)
+            print (groups[feature_codes[ind_plus] + 1])
             delta_df = pd.concat(
                 [
                     pd.DataFrame(
