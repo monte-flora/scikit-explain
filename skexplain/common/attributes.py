@@ -48,6 +48,7 @@ class Attributes:
             ), "Number of estimator objects is not equal to the number of estimator names given!"
 
         # Check that the estimator objects have been fit!
+
         #if not estimator_is_none:
         #    for m in estimator_objs:
         #        check_is_fitted(m)

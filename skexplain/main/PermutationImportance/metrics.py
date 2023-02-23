@@ -18,7 +18,54 @@ from .error_handling import (
 )
 
 
-__all__ = ["gerrity_score", "peirce_skill_score", "heidke_skill_score"]
+__all__ = ["RPSS", "gerrity_score", "peirce_skill_score", "heidke_skill_score"]
+
+
+def RPS(truths, predictions):
+    """Computes the Ranked Probability Score
+
+    :param truths: The true labels of these data
+    :param predictions: The predictions of the model
+    :returns: a single value for the Ranked Probability Score
+    """
+
+    try:
+      truths = truths[:,0]
+    except:
+      pass
+    num_samples = predictions.shape[0]
+    num_classes = predictions.shape[1]
+    truths2 = np.zeros(predictions.shape)
+    for n in range(num_classes):
+      truths2[:,n] = np.where((truths==n), 1, 0)
+
+    RPS = np.sum( np.sum( (np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+
+    return RPS
+
+def RPSS(truths, predictions):
+    """Computes the Ranked Probability Skill Score
+
+    :param truths: The true labels of these data
+    :param predictions: The predictions of the model
+    :returns: a single value for the Ranked Probability Skill Score
+    """
+
+    truths = truths[:,0]
+    num_samples = predictions.shape[0]
+    num_classes = predictions.shape[1]
+    truths2 = np.zeros(predictions.shape); y_clim = np.zeros(predictions.shape)
+    for n in range(num_classes):
+      truths2[:,n] = np.where((truths==n), 1, 0)
+      y_clim[:,n] = len(truths[truths==n])/len(truths)
+
+    RPS = np.sum( np.sum( (np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+
+    RPS_climo = np.sum( np.sum( (np.cumsum(y_clim, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+
+    RPSS = 1 - RPS / RPS_climo
+
+    return RPSS
 
 
 def gerrity_score(truths, predictions, classes=None):

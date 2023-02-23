@@ -11,6 +11,7 @@ import traceback
 from copy import copy
 from inspect import currentframe, getframeinfo
 ##from pandas.core.common import SettingWithCopyError
+
 from joblib import delayed, Parallel
 
 
@@ -335,6 +336,7 @@ class GlobalExplainer(Attributes):
         n_bootstrap=1,
         feature_encoder=None,
         random_seed=42,
+        class_index=1, 
     ):
 
         """
@@ -407,6 +409,7 @@ class GlobalExplainer(Attributes):
                 [n_bins],
                 [subsample],
                 [n_bootstrap],
+                [class_index], 
             )
 
             total = len(features) * len(self.estimator_names)
@@ -432,6 +435,7 @@ class GlobalExplainer(Attributes):
                 [subsample],
                 [n_bootstrap],
                 [feature_encoder],
+                [class_index],
             )
 
             total = len(cat_features) * len(self.estimator_names)
@@ -515,6 +519,7 @@ class GlobalExplainer(Attributes):
         n_bins=30,
         subsample=1.0,
         n_bootstrap=1,
+        class_index=1,
     ):
         """
         Compute the Individual Conditional Expectations (see https://christophm.github.io/interpretable-ml-book/ice.html)
@@ -590,7 +595,7 @@ class GlobalExplainer(Attributes):
             # Binary classification, shape is (2, n_points).
             # we output the effect of **positive** class
             # and convert to percentages
-            ice_values = ice_values[1]
+            ice_values = ice_values[class_index]
 
         # center the ICE plots
         ice_values -= np.mean(ice_values, axis=1).reshape(len(ice_values), 1)
@@ -613,7 +618,7 @@ class GlobalExplainer(Attributes):
         return results
 
     def compute_partial_dependence(
-        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
+        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1, class_index=1, 
     ):
 
         """
@@ -713,7 +718,7 @@ class GlobalExplainer(Attributes):
                 # Binary classification, shape is (2, n_points).
                 # we output the effect of **positive** class
                 # and convert to percentages
-                averaged_predictions = averaged_predictions[1]
+                averaged_predictions = averaged_predictions[class_index]
 
             # Center the predictions
             averaged_predictions -= np.mean(averaged_predictions)
@@ -739,7 +744,7 @@ class GlobalExplainer(Attributes):
         return results
 
     def compute_first_order_ale(
-        self, estimator_name, feature, n_bins=30, subsample=1.0, n_bootstrap=1
+        self, estimator_name, feature, n_bins=30, subsample=1.0, n_bootstrap=1, class_index=1
     ):
         """
         Computes first-order ALE function on single continuous feature data.
@@ -773,6 +778,7 @@ class GlobalExplainer(Attributes):
             results : nested dictionary
 
         """
+        
         estimator = self.estimators[estimator_name]
         # check to make sure feature is valid
         if feature not in self.feature_names:
@@ -837,7 +843,7 @@ class GlobalExplainer(Attributes):
                 X_temp = X.copy()
                 X_temp[feature] = bin_edges[indices + offset]
                 if self.estimator_output == "probability":
-                    predictions.append(estimator.predict_proba(X_temp.values)[:, 1])
+                    predictions.append(estimator.predict_proba(X_temp.values)[:, class_index])
                 elif self.estimator_output == "raw":
                     predictions.append(estimator.predict(X_temp.values))
 
@@ -889,7 +895,7 @@ class GlobalExplainer(Attributes):
         return 0.5 * (x[1:] + x[:-1])
 
     def compute_second_order_ale(
-        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1
+        self, estimator_name, features, n_bins=30, subsample=1.0, n_bootstrap=1, class_index=1, 
     ):
         """
         Computes second-order ALE function on two continuous features data.
@@ -996,7 +1002,7 @@ class GlobalExplainer(Attributes):
                     X_temp[features[i]] = bin_edges[i][indices_list[i] + shifts[i]]
 
                 if self.estimator_output == "probability":
-                    predictions[shifts] = estimator.predict_proba(X_temp.values)[:, 1]
+                    predictions[shifts] = estimator.predict_proba(X_temp.values)[:, class_index]
                 elif self.estimator_output == "raw":
                     predictions[shifts] = estimator.predict(X_temp.values)
 
@@ -1153,6 +1159,7 @@ class GlobalExplainer(Attributes):
         subsample=1.0,
         n_bootstrap=1,
         feature_encoder=None,
+        class_index=1,
     ):
         """
         Computes first-order ALE function on a single categorical feature.
@@ -1266,7 +1273,7 @@ class GlobalExplainer(Attributes):
 
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat = estimator.predict_proba(X_coded)[:, 1]
+                    y_hat = estimator.predict_proba(X_coded)[:, class_index]
                 else:
                     y_hat = estimator.predict(X_coded)
 
@@ -1285,7 +1292,7 @@ class GlobalExplainer(Attributes):
 
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat_plus = estimator.predict_proba(X_plus_coded)[:, 1]
+                    y_hat_plus = estimator.predict_proba(X_plus_coded)[:, class_index]
                 else:
                     y_hat_plus = estimator.predict(X_plus_coded)
 
@@ -1304,7 +1311,7 @@ class GlobalExplainer(Attributes):
 
                 # predict
                 if self.estimator_output == "probability":
-                    y_hat_neg = estimator.predict_proba(X_neg_coded)[:, 1]
+                    y_hat_neg = estimator.predict_proba(X_neg_coded)[:, class_index]
                 else:
                     y_hat_neg = estimator.predict(X_neg_coded)
 
@@ -1325,6 +1332,9 @@ class GlobalExplainer(Attributes):
             Delta_neg = y_hat[ind_neg] - y_hat_neg
 
             # compute the mean of the difference per group
+            print (feature_codes[ind_plus] + 1)
+            print (groups)
+            print (groups[feature_codes[ind_plus] + 1])
             delta_df = pd.concat(
                 [
                     pd.DataFrame(
@@ -1521,6 +1531,7 @@ class GlobalExplainer(Attributes):
         subsample = kwargs.get("subsample", 1.0)
         n_bootstrap = kwargs.get("n_bootstrap", 1)
         estimator_output = kwargs.get("estimator_output", "raw")
+        class_index = kwargs.get('class_index', 1) 
 
         estimator = self.estimators[estimator_name]
         feature_names = list(self.X.columns)
@@ -1550,7 +1561,7 @@ class GlobalExplainer(Attributes):
         for k, idx in enumerate(bootstrap_indices):
             X = self.X.iloc[idx, :].values
             if self.estimator_output == "probability":
-                predictions = estimator.predict_proba(X)[:, 1]
+                predictions = estimator.predict_proba(X)[:, class_index]
             else:
                 predictions = estimator.predict(X)
 
@@ -1702,11 +1713,11 @@ class GlobalExplainer(Attributes):
 
         return results_ds
 
-    def number_of_features_used(self, estimator, X):
+    def number_of_features_used(self, estimator, X, class_index=1):
         """
         Compute the number of features (NF) from Molnar et al. 2019
         """
-        original_predictions = estimator.predict_proba(X)[:, 1]
+        original_predictions = estimator.predict_proba(X)[:, class_index]
         features = list(X.columns)
         for f in features:
             X_temp = X.copy()
@@ -2125,7 +2136,9 @@ class GlobalExplainer(Attributes):
 
     def scorer(self, estimator, X, y, evaluation_fn):
         if hasattr(estimator, 'predict_proba'):
-            prediction = estimator.predict_proba(X)[:, 1]
+            prediction = estimator.predict_proba(X)
+            if prediction.shape[1] == 2:
+              prediction = prediction[:, 1]
         elif hasattr(estimator, 'predict'):
             prediction = estimator.predict(X)[:]
         else:

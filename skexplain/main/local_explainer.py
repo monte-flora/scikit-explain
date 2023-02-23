@@ -129,6 +129,7 @@ class LocalExplainer(Attributes):
         n_samples=100,
         shap_kws=None,
         lime_kws=None, 
+        ti_kws=None, 
         n_jobs=1
     ):
         """
@@ -176,6 +177,15 @@ class LocalExplainer(Attributes):
             estimator_name: {} for estimator_name in self.estimator_names
         }
 
+        if shap_kws is not None and bool(shap_kws):
+            class_idx = shap_kws.get("class_idx", 1)
+        elif lime_kws is not None and bool(lime_kws):
+            class_idx = lime_kws.get("class_idx", 1)
+        elif ti_kws is not None and bool(ti_kws):
+            class_idx = ti_kws.get("class_idx", 1)
+        else:
+            class_idx = 1 
+
         for estimator_name, estimator in self.estimators.items():
             # create entry for current estimator
             # self.contributions_dict[estimator_name] = {}
@@ -187,6 +197,7 @@ class LocalExplainer(Attributes):
                     y=self.y,
                     n_samples=n_samples,
                     estimator_output=self.estimator_output,
+                    class_idx = class_idx,
                 )
 
                 for key, indices in performance_dict.items():
@@ -199,6 +210,7 @@ class LocalExplainer(Attributes):
                         X=X,
                         shap_kws=shap_kws,
                         lime_kws=lime_kws,
+                        ti_kws=ti_kws, 
                         method=method, 
                         n_jobs=n_jobs
                         )
@@ -216,6 +228,7 @@ class LocalExplainer(Attributes):
                     X=self.X,
                     shap_kws=shap_kws,
                     lime_kws=lime_kws,
+                    ti_kws=ti_kws, 
                     method=method, 
                     n_jobs=n_jobs
                     )
@@ -248,11 +261,10 @@ class LocalExplainer(Attributes):
         FOR INTERNAL PURPOSES ONLY.
 
         """
-        if shap_kws is None:
-            shap_kws = {}
-        
+        shap_kws = {} if shap_kws is None else shap_kws
         masker = shap_kws.get("masker", None)
         algorithm = shap_kws.get("algorithm", "auto")
+        class_idx = shap_kws.get('class_idx', 1)
 
         if masker is None:
             raise ValueError(
@@ -277,14 +289,14 @@ class LocalExplainer(Attributes):
         shap_results = explainer(X)
 
         if self.estimator_output == "probability":
-            shap_results = shap_results[..., 1]
+            shap_results = shap_results[..., class_idx]
 
         contributions = shap_results.values
         bias = shap_results.base_values
         
         return contributions, bias
 
-    def _get_ti_values(self, estimator, X):
+    def _get_ti_values(self, estimator, X, ti_kws):
         """
         FOR INTERNAL PURPOSES ONLY.
         """
@@ -297,12 +309,15 @@ class LocalExplainer(Attributes):
             )
 
         # TODO: generalize for the joint_contributions=True.
+        ti_kws = {} if ti_kws is None else ti_kws
+        class_idx = ti_kws.get('class_idx', 1)
+        
         ti = TreeInterpreter(estimator, X, n_jobs=self._n_jobs)
 
         prediction, bias, contributions = ti.predict()
 
         if self.estimator_output == "probability":
-            contributions = contributions[:, :, 1]
+            contributions = contributions[:, :, class_idx]
             bias = bias[:, 1]  # bias is all the same values for first index
         else:
             pass
@@ -367,7 +382,7 @@ class LocalExplainer(Attributes):
         
         if lime_kws['mode'] == 'classification' and hasattr(estimator, 'predict_proba'):
             predict_fn = estimator.predict_proba 
-            label = 1 
+            label = lime_kws.get('class_idx', 1) 
         else:
             predict_fn = estimator.predict 
             label = 0 
@@ -397,7 +412,7 @@ class LocalExplainer(Attributes):
         return contributions, bias
         
     def _get_feature_contributions(self, estimator, X, n_jobs=1, shap_kws=None, 
-                                   lime_kws=None,  method=None, estimator_output=None):
+                                   lime_kws=None, ti_kws=None, method=None, estimator_output=None):
         """
         FOR INTERNAL PURPOSES ONLY.
 
@@ -420,7 +435,7 @@ class LocalExplainer(Attributes):
         if self.method == "shap":
             contributions, bias = self._get_shap_values(estimator, X, shap_kws)
         elif self.method == "tree_interpreter":
-            contributions, bias = self._get_ti_values(estimator, X)
+            contributions, bias = self._get_ti_values(estimator, X, ti_kws)
         elif self.method == 'lime':
             contributions, bias = self._get_lime_values(estimator, X, lime_kws)
 
