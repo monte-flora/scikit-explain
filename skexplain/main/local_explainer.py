@@ -129,6 +129,7 @@ class LocalExplainer(Attributes):
         n_samples=100,
         shap_kws=None,
         lime_kws=None, 
+        ti_kws=None, 
         n_jobs=1
     ):
         """
@@ -202,6 +203,7 @@ class LocalExplainer(Attributes):
                         X=X,
                         shap_kws=shap_kws,
                         lime_kws=lime_kws,
+                        ti_kws=ti_kws, 
                         method=method, 
                         n_jobs=n_jobs
                         )
@@ -219,6 +221,7 @@ class LocalExplainer(Attributes):
                     X=self.X,
                     shap_kws=shap_kws,
                     lime_kws=lime_kws,
+                    ti_kws=ti_kws, 
                     method=method, 
                     n_jobs=n_jobs
                     )
@@ -252,9 +255,9 @@ class LocalExplainer(Attributes):
 
         """
         shap_kws = {} if shap_kws is None else shap_kws
-        masker = shap_kwargs.get("masker", None)
-        algorithm = shap_kwargs.get("algorithm", "auto")
-        class_idx = shap_kwargs.get('class_idx', 1)
+        masker = shap_kws.get("masker", None)
+        algorithm = shap_kws.get("algorithm", "auto")
+        class_idx = shap_kws.get('class_idx', 1)
 
         if masker is None:
             raise ValueError(
@@ -307,7 +310,7 @@ class LocalExplainer(Attributes):
         prediction, bias, contributions = ti.predict()
 
         if self.estimator_output == "probability":
-            contributions = contributions[:, :, class_index]
+            contributions = contributions[:, :, class_idx]
             bias = bias[:, 1]  # bias is all the same values for first index
         else:
             pass
@@ -337,7 +340,6 @@ class LocalExplainer(Attributes):
         """
         Compute the Local Interpretable Model-Agnostic Explanations
         """
-
         lime_kws['fast_lime'] = True
         
         if lime_kws is None:
