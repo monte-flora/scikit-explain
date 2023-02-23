@@ -20,8 +20,8 @@ class PlotInterpretCurves(PlotStructure):
         "xkcd:burnt sienna",
     ]
 
-    def __init__(self, BASE_FONT_SIZE=12):
-        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
+    def __init__(self, BASE_FONT_SIZE=12, seaborn_kws=None):
+        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE, seaborn_kws=seaborn_kws)
 
     def plot_1d_curve(
         self,
@@ -101,11 +101,13 @@ class PlotInterpretCurves(PlotStructure):
 
         # loop over each feature and add relevant plotting stuff
         for lineplt_ax, feature, color_by in zip(ax_iterator, features, color_bys):
-
+            
+            lineplt_ax.grid(False)
+            
             xdata = data[f"{feature}__bin_values"].values
             if add_hist:
                 hist_data = data[f"{feature}"].values
-
+              
                 # add histogram
                 hist_ax = self.make_twin_ax(lineplt_ax)
                 twin_yaxis_label = self.add_histogram_axis(
@@ -116,7 +118,8 @@ class PlotInterpretCurves(PlotStructure):
                     n_panels=n_panels,
                     **kwargs,
                 )
-
+                hist_ax.grid(False)
+                
             for i, model_name in enumerate(estimator_names):
                 if ice_curves:
                     kwargs["color_by"] = color_by
@@ -175,7 +178,7 @@ class PlotInterpretCurves(PlotStructure):
                 #)
    
         majoraxis_fontsize = self.FONT_SIZES["teensie"]
-        if fig is not None and add_hist:
+        if fig is not None and add_hist and not using_internal_ax:
             major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=None,
@@ -280,6 +283,12 @@ class PlotInterpretCurves(PlotStructure):
             zorder=1,
         )
 
+        # We want to set the X-limit as the 
+        # resulting histogram is not concurrent
+        # with the feature effect curves 
+        # and could plot extra regions. 
+        ax.set_xlim([min_value, max_value])
+        
         if density:
             return "Relative Frequency"
         else:

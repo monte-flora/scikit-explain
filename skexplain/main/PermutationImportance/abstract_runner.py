@@ -15,6 +15,7 @@ your own variable importance method."""
 
 import numpy as np
 import multiprocessing as mp
+from tqdm import tqdm
 
 from .data_verification import verify_data, determine_variable_names
 from .multiprocessing_utils import pool_imap_unordered
@@ -110,9 +111,9 @@ def abstract_variable_importance(
     original_score = scoring_fn(training_data, scoring_data, var_idx=None)
     result_obj = ImportanceResult(method, variable_names, original_score)
     
-    for i, _ in enumerate(range(nimportant_vars)):
-        if verbose:
-            print(f"Multi-pass iteration {i+1} out of {nimportant_vars}...")
+    for i, _ in tqdm(enumerate(range(nimportant_vars)), total=nimportant_vars, desc='Perm. Imp.'):
+        #if verbose:
+        #    print(f"Multi-pass iteration {i+1} out of {nimportant_vars}...")
 
         # Sending the scoring_data in as training_data so that for the 
         # forward permutation importance methods, we can un-permuted data. 
@@ -126,9 +127,9 @@ def abstract_variable_importance(
         )
 
         if njobs == 1:
-            result = _singlethread_iteration(selection_iter, scoring_fn)
+            result = PermImpIterator(selection_iter, scoring_fn)._singlethread_iteration()
         else:
-            result = _multithread_iteration(selection_iter, scoring_fn, njobs, nimportant_vars-i)
+            result = PermImpIterator(selection_iter, scoring_fn, njobs)._multithread_iteration()
    
         next_result = add_ranks_to_dict(result, variable_names, scoring_strategy)
         best_var = min(next_result.keys(), key=lambda key: next_result[key][0])
@@ -138,57 +139,37 @@ def abstract_variable_importance(
 
     return result_obj
 
-
-def _singlethread_iteration(selection_iterator, scoring_fn):
-    """Handles a single pass of the abstract variable importance algorithm,
-    assuming a single worker thread
-
+class PermImpIterator:
+    """
     :param selection_iterator: an iterator which yields triples
-        ``(variable, training_data, scoring_data)``. Typically a
-        :class:`PermutationImportance.selection_strategies.SelectionStrategy`
-    :param scoring_fn: a function to be used for scoring. Should be of the form
-        ``(training_data, scoring_data) -> float``
-    :returns: a dict of ``{var: score}``
+            ``(variable, training_data, scoring_data)``. Typically a
+            :class:`PermutationImportance.selection_strategies.SelectionStrategy`
+        :param scoring_fn: a function to be used for scoring. Should be of the form
+            ``(training_data, scoring_data) -> float``
+        :param num_jobs: number of processes to use
+        :returns: a dict of ``{var: score}``
     """
-    result = dict()
-    for training_data, scoring_data, var in selection_iterator:
-        score = scoring_fn(training_data, scoring_data, var_idx=var)
-        result[var] = score
-    return result
+    def __init__(self, selection_iter, scoring_fn, n_jobs=1):
+        self.scoring_fn = scoring_fn
+        self.selection_iterator = selection_iter
+        self.n_jobs=n_jobs
+                                     
+    def _singlethread_iteration(self):
+        """Handles a single pass of the abstract variable importance algorithm,
+        assuming a single worker thread
+        """
+        result = dict()
+        for training_data, scoring_data, var in self.selection_iterator:
+            score = self.scoring_fn(training_data, scoring_data, var_idx=var)
+            result[var] = score
+        return result
 
 
-def _multithread_iteration(selection_iterator, scoring_fn, njobs, total=None):
-    """Handles a single pass of the abstract variable importance algorithm using
-    multithreading
-
-    :param selection_iterator: an iterator which yields triples
-        ``(variable, training_data, scoring_data)``. Typically a
-        :class:`PermutationImportance.selection_strategies.SelectionStrategy`
-    :param scoring_fn: a function to be used for scoring. Should be of the form
-        ``(training_data, scoring_data) -> float``
-    :param num_jobs: number of processes to use
-    :returns: a dict of ``{var: score}``
-    """
-    result = dict()
-    for index, score in pool_imap_unordered(scoring_fn, selection_iterator, njobs):
-        result[index] = score
-    return result
-
-    """
-    This appears to be faster for cases when the dataset is smaller (<5-10K)
-    def worker(training_data, scoring_data, var):
-        result = {}
-        score = scoring_fn(training_data, scoring_data, var_idx=var)
-        result[var] = score
-
-        return result 
-    
-    result = run_parallel(func=worker,
-                args_iterator=selection_iterator,
-                kwargs={},
-                nprocs_to_use=njobs,
-                total=total,
-                         )
-    return merge_dict(result)
-    """
-
+    def _multithread_iteration(self):
+        """Handles a single pass of the abstract variable importance algorithm using
+        multithreading
+        """
+        result = dict()
+        for index, score in pool_imap_unordered(self.scoring_fn, self.selection_iterator, self.n_jobs):
+            result[index] = score
+        return result

@@ -11,12 +11,14 @@ class PlotImportance(PlotStructure):
     """
     PlotImportance handles plotting feature ranking plotting. The class
     is designed to be generic enough to handle all possible ranking methods
-    computed within PyMint.
+    computed within Scikit-Explain.
     """
 
     SINGLE_VAR_METHODS = [
-        "multipass",
-        "singlepass",
+        "backward_multipass",
+        "backward_singlepass",
+        "forward_multipass",
+        "forward_singlepass",
         "ale_variance",
         "coefs",
         "shap_sum",
@@ -25,14 +27,18 @@ class PlotImportance(PlotStructure):
         "sage",
         "grouped",
         "grouped_only",
+        "lime",
+        "tree_interpreter",
     ]
 
     DISPLAY_NAMES_DICT = {
-        "multipass": "Multi-Pass",
-        "singlepass": "Single-Pass",
-        "perm_based": "Permutation-based Interactions",
-        "ale_variance": "ALE-Based Importance",
-        "ale_variance_interactions": "ALE-Based Interactions",
+        "backward_multipass": "Backward Multi-Pass",
+        "backward_singlepass": "Backward Single-Pass",
+        "forward_multipass": "Forward Multi-Pass",
+        "forward_singlepass": "Forward Single-Pass",
+        "perm_based": "Perm.-based Interact.",
+        "ale_variance": "ALE-Based Import.",
+        "ale_variance_interactions": "ALE-Based Interac.",
         "coefs": "Coef.",
         "shap_sum": "SHAP",
         "hstat": "H-Stat",
@@ -43,8 +49,8 @@ class PlotImportance(PlotStructure):
         "grouped_only": "Grouped Only Importance",
     }
 
-    def __init__(self, BASE_FONT_SIZE=12):
-        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
+    def __init__(self, BASE_FONT_SIZE=12, seaborn_kws=None):
+        super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE, seaborn_kws=seaborn_kws)
 
     def is_bootstrapped(self, scores):
         """Check if the permutation importance results are bootstrapped"""
@@ -217,6 +223,12 @@ class PlotImportance(PlotStructure):
                     - np.nanpercentile(scores, [2.5, 97.5], axis=1)
                 )
 
+            if 'forward' in method:
+                ax.axvline(results[f'all_permuted_score__{estimator_name}'].mean(),color='k',ls=':')
+            elif 'backward' in method:
+                ax.axvline(results[f'original_score__{estimator_name}'].mean(),color='k',ls='--')    
+                
+                
             # Despine
             self.despine_plt(ax)
 
@@ -257,9 +269,11 @@ class PlotImportance(PlotStructure):
 
             # Put the variable names _into_ the plot
             if method not in self.SINGLE_VAR_METHODS and plot_correlated_features:
-                results_dict = is_correlated(
-                    corr_matrix, sorted_var_names, rho_threshold=rho_threshold
-                )
+                pass
+                # This is code is not flexible at the moment.
+                #results_dict = is_correlated(
+                #    corr_matrix, sorted_var_names, rho_threshold=rho_threshold
+                #)
 
             if colinear_features is None:
                 fontweight = ["light"] * len(variable_names_to_plot)

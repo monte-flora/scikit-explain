@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
-from .utils import is_list, to_list, is_fitted
+from .utils import is_list, to_list
+from sklearn.utils.validation import check_is_fitted
 
 
 class Attributes:
@@ -47,12 +48,17 @@ class Attributes:
             ), "Number of estimator objects is not equal to the number of estimator names given!"
 
         # Check that the estimator objects have been fit!
-        '''if not estimator_is_none:
-            if not all([is_fitted(m) for m in estimator_objs]):
-                raise ValueError(
-                    "One or more of the estimators given has NOT been fit!"
-                )
-        '''
+
+        #if not estimator_is_none:
+        #    for m in estimator_objs:
+        #        check_is_fitted(m)
+
+        # Check that the estimator objects have predict or predict_proba. 
+        if not estimator_is_none:
+            for m in estimator_objs:
+                if not (hasattr(m, 'predict') or  hasattr(m, 'predict_proba')):
+                    raise AttributeError(f'{m} does not have .predict or .predict_proba')
+                
         # Create a dictionary from the estimator_objs and estimator_names.
         # Then set the attributes.
         self.estimators = OrderedDict(

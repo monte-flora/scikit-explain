@@ -57,28 +57,28 @@ class TestRankPlots(TestLR):
         )
         
         explainer.plot_importance(data=results, 
-                                panels=[('singlepass', self.lr_estimator_name)], 
+                                panels=[('backward_singlepass', self.lr_estimator_name)], 
                                 num_vars_to_plot=15, 
                                  )
         
         # Changing the x-labels.
         explainer.plot_importance(data=results, 
-                                panels=[('singlepass', self.lr_estimator_name)], 
+                                panels=[('backward_singlepass', self.lr_estimator_name)], 
                                 num_vars_to_plot=15,
                                 xlabels = ['Single-Pass']  
                                  )
         # Plot single- and multi-pass permutation importance.
         explainer.plot_importance(data=[results]*2, 
-                                panels=[('singlepass', self.lr_estimator_name),
-                                        ('multipass', self.lr_estimator_name)
+                                panels=[('backward_singlepass', self.lr_estimator_name),
+                                        ('backward_multipass', self.lr_estimator_name)
                                        ], 
                                 num_vars_to_plot=15,
                                  )
         
         # Check error when len(results) != len(panels)
         explainer.plot_importance(data=results, 
-                                panels=[('singlepass', self.lr_estimator_name),
-                                        ('multipass', self.lr_estimator_name)
+                                panels=[('backward_singlepass', self.lr_estimator_name),
+                                        ('backward_multipass', self.lr_estimator_name)
                                        ], 
                                 num_vars_to_plot=15,
                                  )
@@ -86,7 +86,7 @@ class TestRankPlots(TestLR):
         # Using feature_colors.
         explainer.plot_importance(
                                 data=results, 
-                                panels=[('singlepass', self.lr_estimator_name), 
+                                panels=[('backward_singlepass', self.lr_estimator_name), 
                                        ],
                                 num_vars_to_plot=15,
                                 feature_colors = 'xkcd:medium green'
@@ -96,7 +96,7 @@ class TestRankPlots(TestLR):
         # Plotting connections between correlated features. 
         explainer.plot_importance(
                                 data=results, 
-                                panels=[('singlepass', self.lr_estimator_name), 
+                                panels=[('backward_singlepass', self.lr_estimator_name), 
                                        ],
                                 num_vars_to_plot=15,
                                 feature_colors = 'xkcd:medium green',

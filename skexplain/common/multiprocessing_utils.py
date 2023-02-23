@@ -3,18 +3,38 @@ import itertools
 from multiprocessing.pool import Pool
 from datetime import datetime
 
-# from tqdm import tqdm
-from tqdm.notebook import tqdm
+from tqdm import tqdm
+#from tqdm.notebook import tqdm
 import traceback
 from collections import ChainMap
 import warnings
+from copy import copy
 
 from joblib._parallel_backends import SafeFunction
 from joblib import delayed, Parallel
+import joblib 
+import time
+import contextlib
 
 # Ignore the warning for joblib to set njobs=1 for
 # models like RandomForest
 warnings.simplefilter("ignore", UserWarning)
+
+@contextlib.contextmanager
+def tqdm_joblib(tqdm_object):
+    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
+        def __call__(self, *args, **kwargs):
+            tqdm_object.update(n=self.batch_size)
+            return super().__call__(*args, **kwargs)
+
+    old_batch_callback = joblib.parallel.BatchCompletionCallBack
+    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
+    try:
+        yield tqdm_object
+    finally:
+        joblib.parallel.BatchCompletionCallBack = old_batch_callback
+        tqdm_object.close()
 
 
 def text_progessbar(seq, total=None):
@@ -23,7 +43,7 @@ def text_progessbar(seq, total=None):
     while True:
         time_diff = time.time() - tick
         avg_speed = time_diff / step
-        total_str = "of %n" % total if total else ""
+        total_str = f"of {total if total else ''}"
         print(
             "step",
             step,
@@ -42,12 +62,11 @@ all_bar_funcs = {
     "None": lambda args: iter,
 }
 
-
-def ParallelExecutor(use_bar="tqdm", **joblib_args):
-    def aprun(bar=use_bar, **tq_args):
+def ParallelExecutor(use_bar="tqdm", joblib_args={}, tqdm_args={}):
+    def aprun(bar=use_bar, **tqdm_args):
         def tmp(op_iter):
             if str(bar) in all_bar_funcs.keys():
-                bar_func = all_bar_funcs[str(bar)](tq_args)
+                bar_func = all_bar_funcs[str(bar)](tqdm_args)
             else:
                 raise ValueError("Value %s not supported as bar type" % bar)
             return Parallel(**joblib_args)(bar_func(op_iter))
@@ -80,7 +99,6 @@ class LogExceptions(object):
         # It was fine, give a normal answer
         return result
 
-
 def to_iterator(*lists):
     """
     turn list
@@ -91,9 +109,78 @@ def to_iterator(*lists):
 def run_parallel(
     func,
     args_iterator,
+    n_jobs,
+    description=None,
+    kwargs={},
+    nprocs_to_use=None,
+    total=None,
+):
+    """
+    Runs a series of python scripts in parallel. Scripts uses the tqdm to create a
+    progress bar.
+    Args:
+    -------------------------
+        func : callable
+            python function, the function to be parallelized; can be a function which issues a series of python scripts
+        args_iterator :  iterable, list,
+            python iterator, the arguments of func to be iterated over
+                             it can be the iterator itself or a series of list
+        n_jobs : int or float,
+            if int, taken as the literal number of processors to use
+            if float (between 0 and 1), taken as the percentage of available processors to use
+        kwargs : dict
+            keyword arguments to be passed to the func
+    """    
+    if nprocs_to_use is not None:
+        warnings.warn('nprocs_to_use will deprecated and replaced by n_jobs.', 
+                     DeprecationWarning)
+        n_jobs = nprocs_to_use
+    
+    iter_copy = copy(args_iterator)
+    
+    total = len(list(iter_copy))
+    pbar = tqdm(total=total, desc=description)
+    results = [] 
+    def update(*a):
+        # This is called whenever a process returns a result.
+        # results is modified only by the main process, not by the pool workers. 
+        pbar.update()
+    
+    if 0 <= n_jobs < 1:
+        n_jobs = int(n_jobs * mp.cpu_count())
+    else:
+        n_jobs = int(n_jobs)
+
+    if n_jobs > mp.cpu_count():
+        print(f"User requested {n_jobs} processors, but system only has {mp.cpu_count()}! Setting n_jobs to CPU count.")
+        n_jobs = mp.cpu_count()
+        
+        
+    pool = Pool(processes=n_jobs)
+    ps = []
+    for args in args_iterator:
+        if isinstance(args, str):
+            args = (args,)
+         
+        p = pool.apply_async(LogExceptions(func), args=args, callback=update)
+        ps.append(p)
+        
+    pool.close()
+    pool.join()
+
+    results = [p.get() for p in ps]
+    
+    return results 
+
+'''
+Deprecrated on 14 Sept 2022 by monte-flora
+def run_parallel(
+    func,
+    args_iterator,
     kwargs,
-    nprocs_to_use,
+    n_jobs,
     total,
+    description = "Processes",
 ):
     """
     Runs a series of python scripts in parallel. Scripts uses the tqdm to create a
@@ -106,27 +193,33 @@ def run_parallel(
         args_iterator :  iterable, list,
             python iterator, the arguments of func to be iterated over
                              it can be the iterator itself or a series of list
-        nprocs_to_use : int or float,
+        n_jobs : int or float,
             if int, taken as the literal number of processors to use
             if float (between 0 and 1), taken as the percentage of available processors to use
         kwargs : dict
             keyword arguments to be passed to the func
     """
-    if 0 <= nprocs_to_use < 1:
-        nprocs_to_use = int(nprocs_to_use * mp.cpu_count())
+    if 0 <= n_jobs < 1:
+        n_jobs = int(n_jobs * mp.cpu_count())
     else:
-        nprocs_to_use = int(nprocs_to_use)
+        n_jobs = int(n_jobs)
 
-    if nprocs_to_use > mp.cpu_count():
+    if n_jobs > mp.cpu_count():
         raise ValueError(
-            f"User requested {nprocs_to_use} processors, but system only has {mp.cpu_count()}!"
+            f"User requested {n_jobs} processors, but system only has {mp.cpu_count()}!"
         )
 
-    aprun = ParallelExecutor(n_jobs=nprocs_to_use, require="sharedmem")(
+    aprun = ParallelExecutor(
+                             joblib_args={'n_jobs' : n_jobs,
+                                          'require' : "sharedmem"}, 
+                             tqdm_args = {'position' : 0, 'leave' : True, 'desc' : description},
+                            )(
         bar="tqdm", total=total
     )
+    
     results = aprun(
         delayed(LogExceptions(func))(*args, **kwargs) for args in args_iterator
     )
 
     return results
+'''

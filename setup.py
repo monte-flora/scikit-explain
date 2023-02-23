@@ -25,7 +25,7 @@ URL = "https://github.com/monte-flora/scikit-explain/"
 EMAIL = "monte.flora@noaa.gov"
 AUTHOR = "Montgomery Flora"
 REQUIRES_PYTHON = ">=3.8.0"
-VERSION = "0.0.4"
+VERSION = "0.0.9"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -39,7 +39,6 @@ REQUIRED = [
     "ipywidgets",
     "statsmodels",
     "seaborn>=0.11.0",
-    "lime>=0.2.0" 
 ]
 
 # What packages are optional?

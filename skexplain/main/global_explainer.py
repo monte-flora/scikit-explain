@@ -10,7 +10,8 @@ from operator import add
 import traceback
 from copy import copy
 from inspect import currentframe, getframeinfo
-#from pandas.core.common import SettingWithCopyError
+##from pandas.core.common import SettingWithCopyError
+
 from joblib import delayed, Parallel
 
 
@@ -416,8 +417,8 @@ class GlobalExplainer(Attributes):
                 func=func,
                 args_iterator=args_iterator,
                 kwargs={},
-                nprocs_to_use=n_jobs,
-                total=total,
+                n_jobs=n_jobs,
+                description = f"{method.upper()} Numerical Features"
             )
 
         if len(cat_features) > 0:
@@ -442,8 +443,8 @@ class GlobalExplainer(Attributes):
                 func=func,
                 args_iterator=args_iterator,
                 kwargs={},
-                nprocs_to_use=n_jobs,
-                total=total,
+                n_jobs=n_jobs,
+                description = f"{method.upper()} Categorical Features"
             )
 
         results = cat_results + results
@@ -1224,11 +1225,13 @@ class GlobalExplainer(Attributes):
         ale = []
 
         # for each bootstrap set
-        for k, idx in enumerate(bootstrap_indices):
-            X = self.X.iloc[idx, :].reset_index(drop=True)
+        for k, idx in enumerate(bootstrap_indices):            
+            X = self.X.iloc[idx, :]
+            X.reset_index(drop=True, inplace=True)
+            X = X.copy()
 
             if (X[feature].dtype.name != "category") or (not X[feature].cat.ordered):
-                X[feature] = X[feature].astype(str)
+                X[feature] = X[feature].astype("string")
                 groups_order = order_groups(X, feature)
                 groups = groups_order.index.values
                 X[feature] = X[feature].astype(
@@ -1348,7 +1351,7 @@ class GlobalExplainer(Attributes):
 
             res_df = delta_df.groupby([feature]).mean()
             res_df.loc[:, "ale"] = res_df.loc[:, "eff"].cumsum()
-
+            
             res_df.loc[groups[0]] = 0
             # sort the index (which is at this point an ordered categorical) as a safety measure
             res_df = res_df.sort_index()
@@ -1439,8 +1442,7 @@ class GlobalExplainer(Attributes):
             func=func,
             args_iterator=args_iterator,
             kwargs=kwargs,
-            nprocs_to_use=n_jobs,
-            total=total,
+            n_jobs=n_jobs,
         )
 
         results = merge_dict(results)
@@ -1585,13 +1587,14 @@ class GlobalExplainer(Attributes):
 
         return {f"{estimator_name}_ias": (["n_bootstrap"], np.array(ias))}
 
-    def compute_ale_variance(self, data, estimator_names, features=None, **kwargs):
+    def compute_variance(self, method, data, estimator_names, features=None, **kwargs):
         """
-        Compute the standard deviation of the ALE values
+        Compute the standard deviation of the ALE/PD values
         for each feature and rank then for predictor importance.
 
         Parameters
         ----------
+        method : 'pd' or 'ale'
         data : xarray.Dataset
         estimator_names : list of strings
         features : str
@@ -1624,7 +1627,7 @@ class GlobalExplainer(Attributes):
             # Input shape : (n_bootstrap, n_bins)
             ale_std = np.array(
                 [
-                    _std(data[f"{f}__{estimator_name}__ale"].values, f, cat_features)
+                    _std(data[f"{f}__{estimator_name}__{method}"].values, f, cat_features)
                     for f in feature_names
                 ]
             )
@@ -1635,11 +1638,11 @@ class GlobalExplainer(Attributes):
             feature_names_sorted = np.array(feature_names)[idx]
             ale_std_sorted = ale_std[idx, :]
 
-            results[f"ale_variance_rankings__{estimator_name}"] = (
+            results[f"{method}_variance_rankings__{estimator_name}"] = (
                 [f"n_vars_ale_variance"],
                 feature_names_sorted,
             )
-            results[f"ale_variance_scores__{estimator_name}"] = (
+            results[f"{method}_variance_scores__{estimator_name}"] = (
                 [f"n_vars_ale_variance", "n_bootstrap"],
                 ale_std_sorted,
             )
@@ -1903,7 +1906,7 @@ class GlobalExplainer(Attributes):
             func=self._feature_interaction_worker,
             args_iterator=args_iterator,
             kwargs={},
-            nprocs_to_use=n_jobs,
+            n_jobs=n_jobs,
         )
 
         results = merge_dict(results)
@@ -2079,7 +2082,7 @@ class GlobalExplainer(Attributes):
                         )
 
                         estimator_set = [
-                            LinearRegression(normalize=True)
+                            LinearRegression()
                             for _ in range(len(idxs_set))
                         ]
 

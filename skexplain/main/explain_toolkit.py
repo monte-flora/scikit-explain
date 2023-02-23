@@ -108,6 +108,15 @@ class ExplainToolkit(Attributes):
         index for NumPy array and their column name for pandas dataframe.
         Feature names are only required if ``X`` is an ndnumpy.array, a it will be
         converted to a pandas.DataFrame internally.
+        
+    seaborn_kws : dict, None, or False (default is None)
+        Arguments for the seaborn.set_theme(). By default, we use the following settings. 
+        
+        custom_params = {"axes.spines.right": False, "axes.spines.top": False}
+        sns.set_theme(style="ticks", rc=custom_params)
+        
+        If False, then seaborn settings are not used. 
+        
 
     Raises
     ---------
@@ -129,8 +138,9 @@ class ExplainToolkit(Attributes):
         y=np.array([]),
         estimator_output=None,
         feature_names=None,
+        seaborn_kws=None, 
     ):
-
+        self.seaborn_kws=seaborn_kws
         if estimators is not None:
             if not is_list(estimators) and estimators:
                 estimators = [estimators]
@@ -191,6 +201,7 @@ class ExplainToolkit(Attributes):
             )
         )
 
+    
     def _append_attributes(self, ds):
         """
         FOR INTERNAL PURPOSES ONLY.
@@ -266,7 +277,7 @@ class ExplainToolkit(Attributes):
 
             When using a custom function, you must also set the scoring strategy (see below).
 
-        scoring_strategy : string (default=None)
+        scoring_strategy : 'maximize', 'minimize', or None (default=None)
 
             This argument is only required if you are using a non-default evaluation_fn (see above)
 
@@ -369,6 +380,12 @@ class ExplainToolkit(Attributes):
             random_seed=random_seed,
         )
 
+        # Rename the results:
+        for opt in ['multipass', 'singlepass']:
+            pimp_vars = [v for v in results_ds.data_vars if opt in v]
+            name_dict = { v : f'{direction}_{v}' for v in pimp_vars}
+            results_ds = results_ds.rename(name_dict)
+        
         if not is_str(evaluation_fn):
             evaluation_fn = evaluation_fn.__name__
         
@@ -397,48 +414,44 @@ class ExplainToolkit(Attributes):
         clustering_kwargs={"n_clusters": 10},
     ):
         """
-         The group only permutation feature importance (GOPFI) from Au et al. 2021 [1]_
-         (see their equations 10 and 11). This function has a built-in method for clustering
-         features using the sklearn.cluster.FeatureAgglomeration. It also has the ability to
-         compute the results over multiple permutations to improve the feature importance
-         estimate (and provide uncertainty).
+        The group only permutation feature importance (GOPFI) from Au et al. 2021 [1]_
+        (see their equations 10 and 11). This function has a built-in method for clustering
+        features using the sklearn.cluster.FeatureAgglomeration. It also has the ability to
+        compute the results over multiple permutations to improve the feature importance
+        estimate (and provide uncertainty).
 
-         Original score = Jointly permute all features
-         Permuted score = Jointly permuting all features except the considered group
+        Original score = Jointly permute all features
+        Permuted score = Jointly permuting all features except the considered group
 
-         Loss metrics := Original_score - Permuted Score
-         Skill Score metrics := Permuted score - Original Score
+        Loss metrics := Original_score - Permuted Score
+        Skill Score metrics := Permuted score - Original Score
 
+        Parameters
+        ----------
 
-         Parameters
-         ----------------
+        perm_method : ``"grouped"`` or ``"grouped_only"``
+            If ``"grouped"``, the features within a group are jointly permuted and other features
+            are left unpermuted.
 
-         perm_method : ``"grouped"`` or ``"grouped_only"``
+            If ``"grouped_only"``, only the features within a group are left unpermuted and
+            other features are jointly permuted.
 
-             If ``"grouped"``, the features within a group are jointly permuted and other features
-             are left unpermuted.
+        evaluation_fn : string or callable
+            evaluation/scoring function for evaluating the loss of skill once a feature is permuted.
+            evaluation_fn can be set to one of the following strings:
 
-             If ``"grouped_only"``, only the features within a group are left unpermuted and
-             other features are jointly permuted.
+                - ``"auc"``, Area under the Curve
+                - ``"auprc"``, Area under the Precision-Recall Curve
+                - ``"bss"``, Brier Skill Score
+                - ``"mse"``, Mean Square Error
+                - ``"norm_aupdc"``,  Normalized Area under the Performance Diagram (Precision-Recall) Curve
 
+            Otherwise, evaluation_fn can be any function of form,
+            `evaluation_fn(targets, predictions)` and must return a scalar value
 
-         evaluation_fn : string or callable
-             evaluation/scoring function for evaluating the loss of skill once a feature is permuted.
-             evaluation_fn can be set to one of the following strings:
+            When using a custom function, you must also set the scoring strategy (see below).
 
-                 - ``"auc"``, Area under the Curve
-                 - ``"auprc"``, Area under the Precision-Recall Curve
-                 - ``"bss"``, Brier Skill Score
-                 - ``"mse"``, Mean Square Error
-                 - ``"norm_aupdc"``,  Normalized Area under the Performance Diagram (Precision-Recall) Curve
-
-             Otherwise, evaluation_fn can be any function of form,
-             `evaluation_fn(targets, predictions)` and must return a scalar value
-
-             When using a custom function, you must also set the scoring strategy (see below).
-
-         scoring_strategy : string (default=None)
-
+        scoring_strategy : string (default=None)
             This argument is only required if you are using a non-default evaluation_fn (see above)
 
             If the evaluation_fn is positively-oriented (a higher value is better),
@@ -446,66 +459,64 @@ class ExplainToolkit(Attributes):
             indicates higher importance) and if it is negatively-oriented-
             (a lower value is better), then set ``scoring_strategy = "maximize"``
 
-         n_permute: integer (default=1 for only one permutation per feature)
-                 Number of permutations for computing confidence intervals on the feature rankings.
+        n_permute: integer (default=1 for only one permutation per feature)
+            Number of permutations for computing confidence intervals on the feature rankings.
 
-         groups : dict (default=None)
-                 Dictionary of group names and the feature names or feature column indices.
-                 If None, then the feature groupings are determined internally based on
-                 feature clusterings.
+        groups : dict (default=None)
+            Dictionary of group names and the feature names or feature column indices.
+            If None, then the feature groupings are determined internally based on
+            feature clusterings.
 
-         sample_size : integer (default=100)
-                 Number of random samples to determine the correlation for the feature clusterings
+        sample_size : integer (default=100)
+            Number of random samples to determine the correlation for the feature clusterings
+            
+        subsample: float or integer (default=1.0 for no subsampling)
+            if value is between 0-1, it is interpreted as fraction of total X to use
+            if value > 1, interpreted as the number of X to randomly sample
+            from the original dataset.
 
-         subsample: float or integer (default=1.0 for no subsampling)
+        n_jobs : interger or float (default=1; no multiprocessing)
+           if integer, interpreted as the number of processors to use for multiprocessing
+           if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing
 
-                 if value is between 0-1, it is interpreted as fraction of total X to use
-                 if value > 1, interpreted as the number of X to randomly sample
-                 from the original dataset.
+        clustering_kwargs : dict (default = {'n_clusters' : 10})
+            See https://scikit-learn.org/stable/modules/generated/sklearn.cluster.FeatureAgglomeration.html
+            for details
 
-         n_jobs : interger or float (default=1; no multiprocessing)
+        Returns
+        -------
 
-             if integer, interpreted as the number of processors to use for multiprocessing
-             if float between 0-1, interpreted as the fraction of proceesors to use for multiprocessing
+        results : xarray.DataSet
+            Permutation importance results. Includes the both multi-pass and single-pass
+            feature rankings and the scores with the various features permuted.
 
-         clustering_kwargs : dict (default = {'n_clusters' : 10})
-             See https://scikit-learn.org/stable/modules/generated/sklearn.cluster.FeatureAgglomeration.html
-             for details
+        groups : dict
+            If groups is None, then it returns the groups that were
+            automatically created in the feature clustering. Otherwise,
+            only results is returned.
 
-         Returns
-         ----------------
+        References
+        -----------
+        .. [1] Au, Q., J. Herbinger, C. Stachl, B. Bischl, and G. Casalicchio, 2021:
+        Grouped Feature Importance and Combined Features Effect Plot. Arxiv,.
 
-         results : xarray.DataSet
-             Permutation importance results. Includes the both multi-pass and single-pass
-             feature rankings and the scores with the various features permuted.
-
-         groups : dict
-             If groups is None, then it returns the groups that were
-             automatically created in the feature clustering. Otherwise,
-             only results is returned.
-
-         References
-         -----------
-         .. [1] Au, Q., J. Herbinger, C. Stachl, B. Bischl, and G. Casalicchio, 2021:
-         Grouped Feature Importance and Combined Features Effect Plot. Arxiv,.
-
-         Examples
-         ----------
-         >>> import skexplain
-         >>> # pre-fit estimators within skexplain
-         >>> estimators = skexplain.load_models()
-         >>> X, y = skexplain.load_data() # training data
-         >>> # Only compute for the first model
-         >>> explainer = skexplain.ExplainToolkit(estimators=estimators[0],
-         ...                             X=X,
-         ...                             y=y,
-         ...                            )
-         >>> # Group only, the features within a group are the only one's left unpermuted
-         >>> results, groups = explainer.grouped_permutation_importance(
-         ...                                          perm_method = 'grouped_only',
-         ...                                          evaluation_fn = 'norm_aupdc',)
-         >>> print(results)
-         <xarray.Dataset>
+        Examples
+        ----------
+        >>> import skexplain
+        >>> # pre-fit estimators within skexplain
+        >>> estimators = skexplain.load_models()
+        >>> X, y = skexplain.load_data() # training data
+        >>> # Only compute for the first model
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators[0],
+        ...                             X=X,
+        ...                             y=y,
+        ...                            )
+        >>> # Group only, the features within a group are the only one's left unpermuted
+        >>> results, groups = explainer.grouped_permutation_importance(
+        ...                                          perm_method = 'grouped_only',
+        ...                                          evaluation_fn = 'norm_aupdc',)
+        >>> print(results)
+        <xarray.Dataset>
              Dimensions:                        (n_vars_group: 10, n_bootstrap: 1)
              Dimensions without coordinates: n_vars_group, n_bootstrap
              Data variables:
@@ -519,11 +530,11 @@ class ExplainToolkit(Attributes):
                  method:            grouped_permutation_importance
                  perm_method:       grouped_only
                  evaluation_fn:     norm_aupdc
-         >>> print(groups)
-         {'group 0': array(['d_rad_d', 'd_rad_u'], dtype=object),
-         'group 1': array(['high_cloud', 'lat_hf', 'mid_cloud', 'sfcT_hrs_ab_frez', 'date_marker'], dtype=object),
-         'group 2': array(['dllwave_flux', 'uplwav_flux'], dtype=object),
-         'group 3': array(['dwpt2m', 'fric_vel', 'sat_irbt', 'sfc_rough', 'sfc_temp',
+        >>> print(groups)
+        {'group 0': array(['d_rad_d', 'd_rad_u'], dtype=object),
+        'group 1': array(['high_cloud', 'lat_hf', 'mid_cloud', 'sfcT_hrs_ab_frez', 'date_marker'], dtype=object),
+        'group 2': array(['dllwave_flux', 'uplwav_flux'], dtype=object),
+        'group 3': array(['dwpt2m', 'fric_vel', 'sat_irbt', 'sfc_rough', 'sfc_temp',
         'temp2m', 'wind10m', 'urban', 'rural', 'hrrr_dT'], dtype=object),
         'group 4': array(['low_cloud', 'tot_cloud', 'vbd_flux', 'vdd_flux'], dtype=object),
         'group 5': array(['gflux', 'd_ground'], dtype=object),
@@ -574,6 +585,7 @@ class ExplainToolkit(Attributes):
         features=None,
         estimator_names=None,
         interaction=False,
+        method='ale',
     ):
         """
         Compute the standard deviation (std) of the ALE values for each
@@ -735,9 +747,10 @@ class ExplainToolkit(Attributes):
         if interaction:
             func = self.global_obj.compute_interaction_rankings
         else:
-            func = self.global_obj.compute_ale_variance
+            func = self.global_obj.compute_variance
 
         results_ds = func(
+            method=method,
             data=ale,
             estimator_names=estimator_names,
             features=features,
@@ -756,6 +769,27 @@ class ExplainToolkit(Attributes):
 
         return results_ds
 
+    def pd_variance(
+        self,
+        pd,
+        features=None,
+        estimator_names=None,
+        interaction=False,
+    ):
+        """ See ale_variance for documentation."""
+        results_ds = self.ale_variance(
+            pd,
+            features=features,
+            estimator_names=estimator_names,
+            interaction=interaction,
+            method='pd',
+            )
+        
+        self.attrs_dict["method"] = "pd_variance"
+        results_ds = self._append_attributes(results_ds) 
+        
+        return results_ds
+    
     def main_effect_complexity(
         self, ale, estimator_names=None, max_segments=10, approx_error=0.05
     ):
@@ -1433,7 +1467,7 @@ class ExplainToolkit(Attributes):
         else:
             base_font_size = 12 if len(features) <= 6 else 16
             base_font_size = kwargs.get("base_font_size", base_font_size)
-            plot_obj = PlotInterpretCurves(BASE_FONT_SIZE=base_font_size)
+            plot_obj = PlotInterpretCurves(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
             return plot_obj.plot_1d_curve(
                 method=method,
                 data=data,
@@ -1668,28 +1702,27 @@ class ExplainToolkit(Attributes):
         shap_kwargs={},#None,
         lime_kws={},#None
     ):
+        warnings.warn(f'ExplainToolkit.local_contributions is deprecated. Use local_attributions in the future.', 
+                      DeprecationWarning, stacklevel=2)
+        return self.local_attributions(**kws) 
+        
+    def local_attributions(self, method, shap_kws={}, lime_kws={}, n_jobs=1):
         """
-        Computes the individual feature contributions to a predicted outcome for
-        a series of examples either based on tree interpreter (only Tree-based methods)
-        , Shapley Additive Explanations, or Local Interpretable Model-Agnostic Explanations (LIME). 
+        Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_, 
+        Local Interpretable Model Explanations (LIME) or the Tree Interpreter local
+        attributions for a set of examples. 
+        . 
+        By default, we set the SHAP algorithm = ``'auto'``, so that the best algorithm 
+        for a model is determined internally in the SHAP package. 
 
         Parameters
-        -----------
-
-        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'``
-            Can use SHAP, treeinterpreter, or LIME to compute the feature contributions.
+        ------------------
+        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` or list 
+            Can use SHAP, treeinterpreter, or LIME to compute the feature attributions.
             SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
             select decision-tree based estimators in scikit-learn (e.g., random forests). 
-            
-        performance_based : boolean (default=False)
-            If True, will average feature contributions over the best and worst
-            performing of the given X. The number of examples to average over
-            is given by n_samples
-
-        n_samples : interger (default=100)
-            Number of samples to compute average over if performance_based = True
-
-        shap_kwargs : dict
+        
+        shap_kws : dict (default is None)
             Arguments passed to the shap.Explainer object. See
             https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
             for details. The main two arguments supported in skexplain is the masker and
@@ -1702,7 +1735,7 @@ class ExplainToolkit(Attributes):
             - masker
             - algorithm
 
-        lime_kws : dict 
+        lime_kws : dict (default is None)
             Arguments passed to the LimeTabularExplainer object. See https://github.com/marcotcr/lime
             for details. Generally, you'll pass the in the following:
             
@@ -1710,7 +1743,147 @@ class ExplainToolkit(Attributes):
             - categorical_names (scikit-explain will attempt to determine it internally, 
                                  if it is not passed in)
             - random_state (for reproduciability) 
-           
+    
+        n_jobs : float or integer (default=1)
+
+            - if integer, interpreted as the number of processors to use for multiprocessing
+            - if float, interpreted as the fraction of proceesors to use for multiprocessing
+            
+            For treeinterpreter, parallelization is used to process the trees of a random forest 
+            in parallel. For LIME, each example is computed in parallel. We do not apply 
+            parallelization to SHAP as we found it is faster without it. 
+            
+        Returns
+        -------------------
+
+        results : xarray.Dataset
+            A dataset containing shap values [(n_samples, n_features)] for each estimator
+            (e.g., 'shap_values__estimator_name'), the bias ('bias__estimator_name')
+            of shape (n_examples, 1), and the X and y values the shap values were determined from.
+
+        References
+        ------------
+        .. [13] https://christophm.github.io/interpretable-ml-book/shap.html
+        .. [14] Lundberg, S. M., G. G. Erion, and S.-I. Lee, 2018: Consistent Individualized
+                Feature Attribution for Tree Ensembles. Arxiv,.
+        .. [15] Lundberg, S. M., and Coauthors, 2020: From local explanations to global understanding
+                with explainable AI for trees. Nat Mach Intell, 2, 56–67, https://doi.org/10.1038/s42256-019-0138-9.
+
+
+        Examples
+        ---------
+        >>> import skexplain
+        >>> import shap
+        >>> # pre-fit estimators within skexplain
+        >>> estimators = skexplain.load_models()
+        >>> X, _ = skexplain.load_data() # training data
+        >>> X_subset = shap.sample(X, 50, random_state=22)
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators
+        ...                             X=X_subset,)
+        >>> results = explainer.local_attributions(shap_kws={'masker' :
+        ...                          shap.maskers.Partition(X, max_samples=100, clustering="correlation"),
+        ...                          'algorithm' : 'auto'})
+        """
+        dataset = {}
+        include_ys = True
+        if len(self.y) < 1:
+            warnings.warn(
+                """No y values were provided! 
+                          The y values are useful for color-coding in the shap dependence plots."""
+            )
+            include_ys = False
+        
+        if not is_list(method):
+            methods = [method]
+        else:
+            methods = method 
+        
+        correct_names = ["shap", "tree_interpreter", "lime"]
+        r = [[m in correct_names][0] for m in methods]
+        if not all(r):
+            ind = r.index(False)
+            raise ValueError(
+                f"Invalid method ({methods[ind]})! Method must be one of the following: 'shap', 'tree_interpreter', 'lime'"
+            )
+        
+        for estimator_name, estimator in self.estimators.items():
+            for method in methods: 
+            
+                df = self.local_obj._get_feature_contributions(
+                    estimator=estimator,
+                    X=self.X,
+                    shap_kws=shap_kws,
+                    lime_kws=lime_kws, 
+                    n_jobs=n_jobs, 
+                    method = method, 
+                    estimator_output=self.estimator_output
+                )
+            
+                values = df[self.feature_names]
+                bias = df['Bias'] 
+            
+                dataset[f"{method}_values__{estimator_name}"] = (
+                    ["n_examples", "n_features"],
+                    values,
+                )
+                dataset[f"{method}_bias__{estimator_name}"] = (
+                    ["n_examples"],
+                    bias.astype(np.float64),
+                )
+
+        dataset["X"] = (["n_examples", "n_features"], self.X.values)
+
+        # Y may not be given. Need to check!
+        if include_ys:
+            dataset["y"] = (["n_examples"], self.y)
+
+        results_ds = to_xarray(dataset)
+        self.attrs_dict["features"] = self.feature_names
+        self.attrs_dict['method'] = methods
+        results_ds = self._append_attributes(results_ds)
+
+        return results_ds
+        
+    def average_attributions(
+        self,
+        method=None,
+        data=None,
+        performance_based=False,
+        n_samples=100,
+        shap_kws=None, 
+        lime_kws=None,
+        n_jobs=1
+    ):
+        """
+        Computes the individual feature contributions to a predicted outcome for
+        a series of examples either based on tree interpreter (only Tree-based methods)
+        , Shapley Additive Explanations, or Local Interpretable Model-Agnostic Explanations (LIME).
+        
+        The primary difference between average_attributions and local_attributions is the 
+        performance-based determiniation of examples to compute the local attributions from. 
+        average_attributions can start with the full dataset and determine the top n_samples
+        to compute explanations for. 
+
+        Parameters
+        -----------
+        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` (default is None)
+            Can use SHAP, treeinterpreter, or LIME to compute the feature attributions.
+            SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
+            select decision-tree based estimators in scikit-learn (e.g., random forests). 
+
+        data : dataframe or a list of dataframes, shape (n_examples, n_features) (Default is None)
+            Local attribution data for each estimator. 
+            Results from explainer.local_attributions. If None, then the local attributions are computed
+            internally. 
+            
+        performance_based : boolean (default=False)
+            If True, will average feature contributions over the best and worst
+            performing of the given X. The number of examples to average over
+            is given by n_samples
+
+        n_samples : interger (default=100)
+            Number of samples to compute average over if performance_based = True
+
         Returns
         --------
 
@@ -1735,7 +1908,7 @@ class ExplainToolkit(Attributes):
         ...                            )
         >>> # Create a background dataset; randomly sample 100 X
         >>> background_dataset = shap.sample(X, 100)
-        >>> contrib_ds = explainer.local_contributions(method='shap',
+        >>> contrib_ds = explainer.average_contributions(method='shap',
         ...                   background_dataset=background_dataset)
 
         >>> # For the performance-based contributions,
@@ -1744,32 +1917,47 @@ class ExplainToolkit(Attributes):
         ...                             X=X,
         ...                            y=y,
         ...                            )
-        >>> contrib_ds = explainer.local_contributions(method='shap',
+        >>> contrib_ds = explainer.average_contributions(method='shap',
         ...                   background_dataset=background_dataset,
         ...                   performance_based=True, n_samples=100)
 
         """
-        if method not in ["shap", "tree_interpreter", "lime"]:
-            raise ValueError(
-                "Invalid method! Method must be 'shap', 'tree_interpreter', 'lime'"
+        if data is not None:
+            if not is_dataset(data):
+                raise ValueError('Data needs to be a xarray.Dataset from ExplainToolkit.local_attributions.')
+            methods = data.attrs['method']
+        else:
+            if method is None:
+                raise ValueError('Set the method if not providing a Dataset.')
+        
+            if not is_list(method):
+                methods = [method]
+            else:
+                methods = method 
+        
+        results = {}
+        
+        for method in methods: 
+            results_df = self.local_obj._average_attributions(
+                data=data,
+                method=method, 
+                performance_based=performance_based,
+                n_samples=n_samples,
+                shap_kws=shap_kws, 
+                lime_kws=lime_kws,
+                n_jobs=n_jobs
             )
 
-        results_df = self.local_obj._get_local_prediction(
-            method=method,
-            performance_based=performance_based,
-            n_samples=n_samples,
-            shap_kwargs=shap_kwargs,
-            lime_kws=lime_kws,
-        )
+            # Add metadata
+            self.attrs_dict["method"] = method
+            self.attrs_dict["n_samples"] = n_samples
+            self.attrs_dict["performance_based"] = str(performance_based)
+            self.attrs_dict["features"] = self.feature_names
+            results_df = self._append_attributes(results_df)
 
-        # Add metadata
-        self.attrs_dict["method"] = method
-        self.attrs_dict["n_samples"] = n_samples
-        self.attrs_dict["performance_based"] = str(performance_based)
-        self.attrs_dict["feature_names"] = self.feature_names
-        results_df = self._append_attributes(results_df)
-
-        return results_df
+            results[method] = results_df
+            
+        return results
 
     def plot_contributions(
         self,
@@ -1784,8 +1972,11 @@ class ExplainToolkit(Attributes):
 
         Parameters
         ------------
-        contrib : Nested pandas.DataFrame
-            Results of :func:`~ExplainToolkit.local_contributions`
+        contrib : Nested pandas.DataFrame or dict of Nested pandas.DataFrame
+            Results of :func:`~ExplainToolkit.local_attributions` or :func:`~ExplainToolkit.average_attributions`
+            :func:`~ExplainToolkit.local_attributions` returns an xarray.Dataset which can be valid for multiple examples.
+            For plotting, :func:`~ExplainToolkit.average_attributions` is used to average attributions and their 
+            feature values. 
 
         features : string or list of strings (default=None)
 
@@ -1832,21 +2023,29 @@ class ExplainToolkit(Attributes):
 
         .. image :: ../../images/feature_contribution_single.png
         """
+        if is_dataset(contrib):
+            contrib = self.average_attributions(data=contrib, performance_based=False)
+            
+        keys = list(contrib.keys())   
+        
         if estimator_names is None:
-            estimator_names = contrib.attrs["estimators used"]
+            estimator_names = contrib[keys[0]].attrs["estimators used"]
+            
         elif is_str(estimator_names):
             estimator_names = [estimator_names]
 
-        estimator_output = contrib.attrs["estimator_output"]
+        estimator_output = contrib[keys[0]].attrs["estimator_output"]
         if features is None:
-            features = contrib.attrs["feature_names"]
+            features = contrib[keys[0]].attrs["features"]
 
         # initialize a plotting object
         only_one_panel = (
-            contrib.index[0][0] == "non_performance" and len(estimator_names) == 1
+            contrib[keys[0]].index[0][0] == "non_performance" and len(estimator_names) == 1
+            and len(keys) == 1
         )
+        
         base_font_size = kwargs.get("base_font_size", 16 if only_one_panel else 11)
-        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size)
+        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
         kwargs["estimator_output"] = self.estimator_output
 
         return plot_obj.plot_contributions(
@@ -1857,7 +2056,7 @@ class ExplainToolkit(Attributes):
             **kwargs,
         )
 
-    def shap(self, shap_kwargs={"masker": None, "algorithm": "auto"}):
+    def shap(self, shap_kws={"masker": None, "algorithm": "auto"}, shap_kwargs=None):
         """
         Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_. 
         By default, we set algorithm = ``'auto'``, so that the best algorithm 
@@ -1865,7 +2064,7 @@ class ExplainToolkit(Attributes):
 
         Parameters
         ------------------
-        shap_kwargs : dict
+        shap_kws : dict
             Arguments passed to the shap.Explainer object. See
             https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
             for details. The main two arguments supported in skexplain is the masker and
@@ -1905,10 +2104,15 @@ class ExplainToolkit(Attributes):
         >>> X_subset = shap.sample(X, 50, random_state=22)
         >>> explainer = skexplain.ExplainToolkit(estimators=estimators
         ...                             X=X_subset,)
-        >>> results = explainer.shap(shap_kwargs={'masker' :
+        >>> results = explainer.shap(shap_kws={'masker' :
         ...                          shap.maskers.Partition(X, max_samples=100, clustering="correlation"),
         ...                          'algorithm' : 'auto'})
         """
+        warnings.warn(f'explainer.shap is deprecated. Use explainer.local_attributions in the future', 
+                      DeprecationWarning, stacklevel=2)
+        
+        shap_kwargs=shap_kws
+        
         dataset = {}
         include_ys = True
         if len(self.y) < 1:
@@ -1922,7 +2126,7 @@ class ExplainToolkit(Attributes):
             shap_values, bias = self.local_obj._get_shap_values(
                 estimator=estimator,
                 X=self.X,
-                shap_kwargs=shap_kwargs,
+                shap_kws=shap_kws,
             )
 
             dataset[f"shap_values__{estimator_name}"] = (
@@ -1946,10 +2150,11 @@ class ExplainToolkit(Attributes):
 
         return results_ds
 
-    def plot_shap(
+    def scatter_plot(
         self,
-        shap_values,
+        dataset, 
         estimator_name,
+        method=None,
         plot_type="summary",
         features=None,
         display_feature_names={},
@@ -1967,9 +2172,17 @@ class ExplainToolkit(Attributes):
             if 'summary', plots a feature importance-style plot
             if 'dependence', plots a partial depedence style plot
 
-        shap_values : array of shape (n_samples, n_features)
-
-            SHAP values
+        dataset : xarray.Dataset
+            Results from :func:`~ExplainToolkit.local_attributions`. 
+            Dataset containing feature attribution values, their biases, and 
+            the input feature values. 
+            
+        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` (default is None)
+            Can use SHAP, treeinterpreter, or LIME to compute the feature attributions.
+            SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
+            select decision-tree based estimators in scikit-learn (e.g., random forests). 
+            If None, method is determine from the values Dataset. Otherwise, an 
+            error is raised. 
 
         features : string or list of strings (default=None)
             features to plots if plot_type is 'dependence'.
@@ -2020,52 +2233,42 @@ class ExplainToolkit(Attributes):
         .. image :: ../../images/shap_dependence.png
 
         """
+        if method is not None:
+            if is_list(method):
+                methods = method
+            else:
+                methods = [method]
+        else:
+            methods = dataset.attrs['method']
+            
+        X = pd.DataFrame(dataset['X'].values, columns=dataset.attrs['features'])
+        
+        if plot_type == 'summary' and len(methods) > 1:
+            raise ValueError('At the moment, summary plots can only handle one method') 
+        elif plot_type == 'summary':
+            dataset = dataset[f'{methods[0]}_values__{estimator_name}'].values
+        
         if plot_type not in ["summary", "dependence"]:
             raise ValueError("Invalid plot_type! Must be 'summary' or 'dependence'")
-
-        if isinstance(shap_values, xr.Dataset):
-            key = f"shap_values__{estimator_name}"
-            if key not in shap_values.data_vars:
-                raise KeyError(
-                    f"""{key} is not an available variable for this dataset! 
-                                Check that SHAP values were compute for estimator : {estimator_name}
-                                """
-                )
-
-            shap_values = shap_values[f"shap_values__{estimator_name}"].values
-        else:
-            if np.ndim(shap_values) != 2:
-                raise ValueError("shap_values must be 2D array-like data!")
-
-        to_probability = False
-        if self.estimator_output == "probability":
-            to_probability = kwargs.get("to_probability", None)
-            if to_probability is None:
-                to_probability = True        
-                
-        ###to_probability = True if self.estimator_output == 'probability' else False
-        if to_probability:
-            shap_values_copy = np.copy(shap_values)
-            shap_values_copy *= 100.0
-        else:
-            shap_values_copy = shap_values
 
         # initialize a plotting object
         if plot_type == "summary":
             fontsize = 12
         else:
             fontsize = 12 if len(features) <= 6 else 16
-
+            
         base_font_size = kwargs.get("base_font_size", fontsize)
-        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size)
+        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
         plot_obj.feature_names = self.feature_names
-        plot_obj.plot_shap(
-            shap_values=shap_values_copy,
-            X=self.X,
+        plot_obj.scatter_plot(
+            attr_values=dataset,
+            X=X,
             features=features,
             plot_type=plot_type,
             display_feature_names=display_feature_names,
             display_units=display_units,
+            estimator_name=estimator_name,
+            methods=methods, 
             **kwargs,
         )
 
@@ -2191,7 +2394,7 @@ class ExplainToolkit(Attributes):
 
         # initialize a plotting object
         base_font_size = kwargs.get("base_font_size", 12)
-        plot_obj = PlotImportance(BASE_FONT_SIZE=base_font_size)
+        plot_obj = PlotImportance(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
 
         if plot_correlated_features:
             kwargs["X"] = self.X
@@ -2217,8 +2420,8 @@ class ExplainToolkit(Attributes):
         as a box-and-whisker plot. The user provides a single example, which is highlighted
         over those examples. Useful for real-time explainability.
 
-        Parameters:
-        ----------------
+        Parameters
+        -------------
 
         important_vars : str or list of strings
             List of features to plot
@@ -2275,7 +2478,7 @@ class ExplainToolkit(Attributes):
 
         # initialize a plotting object
         base_font_size = kwargs.get("base_font_size", 12)
-        plot_obj = PlotScatter(base_font_size)
+        plot_obj = PlotScatter(base_font_size, seaborn_kws=self.seaborn_kws)
 
         f, axes = plot_obj.plot_scatter(
             self.estimators,
@@ -2399,9 +2602,14 @@ class ExplainToolkit(Attributes):
                 setattr(s, "estimator_output", results.attrs["estimator_output"])
                 estimator_names = [results.attrs["estimators used"]]
             except:
-                setattr(s, "estimator_output", results.attrs["model_output"])
-                estimator_names = [results.attrs["models used"]]
-
+               
+                try:
+                    setattr(s, "estimator output", results.attrs["estimator output"])
+                    estimator_names = [results.attrs["estimators used"]]
+                except:
+                    setattr(s, "estimator_output", results.attrs["model_output"])
+                    estimator_names = [results.attrs["models used"]]
+                    
             if not is_list(estimator_names):
                 estimator_names = [estimator_names]
 
@@ -2413,14 +2621,14 @@ class ExplainToolkit(Attributes):
 
             # in the case of shap_values.
             if dtype == 'dataset':
-              if "X" in results.data_vars:
-                  feature_names = results.attrs["features"]
-                  X = pd.DataFrame(results["X"].values, columns=feature_names)
-                  setattr(s, "X", X)
-                  setattr(s, "feature_names", feature_names)
+                if "X" in results.data_vars:
+                    feature_names = results.attrs["features"]
+                    X = pd.DataFrame(results["X"].values, columns=feature_names)
+                    setattr(s, "X", X)
+                    setattr(s, "feature_names", feature_names)
 
-              if "y" in results.data_vars:
-                  setattr(s, "y", results["y"])
+                if "y" in results.data_vars:
+                    setattr(s, "y", results["y"])
 
         return results
 

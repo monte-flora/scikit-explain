@@ -21,9 +21,11 @@ jobs:
         python -m pip install --upgrade pip
         python3 -m pip install --upgrade pytest-cov codecov coverage
         python -m pip install -r requirements.txt
+    - name: Install package 
+      run: python setup.py install
     
     - name: Run the test scripts 
       run: |
-        pytest -s tests --cov=./ --cov-report=xml
+        python -m pytest tests/test* --cov=./ --cov-report=xml
     
 
