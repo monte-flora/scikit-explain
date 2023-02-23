@@ -141,9 +141,8 @@ def sklearn_permutation_importance(
         which contains the results for each run
     """
     # Check if the data is probabilistic
-    # if len(scoring_data[1].shape) > 1 and scoring_data[1].shape[1] > 1:
-
-    if len(np.unique(scoring_data[1])) >= 2:
+    if len(scoring_data[1].shape) > 1 and scoring_data[1].shape[1] > 1:
+    #if len(np.unique(scoring_data[1])) >= 2:
         scoring_fn = score_trained_sklearn_model_with_probabilities(
             model,
             evaluation_fn,
