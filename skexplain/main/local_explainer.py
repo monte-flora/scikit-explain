@@ -181,7 +181,7 @@ class LocalExplainer(Attributes):
             class_idx = shap_kws.get("class_idx", 1)
         elif lime_kws is not None and bool(lime_kws):
             class_idx = lime_kws.get("class_idx", 1)
-        elif ti is not None and bool(ti_kws):
+        elif ti_kws is not None and bool(ti_kws):
             class_idx = ti_kws.get("class_idx", 1)
         else:
             class_idx = 1 
