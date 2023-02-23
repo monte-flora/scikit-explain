@@ -177,7 +177,14 @@ class LocalExplainer(Attributes):
             estimator_name: {} for estimator_name in self.estimator_names
         }
 
-        class_idx = shap_kwargs.get("class_idx", 1)
+        if shap_kws is not None and bool(shap_kws):
+            class_idx = shap_kws.get("class_idx", 1)
+        elif lime_kws is not None and bool(lime_kws):
+            class_idx = lime_kws.get("class_idx", 1)
+        elif ti is not None and bool(ti_kws):
+            class_idx = ti_kws.get("class_idx", 1)
+        else:
+            class_idx = 1 
 
         for estimator_name, estimator in self.estimators.items():
             # create entry for current estimator
