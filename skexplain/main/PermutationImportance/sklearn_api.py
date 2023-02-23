@@ -60,8 +60,12 @@ def predict_model(model, X_score):
 def predict_proba_model(model, X_score):
     """Uses a trained scikit-learn model to predict class probabilities for the
     scoring data"""
-    return model.predict_proba(X_score)[:, :]
-
+    pred = model.predict_proba(X_score)
+    # Binary classification.
+    if pred.shape[1] == 2: 
+        return pred[:,1]
+    else:
+        return pred 
 
 def forward_permutations(X, inds, var_idx):
     return np.array(

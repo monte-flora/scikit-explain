@@ -28,18 +28,18 @@ def RPS(truths, predictions):
     :param predictions: The predictions of the model
     :returns: a single value for the Ranked Probability Score
     """
-
     try:
-      truths = truths[:,0]
+        truths = truths[:,0]
     except:
-      pass
+        pass
     num_samples = predictions.shape[0]
     num_classes = predictions.shape[1]
     truths2 = np.zeros(predictions.shape)
     for n in range(num_classes):
-      truths2[:,n] = np.where((truths==n), 1, 0)
+        truths2[:,n] = np.where((truths==n), 1, 0)
 
-    RPS = np.sum( np.sum( (np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+    RPS = np.sum( 
+        np.sum( (np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
 
     return RPS
 
@@ -56,12 +56,14 @@ def RPSS(truths, predictions):
     num_classes = predictions.shape[1]
     truths2 = np.zeros(predictions.shape); y_clim = np.zeros(predictions.shape)
     for n in range(num_classes):
-      truths2[:,n] = np.where((truths==n), 1, 0)
-      y_clim[:,n] = len(truths[truths==n])/len(truths)
+        truths2[:,n] = np.where((truths==n), 1, 0)
+        y_clim[:,n] = len(truths[truths==n])/len(truths)
 
-    RPS = np.sum( np.sum( (np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+    RPS = np.sum( 
+        np.sum( (np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
 
-    RPS_climo = np.sum( np.sum( (np.cumsum(y_clim, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+    RPS_climo = np.sum( 
+        np.sum( (np.cumsum(y_clim, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
 
     RPSS = 1 - RPS / RPS_climo
 

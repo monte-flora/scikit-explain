@@ -288,11 +288,17 @@ class LocalExplainer(Attributes):
 
         shap_results = explainer(X)
 
-        if self.estimator_output == "probability":
-            shap_results = shap_results[..., class_idx]
+        #if self.estimator_output == "probability":
+        #    print(shap_results, class_idx) 
+        #    shap_results = shap_results[..., class_idx]
 
         contributions = shap_results.values
         bias = shap_results.base_values
+        
+        if self.estimator_output == "probability":
+            contributions = contributions[..., class_idx] 
+            bias = bias[:, class_idx]
+        
         
         return contributions, bias
 

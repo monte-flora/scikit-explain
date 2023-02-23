@@ -48,6 +48,7 @@ from ..common.attributes import Attributes
 
 from .PermutationImportance import sklearn_permutation_importance
 from .PermutationImportance.utils import bootstrap_generator
+from .PermutationImportance.metrics import RPSS
 
 
 class GlobalExplainer(Attributes):
@@ -150,7 +151,7 @@ class GlobalExplainer(Attributes):
         FOR INTERNAL PURPOSES ONLY.
         Converts a string to an evaluation function.
         """
-        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
+        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc", "rpss"]
 
         if evaluation_fn == "auc":
             evaluation_fn = roc_auc_score
@@ -166,6 +167,9 @@ class GlobalExplainer(Attributes):
             scoring_strategy = "argmin_of_mean"
         elif evaluation_fn == "mse":
             evaluation_fn = mean_squared_error
+            scoring_strategy = "argmax_of_mean"
+        elif evaluation_fn == 'rpss':
+            evaluation_fn = RPSS
             scoring_strategy = "argmax_of_mean"
         else:
             raise ValueError(
@@ -204,8 +208,8 @@ class GlobalExplainer(Attributes):
                 """ 
                 The scoring_strategy argument is None! If you are using a non-default evaluation_fn 
                 then scoring_strategy must be set! If the metric is positively-oriented (a higher value is better), 
-                then set scoring_strategy = "argmin_of_mean" and if it is negatively-oriented-
-                (a lower value is better), then set scoring_strategy = "argmax_of_mean"
+                then set scoring_strategy = "minimize" and if it is negatively-oriented-
+                (a lower value is better), then set scoring_strategy = "maximize"
                 """
             )
 
@@ -1332,9 +1336,6 @@ class GlobalExplainer(Attributes):
             Delta_neg = y_hat[ind_neg] - y_hat_neg
 
             # compute the mean of the difference per group
-            print (feature_codes[ind_plus] + 1)
-            print (groups)
-            print (groups[feature_codes[ind_plus] + 1])
             delta_df = pd.concat(
                 [
                     pd.DataFrame(
