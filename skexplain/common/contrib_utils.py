@@ -4,7 +4,7 @@
 import pandas as pd
 
 
-def get_indices_based_on_performance(estimator, X, y, estimator_output, n_samples=None):
+def get_indices_based_on_performance(estimator, X, y, estimator_output, n_samples=None, class_idx=1):
     """
      Determines the best hits, worst false alarms, worst misses, and best
      correct negatives using the data provided during initialization.
@@ -34,7 +34,7 @@ def get_indices_based_on_performance(estimator, X, y, estimator_output, n_sample
         n_samples = X.shape[0]
 
     if estimator_output == "probability":
-        predictions = estimator.predict_proba(X)[:, 1]
+        predictions = estimator.predict_proba(X)[:, class_idx]
     elif estimator_output == "raw":
         predictions = estimator.predict(X)
 
@@ -43,8 +43,8 @@ def get_indices_based_on_performance(estimator, X, y, estimator_output, n_sample
     df = pd.DataFrame(data)
 
     if estimator_output == "probability":
-        nonevent_X = df[y == 0]
-        event_X = df[y == 1]
+        nonevent_X = df[y != class_idx]
+        event_X = df[y == class_idx]
 
         event_X_sorted_indices = event_X.sort_values(
             by="diff", ascending=True

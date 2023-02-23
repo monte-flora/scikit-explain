@@ -432,7 +432,6 @@ class PlotFeatureContributions(PlotStructure):
         
         kwargs["max_display"] = kwargs.get("max_display", 10)
         estimator_output = kwargs.get("estimator_output", None)
-
         only_one_model = True if len(estimator_names) == 1 else False
         outer_indexs = list(set([f[0] for f in data[methods[0]].index.values]))
         only_one_method = True if len(methods) == 1 else False

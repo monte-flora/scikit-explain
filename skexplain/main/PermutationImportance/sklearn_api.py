@@ -60,7 +60,7 @@ def predict_model(model, X_score):
 def predict_proba_model(model, X_score):
     """Uses a trained scikit-learn model to predict class probabilities for the
     scoring data"""
-    return model.predict_proba(X_score)[:, 1]
+    return model.predict_proba(X_score)[:, :]
 
 
 def forward_permutations(X, inds, var_idx):
@@ -344,6 +344,7 @@ def score_trained_sklearn_model_with_probabilities(
     :returns: a callable which accepts ``(training_data, scoring_data)`` and
         returns some value (probably a float or an array of floats)
     """
+
     return model_scorer(
         model,
         training_fn=get_model,
