@@ -50,6 +50,7 @@ from .PermutationImportance import sklearn_permutation_importance
 from .PermutationImportance.utils import bootstrap_generator
 from .PermutationImportance.metrics import RPSS
 
+available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc", "rpss"]
 
 class GlobalExplainer(Attributes):
 
@@ -151,8 +152,6 @@ class GlobalExplainer(Attributes):
         FOR INTERNAL PURPOSES ONLY.
         Converts a string to an evaluation function.
         """
-        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc", "rpss"]
-
         if evaluation_fn == "auc":
             evaluation_fn = roc_auc_score
             scoring_strategy = "argmin_of_mean"
