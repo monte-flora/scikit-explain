@@ -461,17 +461,24 @@ class PlotStructure:
 
             ax.set_ylabel(yaxis_label_with_units, fontsize=fontsize)
 
-    def set_legend(self, n_panels, fig, ax, major_ax, **kwargs):
+    def set_legend(self, n_panels, fig, ax, major_ax=None, **kwargs):
         """
         Set a single legend on the bottom of a figure
         for a set of subplots.
         """
+        if major_ax is None:
+            major_ax = self.set_major_axis_labels(fig)
+        
         fontsize = kwargs.get("fontsize", "medium")
         ncol = kwargs.get("ncol", 3)
         handles = kwargs.get("handles", None)
         labels = kwargs.get("labels", None)
-        if handles is None and labels is None:
-            handles, labels = ax.get_legend_handles_labels()
+        
+        if handles is None: 
+            handles, _ = ax.get_legend_handles_labels()
+        
+        if labels is None:
+            _, labels = ax.get_legend_handles_labels()
 
         if n_panels > 3:
             bbox_to_anchor = (0.5, -0.35)

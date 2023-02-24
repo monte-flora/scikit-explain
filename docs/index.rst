@@ -44,6 +44,7 @@ Documentation
     Feature Attributions <feature_attributions> 
     SHAP-Style <shap>
     Permutation Importance <pimp>
+    Multiclassification Tasks <multiclassification>
 
 Contribute
 -----------

@@ -134,6 +134,8 @@ class PlotImportance(PlotStructure):
         p_values = kwargs.get("p_values", None)
         colinear_features = kwargs.get("colinear_features", None)
         rho_threshold = kwargs.get("rho_threshold", 0.8)
+        plot_reference_score = kwargs.get("plot_reference_score", True)
+        plot_error = kwargs.get('plot_error', True)
 
         only_one_method = all([m[0] == panels[0][0] for m in panels])
         only_one_estimator = all([m[1] == panels[0][1] for m in panels])
@@ -223,10 +225,12 @@ class PlotImportance(PlotStructure):
                     - np.nanpercentile(scores, [2.5, 97.5], axis=1)
                 )
 
-            if 'forward' in method:
-                ax.axvline(results[f'all_permuted_score__{estimator_name}'].mean(),color='k',ls=':')
-            elif 'backward' in method:
-                ax.axvline(results[f'original_score__{estimator_name}'].mean(),color='k',ls='--')    
+                
+            if plot_reference_score:    
+                if 'forward' in method:
+                    ax.axvline(results[f'all_permuted_score__{estimator_name}'].mean(),color='k',ls=':')
+                elif 'backward' in method:
+                    ax.axvline(results[f'original_score__{estimator_name}'].mean(),color='k',ls='--')    
                 
                 
             # Despine
@@ -234,24 +238,37 @@ class PlotImportance(PlotStructure):
 
             elinewidth = 0.9 if n_panels <= 3 else 0.5
 
-            ax.barh(
-                np.arange(len(scores_to_plot)),
-                scores_to_plot,
-                linewidth=1.75,
-                edgecolor="white",
-                alpha=0.5,
-                color=colors_to_plot,
-                xerr=ci,
-                capsize=3.0,
-                ecolor="k",
-                error_kw=dict(
-                    alpha=0.2,
-                    elinewidth=elinewidth,
-                ),
-                zorder=2,
-            )
-
+            if plot_error:
             
+                ax.barh(
+                    np.arange(len(scores_to_plot)),
+                    scores_to_plot,
+                    linewidth=1.75,
+                    edgecolor="white",
+                    alpha=0.5,
+                    color=colors_to_plot,
+                    xerr=ci,
+                    capsize=3.0,
+                    ecolor="k",
+                    error_kw=dict(
+                    alpha=0.2,
+                        elinewidth=elinewidth,
+                    ),
+                    zorder=2,
+                )
+
+            else:
+                ax.barh(
+                    np.arange(len(scores_to_plot)),
+                    scores_to_plot,
+                    linewidth=1.75,
+                    edgecolor="white",
+                    alpha=0.5,
+                    color=colors_to_plot,
+                    zorder=2,
+                )
+
+
             if plot_correlated_features:
                 self._add_correlated_brackets(
                     ax, np.arange(len(scores_to_plot)), 

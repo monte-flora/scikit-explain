@@ -144,6 +144,15 @@ class ExplainToolkit(Attributes):
         if estimators is not None:
             if not is_list(estimators) and estimators:
                 estimators = [estimators]
+            
+            # Check that the estimator name is provided!
+            for e in estimators:
+                if not is_tuple(e):
+                    raise TypeError('The estimators arg must be a tuple of (estimator_name, estimator)!')
+                else:
+                    if not is_str(e[0]):
+                        raise TypeError('Estimator name is suppose to be string. Make sure that the tuple is (estimator_name, estimator.')
+
             estimator_names = [e[0] for e in estimators]
             estimators = [e[1] for e in estimators]
         else:
