@@ -20,7 +20,8 @@ class TestRankings(TestLR, TestRF):
         explainer = skexplain.ExplainToolkit(
             estimators=self.lr_estimator, X=self.X, y=self.y
         )
-        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
+        available_scores = skexplain.main.global_explainer.available_scores
+        
         with self.assertRaises(Exception) as ex:
             explainer.permutation_importance(
                 n_vars=len(self.X.columns), evaluation_fn="bad"
@@ -36,7 +37,7 @@ class TestRankings(TestLR, TestRF):
         explainer = skexplain.ExplainToolkit(
             estimators=(self.lr_estimator_name, self.lr), X=self.X, y=self.y
         )
-        available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc"]
+        available_scores = skexplain.main.global_explainer.available_scores
         with self.assertRaises(Exception) as ex:
             explainer.permutation_importance(
                 n_vars=len(self.X.columns),
@@ -46,8 +47,8 @@ class TestRankings(TestLR, TestRF):
         except_msg = """ 
                 The scoring_strategy argument is None! If you are using a non-default evaluation_fn 
                 then scoring_strategy must be set! If the metric is positively-oriented (a higher value is better), 
-                then set scoring_strategy = "argmin_of_mean" and if it is negatively-oriented-
-                (a lower value is better), then set scoring_strategy = "argmax_of_mean"
+                then set scoring_strategy = "minimize" and if it is negatively-oriented-
+                (a lower value is better), then set scoring_strategy = "maximize"
                 """
         self.assertMultiLineEqual(ex.exception.args[0], except_msg)
         
