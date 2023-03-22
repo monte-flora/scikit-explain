@@ -1434,6 +1434,41 @@ class ExplainToolkit(Attributes):
 
         return results_ds
 
+    
+    def sobol_indices(self, n_bootstrap=5000, class_index=1):
+        """
+        Compute the 1st Order and Total order Sobol Indices. Useful for diagnosing feature 
+        interactions.
+        
+        
+        Parameters
+        ------------
+
+        Returns
+        ----------
+
+
+        Examples
+        ---------
+        >>> import skexplain
+        >>> # pre-fit estimators within skexplain
+        >>> estimators = skexplain.load_models()
+        >>> X, y = skexplain.load_data() # training data
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators
+        ...                             X=X,
+        ...                             y=y,
+        ...                            )
+        >>> ale = explainer.ale(features='all')
+        >>> ias = explainer.interaction_strength(ale)
+        """
+        
+        results_ds = self.global_obj.compute_sobol(n_bootstrap, class_idx=class_index)
+        results_ds = self._append_attributes(results_ds)
+
+        return results_ds
+    
+    
+    
     def _plot_interpret_curves(
         self,
         method,

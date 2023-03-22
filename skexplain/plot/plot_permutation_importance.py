@@ -29,6 +29,10 @@ class PlotImportance(PlotStructure):
         "grouped_only",
         "lime",
         "tree_interpreter",
+        "sobol_total", 
+        "sobol_1st",
+        "sobol_interact"
+        
     ]
 
     DISPLAY_NAMES_DICT = {
@@ -47,6 +51,10 @@ class PlotImportance(PlotStructure):
         "sage": "SAGE Importance Scores",
         "grouped": "Grouped Importance",
         "grouped_only": "Grouped Only Importance",
+        "sobol_total" : 'Sobol Total',
+        "sobol_1st" : 'Sobol 1st Order',
+        "sobol_interact" : 'Sobol Higher Orders',
+        
     }
 
     def __init__(self, BASE_FONT_SIZE=12, seaborn_kws=None):

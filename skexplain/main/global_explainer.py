@@ -2328,3 +2328,96 @@ class GlobalExplainer(Attributes):
         results = xr.merge(results, combine_attrs="override", compat="override")
 
         return results, names
+    
+    
+    def _sobol_create_dataA(self, data, N):
+        """Internal func for Sobol indices"""
+        return data.sample(n = N, replace = True).values
+
+    def _sobol_create_dataB(self, data, N):
+        """Internal func for Sobol indices"""
+        return data.sample(n = N, replace = True).values
+
+    def _sobol_create_dataAB(self, dataA, dataB, variable_index_to_fix):
+        """Internal func for Sobol indices"""
+        dataB_withA = dataB.copy()
+        dataB_withA[:, variable_index_to_fix] = dataA[:, variable_index_to_fix]
+        return dataB_withA
+
+    def sobol_indice_1st_and_total_order(self, estimator, variable_index, dataA, dataB, class_idx=1):
+        """
+        Computes the 1st order and full Sobol Indices for each feature. 
+        
+        
+        Parameters
+        -----------------------------
+        model : 
+        
+        """
+        dataB_withA = self._sobol_create_dataAB(dataA, dataB, variable_index)
+
+        N = len(dataA)
+
+        if hasattr(estimator, 'predict_proba'):
+            pred_func = estimator.predict_proba
+            y_A = estimator.predict_proba(dataA)[:,class_idx]
+            y_AB = estimator.predict_proba(dataB_withA)[:,class_idx]
+            y_B = estimator.predict_proba(dataB)[:,class_idx]
+            
+        else:
+            y_A = estimator.predict(dataA)
+            y_AB = estimator.predict(dataB_withA)
+            y_B = estimator.predict(dataB)
+    
+        num_1st_order = N*np.sum(np.multiply(y_A,y_AB)) - (np.sum(y_A)*np.sum(y_AB))
+        num_tot = N*np.sum(np.multiply(y_B,y_AB)) - (np.sum(y_A)**2)
+        deno = N*np.sum(y_A**2) - (np.sum(y_A))**2
+
+        return np.round(num_1st_order/deno, 3), np.round((1 - (num_tot/deno)), 3)
+
+    def compute_sobol(self, estimator_name, N=5000, class_idx=1):
+        """
+        Compute the Sobol Indices. 
+        """
+        final_results = [] 
+        for estimator_name in self.estimator_names: 
+        
+            # Retrieve the estimator object from the estimators dict attribute
+            estimator = self.estimators[estimator_name]
+    
+            st_order = []
+            total = []
+
+            dataA = self._sobol_create_dataA(self.X, N=N)
+            dataB = self._sobol_create_dataB(self.X, N=N)
+    
+            for i in range((self.X.shape[1])):
+                results = self.sobol_indice_1st_and_total_order(estimator, i, dataA, dataB)
+                st_order.append(results[0])
+                total.append(results[1])
+
+            df_result = pd.DataFrame({
+                "variable" : list(self.X.columns),
+                "1st_order" : st_order,
+                "other_order" : [tot - first for tot, first in zip(total,st_order)]
+            })
+
+            sobol_rank = to_skexplain_importance(df_result['1st_order'].values , estimator_name, 
+                                     feature_names = df_result['variable'].values, method='sobol_1st', normalize=False)
+
+            sobol_total_rank = to_skexplain_importance(
+                df_result['1st_order'].values+df_result['other_order'].values , estimator_name, 
+                                     feature_names = df_result['variable'].values, method='sobol_total', 
+                                           normalize=False)
+
+            sobol_int_rank = to_skexplain_importance(df_result['other_order'].values , estimator_name, 
+                                     feature_names = df_result['variable'].values, method='sobol_interact', 
+                                           normalize=False)
+
+            final_results.append(xr.merge([sobol_rank, sobol_total_rank, sobol_int_rank]))
+            
+            
+        final_results = xr.merge(final_results)
+    
+        return final_results
+    
