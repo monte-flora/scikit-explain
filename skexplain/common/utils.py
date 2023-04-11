@@ -443,6 +443,10 @@ def order_groups(X, feature):
                 D.loc[group, :] = D_values
                 D.loc[:, group] = D_values
         D_cumu = D_cumu + D
+        
+    # To avoid numpy.core._exceptions._UFuncInputCastingError, convert to dtype float32
+    D_cumu = D_cumu.astype(float)
+    
     # reduce the dimension of the cumulative distance matrix to 1
     D1D = cmds(D_cumu, 1).flatten()
     # order groups based on the values
