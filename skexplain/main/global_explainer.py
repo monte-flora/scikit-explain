@@ -1528,6 +1528,9 @@ class GlobalExplainer(Attributes):
         ias : dict
 
         """
+        # Reset the indices to avoid positional index errors
+        self.X.reset_index(inplace=True, drop=True)
+        
         subsample = kwargs.get("subsample", 1.0)
         n_bootstrap = kwargs.get("n_bootstrap", 1)
         estimator_output = kwargs.get("estimator_output", "raw")
@@ -1559,7 +1562,7 @@ class GlobalExplainer(Attributes):
 
         ias = []
         for k, idx in enumerate(bootstrap_indices):
-            X = self.X.iloc[idx, :].values
+            X = self.X.iloc[idx, :].reset_index(drop=True).values
             if self.estimator_output == "probability":
                 predictions = estimator.predict_proba(X)[:, class_index]
             else:
