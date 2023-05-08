@@ -75,6 +75,8 @@ tqdm
 statsmodels
 seaborn>=0.11.0
 ```
+Scikit-explain has built-in saving and loading function for pandas dataframes and xarray datasets. Datasets are saved in netCDF4 format. To use this feature, install netCDF4 with one of the following: `pip install netCDF4` or `conda install -c conda-forge netCDF4`
+
 
 ### Initializing scikit-explain
 The interface of scikit-explain is ```ExplainToolkit```, which houses all of the explainability methods and their corresponding plotting methods. See the tutorial notebooks for examples. 
