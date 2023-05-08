@@ -2676,7 +2676,7 @@ class ExplainToolkit(Attributes):
 
         return results
 
-    def save(self, fname, data):
+    def save(self, fname, data, complevel=5, df_save_func='to_json', **kwargs):
         """
         Save results of a computation (permutation importance, calc_ale, calc_pd, etc)
 
@@ -2686,6 +2686,15 @@ class ExplainToolkit(Attributes):
             filename to store the results in (including path)
         data : ExplainToolkit results
             the results of a ExplainToolkit calculation. Can be a dataframe or dataset.
+        complevel : int 
+            Compression level for the netCDF file (default=5) 
+        df_save_func : 'to_json', 'to_pickle', 'to_csv', 'to_feather', or other str
+            The dataframe attribute used to save a pandas dataframe. To use
+            `to_feather` pyarrow must be installed. 
+        kwargs : dict 
+                Args passed to either xarray.Dataset.to_netcdf()
+                (https://docs.xarray.dev/en/stable/generated/xarray.Dataset.to_netcdf.html)
+                or to 
 
         Examples
         -------
@@ -2707,9 +2716,9 @@ class ExplainToolkit(Attributes):
         >>> explainer.save(fname, perm_imp_results)
         """
         if is_dataset(data):
-            save_netcdf(fname=fname, ds=data)
+            save_netcdf(fname=fname, ds=data, **kwargs)
         elif is_dataframe(data):
-            save_dataframe(fname=fname, dframe=data)
+            save_dataframe(fname=fname, dframe=data, df_save_func=df_save_func, **kwargs)
         else:
             raise TypeError(
                 f"data is not a pandas.DataFrame or xarray.Dataset. The type is {type(data)}."

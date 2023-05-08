@@ -79,18 +79,24 @@ def load_dataframe(fnames):
     return data_concat
 
 
-def save_netcdf(fname, ds, complevel=5):
+def save_netcdf(fname, ds, complevel=5, **kwargs):
     """Save netcdf file with xarray"""
     comp = dict(zlib=True, complevel=complevel)
     encoding = {var: comp for var in ds.data_vars}
-    ds.to_netcdf(path=fname, encoding=encoding)
+    
+    kwargs['encoding'] = kwargs.get('encoding', encoding)
+    
+    ds.to_netcdf(path=fname, **kwargs)
     ds.close()
     del ds
 
 def save_dataframe(
     fname,
     dframe,
+    df_save_func, 
+    **kwargs
 ):
     """Save dataframe as pickle file"""
-    dframe.to_pickle(fname)
+    getattr(dframe, df_save_func)(fname, **kwargs)
+    
     del dframe
