@@ -361,7 +361,7 @@ def find_correlated_pairs_among_top_features(
 
     return pairs, pair_indices
 
-def all_permuted_score(estimator, X, y, evaluation_fn, n_permute, subsample, random_seed=123):
+def all_permuted_score(estimator, X, y, evaluation_fn, n_permute, subsample, random_seed=123, class_index=1):
     random_state = np.random.RandomState(random_seed)
     inds = random_state.permutation(len(X))
     if isinstance(X, pd.DataFrame):
@@ -378,6 +378,10 @@ def all_permuted_score(estimator, X, y, evaluation_fn, n_permute, subsample, ran
     
         if hasattr(estimator, 'predict_proba'):
             predictions = estimator.predict_proba(X_permuted)[:]
+            # For binary classification problems. 
+            if predictions.shape[1] == 2: 
+                predictions = predictions[:,1]
+            
             #print (predictions.shape)
         elif hasattr(estimator, 'predict'):
             predictions = estimator.predict(X_permuted)[:]
