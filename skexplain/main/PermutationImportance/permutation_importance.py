@@ -30,25 +30,13 @@ __all__ = ["permutation_importance", "sklearn_permutation_importance"]
 # variable_names = ['' for i in range(len(fake_data))]
 # from sklearn.metrics import roc_auc_score
 
-def is_approx_integers(lst, tol=0.00000000000001):
-    """
-    Check if a list of data is approximately integers.
-    """
-    rounded_lst = np.round(lst)
-    abs_diff = np.abs(lst - rounded_lst)
-    mean_abs_diff = np.mean(abs_diff)
-    return mean_abs_diff <= tol
-
 def is_classification(y): 
-    # Are there two target values (i.e., binary classification)
-    if len(np.unique(y)) == 2:
+    # Are there less 10 unique categories? 
+    if len(np.unique(y)) <= 10:
         return True
-    elif is_approx_integers(y):
-        return True 
-    else:
-        return False 
-
-
+    
+    return False
+            
 def permutation_importance(
     scoring_data,
     scoring_fn,
