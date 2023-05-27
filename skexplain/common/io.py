@@ -2,6 +2,7 @@ import xarray as xr
 import pandas as pd
 import pickle
 from collections import ChainMap
+from pathlib import Path
 
 from .utils import is_list, is_all_dict, flatten_nested_list
 
@@ -85,8 +86,17 @@ def save_netcdf(fname, ds, complevel=5, **kwargs):
     encoding = {var: comp for var in ds.data_vars}
     
     kwargs['encoding'] = kwargs.get('encoding', encoding)
+    try:
+        ds.to_netcdf(path=fname, **kwargs)
+    except PermissionError:
+        # If the file already exists, then that can raise 
+        # an PermissionError. Check if in fact the 
+        # file already exists.
+        if Path(fname).is_file():
+            # If so, let's delete it. We should be able to save it 
+            # now. 
+            Path(fname).unlink()
     
-    ds.to_netcdf(path=fname, **kwargs)
     ds.close()
     del ds
 
