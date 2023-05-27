@@ -97,6 +97,8 @@ def save_netcdf(fname, ds, complevel=5, **kwargs):
             # now. 
             Path(fname).unlink()
     
+    ds.to_netcdf(path=fname, **kwargs)
+    
     ds.close()
     del ds
 
