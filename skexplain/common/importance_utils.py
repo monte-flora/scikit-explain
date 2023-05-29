@@ -185,26 +185,45 @@ def compute_importance(results, scoring_strategy, direction):
 
 
 def to_skexplain_importance(
-    importances, estimator_name, feature_names, method, normalize=True
+    importances, estimator_name, 
+    feature_names, 
+    method, 
+    normalize=False, 
+    bootstrap_axis=0, 
 ):
     """
-    Convert the feature ranking-based scores from non-permutation-importance methods
-    into a importance dataset for plotting purposes
+    Convert feature ranking-based scores from non-permutation-importance methods
+    computed by scikit-explain or other methods into a skexplain-style
+    datset to leverage the built-in plotting code. This method handles the 
+    ranking and sorting of the importance values by assuming higher values 
+    equal higher importance.
+    
+    Caution: This method assumes that higher values equal higher importance!
     
     Parameters
     ---------------
-    importances : array-like 
+    importances : 1d or 2d array-like 
+        The feature importance scores. The code assumes that 2D arrays are the result 
+        of bootstrapping. Users can declare the bootstrapping axis with `bootstrap_axis`.
+        By default, the first axis (=0) is the bootstrap axis for  skexplain methods 
+    
+    bootstrap_axis : int (default=0)
     
     estimator_name : str 
+        The estimator name. Used for plotting and creating the dataset. 
     
     feature_names : array-like of shape (n_features)
+        The feature names. Used for plotting and creating the dataset. 
     
     method : 'sage', 'coefs', 'shap_std', 'shap_sum', 'tree_interpreter', 'lime' or str
-    
-    normalize : True/False
-    
+        The name of the feature ranking method. The named method perform specific 
+        operations. For example, local methods like 'shap_sum', 'tree_interpreter', 
+        'lime' will sum the importance values to determine feature ranking. 
+        
+    normalize : True/False (default=False)
+        If True, normalize the feature importance values using min-max scaling. 
+        This is useful when comparing importance across different methods. 
     """
-
     bootstrap = False
     if method == "sage":
         importances_std = importances.std
@@ -213,16 +232,16 @@ def to_skexplain_importance(
         importances = np.absolute(importances)
     elif method == "shap_std":
         # Compute the std(SHAP)
-        importances = np.std(importances, axis=0)
+        importances = np.nanstd(importances, axis=0)
     elif method == "shap_sum" or method == "tree_interpreter" or method == 'lime':
         # Compute sum of abs values
-        importances = np.sum(np.absolute(importances), axis=0)
+        importances = np.nansum(np.absolute(importances), axis=0)
     else:
         if np.ndim(importances) == 2:
             # average over bootstrapping
             bootstrap = True
             importances_to_save = importances.copy()
-            importances = np.mean(importances, axis=1)
+            importances = np.nanmean(importances, axis=bootstrap_axis)
 
     # Sort from higher score to lower score
     ranked_indices = np.argsort(importances)[::-1]

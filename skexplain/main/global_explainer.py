@@ -255,7 +255,8 @@ class GlobalExplainer(Attributes):
                                             y.values, 
                                             evaluation_fn=evaluation_fn, 
                                             n_permute=n_permute, 
-                                            subsample=subsample, random_seed=random_seed)
+                                            subsample=subsample, random_seed=random_seed, 
+                                           )
                 
                 pi_result.permuted_score = scores
             
@@ -781,7 +782,6 @@ class GlobalExplainer(Attributes):
             results : nested dictionary
 
         """
-        
         estimator = self.estimators[estimator_name]
         # check to make sure feature is valid
         if feature not in self.feature_names:
@@ -844,6 +844,9 @@ class GlobalExplainer(Attributes):
             predictions = []
             for offset in range(2):
                 X_temp = X.copy()
+                ###print(feature, np.unique(bin_edges), np.unique(indices), offset)
+                # TODO: ran into an error when using too small of sample size
+                # There seems to be an issue with the binning. 
                 X_temp[feature] = bin_edges[indices + offset]
                 if self.estimator_output == "probability":
                     predictions.append(estimator.predict_proba(X_temp.values)[:, class_index])
@@ -1620,9 +1623,9 @@ class GlobalExplainer(Attributes):
             categorical features.
             """
             if f in cat_features:
-                return 0.25 * (np.max(values, axis=1) - np.min(values, axis=1))
+                return 0.25 * (np.nanmax(values, axis=1) - np.nanmin(values, axis=1))
             else:
-                return np.std(values, ddof=1, axis=1)
+                return np.nanstd(values, ddof=1, axis=1)
 
         results = {}
         for estimator_name in estimator_names:
@@ -1636,7 +1639,7 @@ class GlobalExplainer(Attributes):
             )
 
             # Average over the bootstrap indices
-            idx = np.argsort(np.mean(ale_std, axis=1))[::-1]
+            idx = np.argsort(np.nanmean(ale_std, axis=1))[::-1]
 
             feature_names_sorted = np.array(feature_names)[idx]
             ale_std_sorted = ale_std[idx, :]
