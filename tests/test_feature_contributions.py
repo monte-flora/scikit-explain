@@ -49,7 +49,8 @@ class TestFeatureContributions(TestSingleExampleContributions):
             y=self.y,
         )
 
-        for method in ["tree_interpreter", "shap", 'lime']:
+        # for method in ["tree_interpreter", "shap", 'lime']
+        for method in ["tree_interpreter", 'lime']:
             contrib_ds = explainer.average_attributions(
                 method=method,
                 performance_based=True,

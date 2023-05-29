@@ -1620,7 +1620,8 @@ class GlobalExplainer(Attributes):
         def _std(values, f, cat_features):
             """
             Using a different formula for computing standard deviation for
-            categorical features.
+            categorical features. `values` and `cat_features` are shape = (n_boot, n_bins),
+            so axis=1 computes the spread over the bin range. 
             """
             if f in cat_features:
                 return 0.25 * (np.nanmax(values, axis=1) - np.nanmin(values, axis=1))
@@ -1637,7 +1638,7 @@ class GlobalExplainer(Attributes):
                     for f in feature_names
                 ]
             )
-
+            # shape of ale_std = (n_boot, n_features, n_boot)             
             # Average over the bootstrap indices
             idx = np.argsort(np.nanmean(ale_std, axis=1))[::-1]
 
@@ -2322,11 +2323,13 @@ class GlobalExplainer(Attributes):
             group_names = list(groups.keys())
             importances = np.array([scores[g] for g in group_names])
 
+            # importances shape = (n_groups, n_permutations) 
             group_rank = to_skexplain_importance(
                 importances,
                 estimator_name=estimator_name,
                 feature_names=group_names,
                 method=perm_method,
+                bootstrap_axis=1
             )
 
             results.append(group_rank)
