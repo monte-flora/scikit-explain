@@ -50,19 +50,19 @@ class TestFeatureContributions(TestSingleExampleContributions):
         )
 
         # for method in ["tree_interpreter", "shap", 'lime']
+        #  shap_kws={
+        #            "masker": shap.maskers.Partition(
+        #                self.X, max_samples=100, clustering="correlation"
+        #            ),
+        #            "algorithm": "permutation",
+        #           
+        #        },
         for method in ["tree_interpreter", 'lime']:
             contrib_ds = explainer.average_attributions(
                 method=method,
                 performance_based=True,
                 n_samples=10,
                 lime_kws={'training_data' : self.X.values}, 
-                shap_kws={
-                    "masker": shap.maskers.Partition(
-                        self.X, max_samples=100, clustering="correlation"
-                    ),
-                    "algorithm": "permutation",
-                   
-                },
             )
 
     def test_bad_method(self):
