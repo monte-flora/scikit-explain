@@ -1612,10 +1612,12 @@ class GlobalExplainer(Attributes):
         results_ds : xarray.Dataset
 
         """
-        feature_names = list([f for f in data.data_vars if "__" not in f])
-        feature_names.sort()
+        all_features = features.copy() 
+        
+        #feature_names = list([f for f in data.data_vars if "__" not in f])
+        #feature_names.sort()
 
-        features, cat_features = determine_feature_dtype(self.X, feature_names)
+        features, cat_features = determine_feature_dtype(self.X, features)
 
         def _std(values, f, cat_features):
             """
@@ -1635,14 +1637,14 @@ class GlobalExplainer(Attributes):
             ale_std = np.array(
                 [
                     _std(data[f"{f}__{estimator_name}__{method}"].values, f, cat_features)
-                    for f in feature_names
+                    for f in all_features
                 ]
             )
             # shape of ale_std = (n_boot, n_features, n_boot)             
             # Average over the bootstrap indices
             idx = np.argsort(np.nanmean(ale_std, axis=1))[::-1]
 
-            feature_names_sorted = np.array(feature_names)[idx]
+            feature_names_sorted = np.array(all_features)[idx]
             ale_std_sorted = ale_std[idx, :]
 
             results[f"{method}_variance_rankings__{estimator_name}"] = (
