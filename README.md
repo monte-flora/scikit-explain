@@ -18,6 +18,7 @@ scikit-explain is a user-friendly Python module for tabular-style machine learni
   * [SHAP](https://christophm.github.io/interpretable-ml-book/shap.html) 
   * First-order PD/ALE Variance ([Greenwell et al. 2018](https://arxiv.org/abs/1805.04755))    
   * Grouped permutation importance ([Au et al. 2021](https://arxiv.org/abs/2104.11688))
+  * Tree Interpreter ([Saabas 2014](http://blog.datadive.net/interpreting-random-forests/))
 
 * Feature Effects/Attributions: 
   * [Partial Dependence](https://christophm.github.io/interpretable-ml-book/pdp.html) (PD), 
@@ -26,6 +27,7 @@ scikit-explain is a user-friendly Python module for tabular-style machine learni
   * [SHAP](https://christophm.github.io/interpretable-ml-book/shap.html) 
   * [LIME](https://christophm.github.io/interpretable-ml-book/lime.html#lime)
   * Main Effect Complexity (MEC; [Molnar et al. 2019](https://arxiv.org/abs/1904.03867))
+  * Tree Interpreter ([Saabas 2014](http://blog.datadive.net/interpreting-random-forests/))
 
 * Feature Interactions:
   * Second-order PD/ALE 
@@ -33,6 +35,7 @@ scikit-explain is a user-friendly Python module for tabular-style machine learni
   * Second-order PD/ALE Variance ([Greenwell et al. 2018](https://arxiv.org/abs/1805.04755)) 
   * Second-order Permutation Importance ([Oh et al. 2019](https://www.mdpi.com/2076-3417/9/23/5191))
   * Friedman H-statistic ([Friedman and Popescu 2008](https://projecteuclid.org/journals/annals-of-applied-statistics/volume-2/issue-3/Predictive-learning-via-rule-ensembles/10.1214/07-AOAS148.full))
+  * [Sobol Indices](https://towardsdatascience.com/sobol-indices-to-measure-feature-importance-54cedc3281bc)
 
 These explainability methods are discussed at length in Christoph Molnar's [Interpretable Machine Learning](https://christophm.github.io/interpretable-ml-book/). The primary feature of this package is the accompanying built-in plotting methods, which are desgined to be easy to use while producing publication-level quality figures. The computations do leverage parallelization when possible. Documentation for scikit-explain can be found at [Read the Docs](https://scikit-explain.readthedocs.io/en/latest/index.html#). 
 
