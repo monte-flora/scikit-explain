@@ -214,6 +214,8 @@ def to_skexplain_importance(
     
     feature_names : array-like of shape (n_features)
         The feature names. Used for plotting and creating the dataset. 
+        Feature name index should correspond with the same index in
+        importances
     
     method : 'sage', 'coefs', 'shap_std', 'shap_sum', 'tree_interpreter', 'lime' or str
         The name of the feature ranking method. The named method perform specific 
@@ -243,6 +245,9 @@ def to_skexplain_importance(
             importances_to_save = importances.copy()
             importances = np.nanmean(importances, axis=bootstrap_axis)
 
+            assert len(importances) == len(feature_names), """Number of features not equal to number of 
+            importance values! Check bootstrap_axis"""
+            
     # Sort from higher score to lower score
     ranked_indices = np.argsort(importances)[::-1]
 

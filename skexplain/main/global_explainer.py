@@ -1613,10 +1613,6 @@ class GlobalExplainer(Attributes):
 
         """
         all_features = features.copy() 
-        
-        #feature_names = list([f for f in data.data_vars if "__" not in f])
-        #feature_names.sort()
-
         features, cat_features = determine_feature_dtype(self.X, features)
 
         def _std(values, f, cat_features):
@@ -1640,21 +1636,12 @@ class GlobalExplainer(Attributes):
                     for f in all_features
                 ]
             )
-            # shape of ale_std = (n_boot, n_features, n_boot)             
-            # Average over the bootstrap indices
-            idx = np.argsort(np.nanmean(ale_std, axis=1))[::-1]
-
-            feature_names_sorted = np.array(all_features)[idx]
-            ale_std_sorted = ale_std[idx, :]
-
-            results[f"{method}_variance_rankings__{estimator_name}"] = (
-                [f"n_vars_ale_variance"],
-                feature_names_sorted,
-            )
-            results[f"{method}_variance_scores__{estimator_name}"] = (
-                [f"n_vars_ale_variance", "n_bootstrap"],
-                ale_std_sorted,
-            )
+            
+            results = to_skexplain_importance(ale_std, 
+                                          estimator_name, all_features, 
+                                               method=f'{method}_variance', normalize=False,
+                                       bootstrap_axis=1, 
+                                      )
 
         results_ds = to_xarray(results)
 
