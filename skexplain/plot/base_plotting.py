@@ -286,7 +286,8 @@ class PlotStructure:
 
         return ax
 
-    def set_row_labels(self, labels, axes, pos=-1, pad=1.15, rotation=270, **kwargs):
+    def set_row_labels(self, labels, axes, pos=-1, pad=1.15, rotation=270,
+                       **kwargs):
         """
         Give a label to each row in a series of subplots
         """
@@ -296,7 +297,7 @@ class PlotStructure:
         if np.ndim(axes) == 2:
             iterator = axes[:, pos]
         else:
-            iterator = [axes[pos]]
+            iterator = axes.flat #[axes[pos]]
 
         for ax, row, color in zip(iterator, labels, colors):
             ax.yaxis.set_label_position("right")
