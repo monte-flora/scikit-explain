@@ -2413,20 +2413,49 @@ class GlobalExplainer(Attributes):
                 "other_order" : [tot - first for tot, first in zip(total,st_order)]
             })
 
-            sobol_rank = to_skexplain_importance(df_result['1st_order'].values , estimator_name, 
-                                     feature_names = df_result['variable'].values, method='sobol_1st', normalize=False)
+            # Sort from higher score to lower score based on the absolute value
+            # of the total sobol indices. We then use that sorting to sort 
+            # the first order and higher order sobol indices. 
+            importances = np.absolute(df_result['1st_order'].values+df_result['other_order'].values)
+            ranked_indices = np.argsort(importances)[::-1]
 
-            sobol_total_rank = to_skexplain_importance(
-                df_result['1st_order'].values+df_result['other_order'].values , estimator_name, 
-                                     feature_names = df_result['variable'].values, method='sobol_total', 
-                                           normalize=False)
-
-            sobol_int_rank = to_skexplain_importance(df_result['other_order'].values , estimator_name, 
-                                     feature_names = df_result['variable'].values, method='sobol_interact', 
-                                           normalize=False)
-
-            final_results.append(xr.merge([sobol_rank, sobol_total_rank, sobol_int_rank]))
+            scores_ranked = importances[ranked_indices]
+            features_ranked = np.array(list(self.X.columns))[ranked_indices]
             
+            data = {}
+            data[f"sobol_total_rankings__{estimator_name}"] = (
+                [f"n_vars_sobol_total"],
+                features_ranked,
+                )
+            
+            scores_ranked = scores_ranked.reshape(len(scores_ranked), 1)
+            data[f"sobol_total_scores__{estimator_name}"] = (
+                [f"n_vars_sobol_total", "n_bootstrap"],
+                scores_ranked,
+                    )
+            
+            data_first = df_result['1st_order'].values[ranked_indices]
+            data_first = data_first.reshape(len(scores_ranked), 1)
+            
+ 
+            data[f"sobol_1st_scores__{estimator_name}"] = (
+                [f"n_vars_sobol_total", "n_bootstrap"],
+                data_first,
+                    )
+            
+            data_higher = df_result['other_order'].values[ranked_indices]
+            data_higher = data_higher.reshape(len(scores_ranked), 1)
+            data[f"sobol_interact_scores__{estimator_name}"] = (
+                [f"n_vars_sobol_total", "n_bootstrap"],
+                data_higher
+                    )
+            
+            data = xr.Dataset(data)
+
+            data.attrs["estimators used"] = estimator_name
+            data.attrs["estimator output"] = "probability"
+            
+            final_results.append(data)
             
         final_results = xr.merge(final_results)
     
