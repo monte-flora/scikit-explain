@@ -802,7 +802,11 @@ class GlobalExplainer(Attributes):
         # calculate the bin edges to be used in the bootstrapping.
         original_feature_values = self.X[feature].values
 
-        if self.X[feature].dtype.name != "category":
+        unique_vals = np.unique(original_feature_values)
+        
+        # For continuous features, we've hardcoded a check that the 
+        # number of unique values be larger than the number of bins. 
+        if self.X[feature].dtype.name != "category" :
             bin_edges = np.unique(
                 np.percentile(
                     original_feature_values,
@@ -813,8 +817,10 @@ class GlobalExplainer(Attributes):
             # Initialize an empty ale array
             ale = np.zeros((n_bootstrap, len(bin_edges) - 1))
         else:
+            #self.X[feature] = self.X[feature].astype('category') 
+            
             # Use the unique values for discrete data.
-            bin_edges = np.unique(original_feature_values)
+            bin_edges = unique_vals
 
             # Initialize an empty ale array
             ale = np.zeros((n_bootstrap, len(bin_edges)))
@@ -1236,6 +1242,7 @@ class GlobalExplainer(Attributes):
             X.reset_index(drop=True, inplace=True)
             X = X.copy()
 
+            
             if (X[feature].dtype.name != "category") or (not X[feature].cat.ordered):
                 X[feature] = X[feature].astype("string")
                 groups_order = order_groups(X, feature)
@@ -1243,13 +1250,14 @@ class GlobalExplainer(Attributes):
                 X[feature] = X[feature].astype(
                     pd.api.types.CategoricalDtype(categories=groups, ordered=True)
                 )
-
+                
             groups = X[feature].unique()
             groups = groups.sort_values()
             feature_codes = X[feature].cat.codes
             groups_counts = X.groupby(feature).size()
             groups_props = groups_counts / sum(groups_counts)
 
+            
             K = len(groups)
 
             # create copies of the dataframe
@@ -1332,7 +1340,6 @@ class GlobalExplainer(Attributes):
                     """ right columns encoding it, including the case of a missing category.
                     """
                 )
-
             # compute prediction difference
             Delta_plus = y_hat_plus - y_hat[ind_plus]
             Delta_neg = y_hat[ind_neg] - y_hat_neg
@@ -1353,7 +1360,7 @@ class GlobalExplainer(Attributes):
             )
 
             res_df = delta_df.groupby([feature]).mean()
-            res_df.loc[:, "ale"] = res_df.loc[:, "eff"].cumsum()
+            res_df["ale"] = res_df["eff"].cumsum()
             
             res_df.loc[groups[0]] = 0
             # sort the index (which is at this point an ordered categorical) as a safety measure
@@ -1621,11 +1628,17 @@ class GlobalExplainer(Attributes):
             categorical features. `values` and `cat_features` are shape = (n_boot, n_bins),
             so axis=1 computes the spread over the bin range. 
             """
+            
             if f in cat_features:
-                return 0.25 * (np.nanmax(values, axis=1) - np.nanmin(values, axis=1))
+                vals = (np.nanmax(values, axis=1) - np.nanmin(values, axis=1))
             else:
-                return np.nanstd(values, ddof=1, axis=1)
-
+                vals = np.nanstd(values, ddof=1, axis=1)
+                
+            # Convert NaNs to zeros for this calculation. 
+            vals[np.isnan(vals)] = 0   
+                
+            return vals
+                
         results = {}
         for estimator_name in estimator_names:
             # Compute the std over the bin axis [shape = (n_features, n_bootstrap)]

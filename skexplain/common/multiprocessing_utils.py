@@ -117,7 +117,7 @@ def run_parallel(
 ):
     """
     Runs a series of python scripts in parallel. Scripts uses the tqdm to create a
-    progress bar.
+    progress bar. If n_jobs == 1, then process is run in serial. 
     Args:
     -------------------------
         func : callable
@@ -155,71 +155,27 @@ def run_parallel(
         print(f"User requested {n_jobs} processors, but system only has {mp.cpu_count()}! Setting n_jobs to CPU count.")
         n_jobs = mp.cpu_count()
         
+    is_parallel = True if n_jobs != 1 else False
         
-    pool = Pool(processes=n_jobs)
+    if is_parallel:   
+        pool = Pool(processes=n_jobs)
+        
     ps = []
+    results=[]
     for args in args_iterator:
         if isinstance(args, str):
             args = (args,)
-         
-        p = pool.apply_async(LogExceptions(func), args=args, callback=update)
-        ps.append(p)
         
-    pool.close()
-    pool.join()
-
-    results = [p.get() for p in ps]
+        if is_parallel:
+            p = pool.apply_async(LogExceptions(func), args=args, callback=update)
+            ps.append(p)
+        else:
+            results.append(LogExceptions(func)(*args))
+            update()
+    
+    if is_parallel:
+        pool.close()
+        pool.join()
+        results = [p.get() for p in ps]
     
     return results 
-
-'''
-Deprecrated on 14 Sept 2022 by monte-flora
-def run_parallel(
-    func,
-    args_iterator,
-    kwargs,
-    n_jobs,
-    total,
-    description = "Processes",
-):
-    """
-    Runs a series of python scripts in parallel. Scripts uses the tqdm to create a
-    progress bar.
-
-    Args:
-    -------------------------
-        func : callable
-            python function, the function to be parallelized; can be a function which issues a series of python scripts
-        args_iterator :  iterable, list,
-            python iterator, the arguments of func to be iterated over
-                             it can be the iterator itself or a series of list
-        n_jobs : int or float,
-            if int, taken as the literal number of processors to use
-            if float (between 0 and 1), taken as the percentage of available processors to use
-        kwargs : dict
-            keyword arguments to be passed to the func
-    """
-    if 0 <= n_jobs < 1:
-        n_jobs = int(n_jobs * mp.cpu_count())
-    else:
-        n_jobs = int(n_jobs)
-
-    if n_jobs > mp.cpu_count():
-        raise ValueError(
-            f"User requested {n_jobs} processors, but system only has {mp.cpu_count()}!"
-        )
-
-    aprun = ParallelExecutor(
-                             joblib_args={'n_jobs' : n_jobs,
-                                          'require' : "sharedmem"}, 
-                             tqdm_args = {'position' : 0, 'leave' : True, 'desc' : description},
-                            )(
-        bar="tqdm", total=total
-    )
-    
-    results = aprun(
-        delayed(LogExceptions(func))(*args, **kwargs) for args in args_iterator
-    )
-
-    return results
-'''
