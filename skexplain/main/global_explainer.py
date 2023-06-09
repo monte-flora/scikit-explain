@@ -23,6 +23,7 @@ from sklearn.metrics import (
     average_precision_score,
     mean_squared_error,
     r2_score,
+    mean_absolute_error
 )
 
 from ..common.utils import (
@@ -50,7 +51,7 @@ from .PermutationImportance import sklearn_permutation_importance
 from .PermutationImportance.utils import bootstrap_generator
 from .PermutationImportance.metrics import RPSS
 
-available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc", "rpss"]
+available_scores = ["auc", "auprc", "bss", "mse", "norm_aupdc", "rpss", "mae"]
 
 class GlobalExplainer(Attributes):
 
@@ -167,6 +168,9 @@ class GlobalExplainer(Attributes):
         elif evaluation_fn == "mse":
             evaluation_fn = mean_squared_error
             scoring_strategy = "argmax_of_mean"
+        elif evaluation_fn == "mae":
+            evaluation_fn = mean_absolute_error
+            scoring_strategy = "argmax_of_mean" 
         elif evaluation_fn == 'rpss':
             evaluation_fn = RPSS
             scoring_strategy = "argmax_of_mean"
@@ -1553,7 +1557,9 @@ class GlobalExplainer(Attributes):
         # Get the interpolated ALE curves
         main_effect_funcs = {}
         for f in feature_names:
-            ale = np.mean(data[f"{f}__{estimator_name}__ale"].values, axis=0)
+            ale = np.nanmean(data[f"{f}__{estimator_name}__ale"].values, axis=0)
+            # Replace NaNs with zeros.
+            ale[np.isnan(ale)] = 0 
             x = data[f"{f}__bin_values"].values
             main_effect_funcs[f] = interp1d(
                 x,
@@ -1579,7 +1585,7 @@ class GlobalExplainer(Attributes):
                 predictions = estimator.predict(X)
 
             # Get the average estimator prediction
-            avg_prediction = np.mean(predictions)
+            avg_prediction = np.nanmean(predictions)
 
             # Get the ALE value for each feature per X
             main_effects = np.array(
@@ -1589,12 +1595,17 @@ class GlobalExplainer(Attributes):
                 ]
             )
 
+            main_effects[np.isnan(main_effects)] = 0
+            
             # Sum the ALE values per X and add on the average value
             main_effects = np.sum(main_effects.T, axis=1) + avg_prediction
 
             num = np.sum((predictions - main_effects) ** 2)
             denom = np.sum((predictions - avg_prediction) ** 2)
 
+            if denom <= 1e-6:
+                denom = 1e-6
+            
             # Compute the interaction strength
             ias.append(num / denom)
 
@@ -2147,7 +2158,7 @@ class GlobalExplainer(Attributes):
         if hasattr(estimator, 'predict_proba'):
             prediction = estimator.predict_proba(X)
             if prediction.shape[1] == 2:
-              prediction = prediction[:, 1]
+                prediction = prediction[:, 1]
         elif hasattr(estimator, 'predict'):
             prediction = estimator.predict(X)[:]
         else:
@@ -2164,51 +2175,87 @@ class GlobalExplainer(Attributes):
         feature_subset,
         estimator,
         only,
-        all_permuted_score,
+        base_score,
         scoring_strategy, 
     ):
+        """
+        Compute the importance of a given group of features by permuting them and scoring the model's performance.
+
+        Parameters
+        ----------------------------------
+        X: numpy array
+            The input data
+        y: numpy array
+            The target output
+        evaluation_fn: function
+            The function used to evaluate the model's performance
+        group: string
+            The group of features whose importance is being evaluated
+        feature_subset: list
+            The indices of the features in the subset being evaluated
+        estimator: sklearn-like estimator
+            The model being evaluated
+        only: bool
+            If True, jointly permute all features except those in the feature subset.
+            If False, only the features in the feature_subset are permuted. 
+        base_score: float
+            The score against which the importance is determined. 
+        scoring_strategy: string
+            The strategy used to calculate importance. 'minimize' means lower scores are better, 
+            and 'maximize' means higher scores are better.
+
+        Returns:
+        scores: dict
+            The computed importance scores for the group.
+        """
+
         scores = {group: []}
-        X_permuted = X.copy()
+    
         for rs in self.random_states:
             inds = rs.permutation(len(X))
-            # Jointly permute all features expect those in the feature_subset
 
-            if only:
-                # For group only version, jointly permute all features except those in the feature subset.
-                X_permuted = np.array(
-                    [
-                        X[:, i] if i in feature_subset else X[inds, i]
-                        for i in range(X.shape[1])
-                    ]
-                ).T
-            else:
-                # Else, only jointly permute the features in the feature subset.
-                X_permuted = np.array(
-                    [
-                        X[inds, i] if i in feature_subset else X[:, i]
-                        for i in range(X.shape[1])
-                    ]
-                ).T
+            # Permute the features based on the 'only' parameter
+            X_permuted = np.array([
+                (X[:, i] if only else X[inds, i]) if i in feature_subset else 
+                (X[inds, i] if only else X[:, i]) for i in range(X.shape[1])
+                ]).T
 
             group_permute_score = self.scorer(estimator, X_permuted, y, evaluation_fn)
 
-            if only:
-                # For metrics like AUC, NAUPDC, CSI, BSS
-                if scoring_strategy == 'minimize':
-                    imp = group_permute_score - all_permuted_score
-                else:
-                    imp = all_permuted_score - group_permute_score
-                    
+            # Determine importance based on scoring strategy
+            if scoring_strategy == 'minimize':
+                # For metrics like AUC, AUPDC, CSI, BSS where scores 
+                # are expected to decrease after permutation. 
+                # 
+                # For grouped only, the base_score is likely 0 for these metrics. 
+                # and the score will increase once a group is unpermuted
+                
+                # For the grouped, the base_score will be the full accuracy of the model
+                # and the group_permute_score will be lower. 
+                
+                # In both cases, a larger positive indicates a more important feature
+                
+                imp = group_permute_score - base_score if only else base_score - group_permute_score
             else:
-                if scoring_strategy == 'minimize':
-                    imp = all_permuted_score - group_permute_score
-                else:
-                    imp = group_permute_score - all_permuted_score
-
+                # For metrics like MSE, MAE where scores 
+                # are expected to increase after permutation. 
+                
+                # For grouped only, the base_score will be the largest possible loss and the 
+                # group_permute_score should be slightly lower, therefore we substract
+                # the group_permute_score from the base_score
+                
+                # For the grouped, the base_score will be lowest possible loss of the model
+                # and the group_permute_score will be larger. In the case, we want
+                # to substract the base_score from the grouped_permute_score.
+                
+                # In both cases, a larger positive indicates a more important feature
+               
+                imp = base_score - group_permute_score if only else group_permute_score - base_score
+                
             scores[group].append(imp)
 
         return scores
-
+    
     def grouped_feature_importance(
         self,
         evaluation_fn,
@@ -2303,8 +2350,9 @@ class GlobalExplainer(Attributes):
 
         results = []
         for estimator_name, estimator in self.estimators.items():
-            # Score after jointly permuting all features.
-            all_permuted_score = self.scorer(estimator, X_permuted, y, evaluation_fn)
+            # For grouped only, base_score is the score after jointly permuting all features.
+            # For grouped, base_score is the score with all features intact. 
+            base_score = self.scorer(estimator, X_permuted, y, evaluation_fn)
 
             scores = parallel(
                 delayed(self._compute_grouped_importance)(
@@ -2315,7 +2363,7 @@ class GlobalExplainer(Attributes):
                     feature_subset,
                     estimator,
                     only,
-                    all_permuted_score,
+                    base_score,
                     scoring_strategy,
                 )
                 for group, feature_subset in groups.items()
@@ -2324,14 +2372,15 @@ class GlobalExplainer(Attributes):
 
             group_names = list(groups.keys())
             importances = np.array([scores[g] for g in group_names])
-
+            
             # importances shape = (n_groups, n_permutations) 
             group_rank = to_skexplain_importance(
                 importances,
                 estimator_name=estimator_name,
                 feature_names=group_names,
                 method=perm_method,
-                bootstrap_axis=1
+                bootstrap_axis=1,
+                absolute_values=False
             )
 
             results.append(group_rank)
