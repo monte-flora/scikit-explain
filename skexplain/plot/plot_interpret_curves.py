@@ -178,7 +178,8 @@ class PlotInterpretCurves(PlotStructure):
                 #)
    
         majoraxis_fontsize = self.FONT_SIZES["teensie"]
-        if fig is not None and add_hist and not using_internal_ax:
+   
+        if fig is not None and add_hist and using_internal_ax:
             major_ax = self.set_major_axis_labels(
                 fig,
                 xlabel=None,
@@ -187,7 +188,7 @@ class PlotInterpretCurves(PlotStructure):
                 **kwargs,
             )
 
-        if not only_one_estimator and fig is not None and not using_internal_ax:
+        if not only_one_estimator and fig is not None and using_internal_ax:
             self.set_legend(n_panels, fig, lineplt_ax, major_ax)
 
         if using_internal_ax:

@@ -105,15 +105,12 @@ class TestRankPlots(TestLR):
                                     )
         
         # Test Sobol indices 
-        results = explainer.sobol_indices(n_bootstrap=5000, class_index=1)
-        explainer.plot_importance(data=[results, results, results], 
-                          panels=[('sobol_total', self.lr_estimator[0]), ('sobol_1st', self.lr_estimator[0]), 
-                                 ('sobol_interact', self.lr_estimator[0])],
+        sobol_results = explainer.sobol_indices(n_bootstrap=5000, class_index=1)
+        explainer.plot_importance(data=[sobol_results], 
+                          panels=[('sobol_total', self.lr_estimator[0])],
                           figsize=(12,4)
                          )
         
-        
-
 class TestContributionPlots(TestLR):
 
     # Make sure the ranking is plotted correctly

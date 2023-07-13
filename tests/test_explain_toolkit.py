@@ -7,7 +7,8 @@ from sklearn.ensemble import RandomForestRegressor
 
 # From the __init__.py
 from tests import TestSciKitExplainData
-
+import sys, os 
+sys.path.insert(0, os.path.dirname(os.getcwd()))
 import skexplain
 
 

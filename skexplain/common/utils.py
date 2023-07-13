@@ -396,7 +396,7 @@ def order_groups(X, feature):
     K = len(groups)
     D_cumu = pd.DataFrame(0, index=groups, columns=groups)
 
-    print(groups) 
+    ###print(groups) 
     
     for j in set(features) - set([feature]):
         # Preallocating memory for D DataFrame

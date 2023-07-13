@@ -11,7 +11,10 @@ except ImportError:
     pass
 
 import seaborn as sns
-from shap.plots import colors
+try:
+    from shap.plots import colors
+except ImportError:
+    colors = None
 
 try:
     from shap.utils import convert_name, approximate_interactions
@@ -108,7 +111,11 @@ def dependence_plot(
     """
     marker = kwargs.get("marker", "o")
     unnormalize = kwargs.get("unnormalize", None)
-    cmap = kwargs.get("cmap", colors.red_blue)
+    if colors is None:
+        cmap = kwargs.get("cmap", 'seismic')
+    else:
+        cmap = kwargs.get("cmap", colors.red_blue)
+
     feature_names = list(X.columns)
      
     X = X.values
@@ -292,8 +299,9 @@ def dependence_plot(
         pad = kwargs.get('colorbar_pad', pad)
         
         divider = make_axes_locatable(ax)
-        if histdata is None:
-            orientation='vertical'
+        orientation = kwargs.get('orientation', 'vertical')
+        if histdata is None and orientation == 'vertical':
+            orientation=kwargs.get('orientation', 'vertical')
             cax = divider.append_axes('right', size='5%', pad=pad)
         else:
             orientation='horizontal'

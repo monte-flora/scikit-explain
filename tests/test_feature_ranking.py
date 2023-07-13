@@ -6,6 +6,8 @@ from sklearn.metrics import roc_auc_score
 import shap
 import numpy as np
 
+import sys, os 
+sys.path.insert(0, os.path.dirname(os.getcwd()))
 
 import skexplain
 from skexplain.common.importance_utils import to_skexplain_importance
