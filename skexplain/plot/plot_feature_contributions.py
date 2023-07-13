@@ -3,6 +3,7 @@ import math
 import shap
 
 from .base_plotting import PlotStructure
+from ._beeswarm import beeswarm_plot
 from ..common.contrib_utils import combine_like_features
 import matplotlib.pyplot as plt
 from .dependence import dependence_plot
@@ -398,6 +399,29 @@ def waterfall(
     return fx, base_values
 
 
+def add_summary_plot_cb(color, cax=None, orientation='vertical', 
+                        fig=None, ax_dim=[0.3, 1.02, 0.5, 0.02]):
+    # Add colorbar.
+    import matplotlib.cm as cm
+    m = cm.ScalarMappable(cmap=color)
+    m.set_array([0, 1])
+    if cax is None:
+        cb = plt.colorbar(m, ticks=[0, 1], aspect=80)
+        cb.set_label('Feature Value', size=12, labelpad=0)
+    else:
+        # Create an additional axes for the colorbar
+        cax = fig.add_axes(ax_dim)  # [left, bottom, width, height]
+        cb = plt.colorbar(m, cax = cax, ticks=[0, 1], 
+                          orientation='horizontal')
+        # Add a label to the colorbar
+        cb.set_label('Feature Value', labelpad=-40, y=1.05, rotation=0)
+        
+    cb.set_ticklabels(['Low', 'High'])
+    cb.ax.tick_params(labelsize=11, length=0)
+    cb.set_alpha(1)
+    cb.outline.set_visible(False)
+
+
 class PlotFeatureContributions(PlotStructure):
     """
     PlotFeatureContributions handles plotting contribution-based plotting for
@@ -640,6 +664,7 @@ class PlotFeatureContributions(PlotStructure):
         """
         max_display = kwargs.get('max_display', 10) 
         alpha = kwargs.get('alpha', 0.8) 
+        add_colorbar = kwargs.get('add_colorbar', True)
         
         if len(methods)>1:
             interaction_index=None
@@ -655,22 +680,48 @@ class PlotFeatureContributions(PlotStructure):
         ]
 
         if plot_type == "summary":
-            f, ax = plt.subplots(dpi=300)
+            ax = kwargs.get('ax', None)
+            fig = kwargs.get('fig', None)
+            
+            order = kwargs.get('order', shap._explanation.Explanation.abs.mean(axis=0))
             explain_obj = shap._explanation.Explanation(values = attr_values, 
                                             feature_names = display_feature_names_list,
                                             data=X,                  
                                            )
             
-            shap.plots.beeswarm(
+            #shap.plots.beeswarm
+            
+            ax, color = beeswarm_plot(
                 explain_obj,
                 max_display=max_display,
                 show=False, 
                 alpha=alpha,
+                ax=ax, 
+                fig=fig,
+                order = order,
             )
 
-            plt.gcf().axes[-1].set_aspect(100)
-            plt.gcf().axes[-1].set_box_aspect(100)
+            if add_colorbar:
+                add_summary_plot_cb(color)
             
+            """
+            # Add colorbar.
+            import matplotlib.cm as cm
+            m = cm.ScalarMappable(cmap=color)
+            m.set_array([0, 1])
+            cb = plt.colorbar(m, ax = list(axes.ravel()), ticks=[0, 1], aspect=80)
+            cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
+            cb.set_label(color_bar_label, size=12, labelpad=0)
+            cb.ax.tick_params(labelsize=11, length=0)
+            cb.set_alpha(1)
+            cb.outline.set_visible(False)
+            """
+            if ax is None:
+                ax = plt.gca()
+                ax.set_xlabel('SHAP Value')
+            
+            return ax, color
+
         elif plot_type == "dependence":
             # Set up the font sizes for matplotlib
             self.display_feature_names = display_feature_names
@@ -712,13 +763,17 @@ class PlotFeatureContributions(PlotStructure):
             for method, marker in zip(methods, markers):
                 values = attr_values[f'{method}_values__{estimator_name}'].values
                 for ax, feature in zip(ax_iterator, features):
+                    ind = interaction_index
+                    if interaction_index == feature:
+                        ind = 'auto'
+                    
                     dependence_plot(
                         feature=feature,
                         method=method,
                         attr_values=values,
                         X=X,
                         display_feature_names=display_feature_names_list,
-                        interaction_index=interaction_index,
+                        interaction_index=ind,
                         target_values=target_values,
                         ax=ax,
                         fig=fig,

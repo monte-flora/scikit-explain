@@ -21,7 +21,7 @@ from ..common.importance_utils import retrieve_important_vars
 from ..common.utils import to_dataframe, determine_feature_dtype
 from ..common.metrics import brier_skill_score
 from ..common.multiprocessing_utils import tqdm_joblib, delayed, Parallel 
-
+import warnings
 
 from ..common.contrib_utils import (
     get_indices_based_on_performance,
@@ -262,24 +262,27 @@ class LocalExplainer(Attributes):
 
         """
         shap_kws = {} if shap_kws is None else shap_kws
-        masker = shap_kws.get("masker", None)
+        masker = shap_kws.get("masker", shap.maskers.Independent(self.X))
         algorithm = shap_kws.get("algorithm", "auto")
         class_idx = shap_kws.get('class_idx', 1)
 
         if masker is None:
-            raise ValueError(
+            warnings.warn(
                 """masker in shap_kws is None. 
                              This will cause issues with SHAP. We recommend starting with
                              shap_kws = {'masker' = shap.maskers.Partition(X, max_samples=100, clustering="correlation")}
                              where X is the original dataset and not the examples SHAP is being computed for. 
-                             """
+                             """, UserWarning
             )
 
-        if self.estimator_output == "probability":
-            model = estimator.predict_proba
+        if algorithm == 'tree':
+            model = estimator
         else:
-            model = estimator.predict
-
+            if self.estimator_output == "probability":
+                model = estimator.predict_proba
+            else:
+                model = estimator.predict
+            
         explainer = shap.Explainer(
             model=model,
             masker=masker,

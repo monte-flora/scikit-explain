@@ -2,6 +2,8 @@
 # Unit test for the ALE and PD 
 # code in Scikit-Explain.
 #===================================================
+import sys, os 
+sys.path.insert(0, os.path.dirname(os.getcwd()))
 
 import shap
 import numpy as np

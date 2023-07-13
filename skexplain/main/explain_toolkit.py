@@ -718,11 +718,10 @@ class ExplainToolkit(Attributes):
         """
         if (features == "all" or features is None) and interaction:
             features = list(itertools.combinations(self.feature_names, r=2))
-        elif features is None:
+        elif (features == "all" or features is None):
             # Assume all features. 
             features = self.feature_names
-            
-            
+             
         if estimator_names is None:
             estimator_names = self.estimator_names
 
@@ -2304,7 +2303,7 @@ class ExplainToolkit(Attributes):
         base_font_size = kwargs.get("base_font_size", fontsize)
         plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
         plot_obj.feature_names = self.feature_names
-        plot_obj.scatter_plot(
+        return plot_obj.scatter_plot(
             attr_values=dataset,
             X=X,
             features=features,

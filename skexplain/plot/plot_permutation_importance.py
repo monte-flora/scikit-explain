@@ -162,9 +162,15 @@ class PlotImportance(PlotStructure):
         data = [data] if not is_list(data) else data
         n_panels = len(panels)
 
-        fig, axes = self._get_axes(n_panels, **kwargs)
-        ax_iterator = self.axes_to_iterator(n_panels, axes)
-
+        ax = kwargs.get('ax', None)
+        if ax is None:
+            fig, axes = self._get_axes(n_panels, **kwargs)
+            ax_iterator = self.axes_to_iterator(n_panels, axes)
+        else:
+            fig = ax.get_figure()
+            axes = [ax]
+            ax_iterator = self.axes_to_iterator(n_panels, axes)
+            
         for i, (panel, ax) in enumerate(zip(panels, ax_iterator)):
 
             # Set the facecolor.
@@ -438,4 +444,4 @@ class PlotImportance(PlotStructure):
             ):
                 return VARIABLES_COLOR_DICT
             else:
-                return VARIABLES_COLOR_DICT[var]
+                return VARIABLES_COLOR_DICT.get(var, "xkcd:powder blue")

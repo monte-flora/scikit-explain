@@ -2476,7 +2476,7 @@ class GlobalExplainer(Attributes):
                 [f"n_vars_sobol_total"],
                 features_ranked,
                 )
-            
+           
             scores_ranked = scores_ranked.reshape(len(scores_ranked), 1)
             data[f"sobol_total_scores__{estimator_name}"] = (
                 [f"n_vars_sobol_total", "n_bootstrap"],

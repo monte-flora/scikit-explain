@@ -112,7 +112,7 @@ def compute_importance(results, scoring_strategy, direction):
     elif scoring_strategy == 'argmax_of_mean':
         scoring_strategy = 'maximize' 
     
-    print(direction, scoring_strategy)
+    ##print(direction, scoring_strategy)
     estimators = results.attrs["estimators used"]
     for estimator in estimators:
         orig_score = results[f"original_score__{estimator}"].values
@@ -190,6 +190,7 @@ def to_skexplain_importance(
     method, 
     normalize=False, 
     bootstrap_axis=0, 
+    absolute_values=True
 ):
     """
     Convert feature ranking-based scores from non-permutation-importance methods
@@ -240,19 +241,28 @@ def to_skexplain_importance(
         importances = np.nansum(np.absolute(importances), axis=0)
     else:
         if np.ndim(importances) == 2:
-            # average over bootstrapping
+            # average over bootstrapping of the absolute values. 
             bootstrap = True
             importances_to_save = importances.copy()
-            importances = np.nanmean(importances, axis=bootstrap_axis)
+            # Convert to absolute values (optional) 
+            vals = np.absolute(importances) if absolute_values else importances
+            importances = np.nanmean(vals, axis=bootstrap_axis)
 
             assert len(importances) == len(feature_names), """Number of features not equal to number of 
             importance values! Check bootstrap_axis"""
+        else:
+            importances_to_save = importances.copy()
+            # Convert to absolute values (optional) 
+            vals = np.absolute(importances) if absolute_values else importances
             
     # Sort from higher score to lower score
     ranked_indices = np.argsort(importances)[::-1]
 
     if bootstrap:
-        scores_ranked = importances_to_save[ranked_indices, :]
+        if bootstrap_axis==0:
+            scores_ranked = importances_to_save[:, ranked_indices]
+        else:
+            scores_ranked = importances_to_save[ranked_indices, :]
     else:
         scores_ranked = importances[ranked_indices]
 
