@@ -55,12 +55,21 @@ If you employ scikit-explain in your research, please cite this github and the r
 
 If you are experiencing issues with loading the tutorial jupyter notebooks, you can enter the URL/location of the notebooks into the following address: https://nbviewer.jupyter.org/. 
 
-## Install
+## Install From Conda or PyPi
 
 scikit-explain can be installed through conda-forge or pip. 
 ```
 conda install -c conda-forge scikit-explain
 pip install scikit-explain
+```
+## Install From Source Code
+
+For the most up-to-date version of scikit-explain, you can install it from the source code. The commands 
+given below are executable from the command line. 
+```
+git clone https://github.com/monte-flora/scikit-explain/
+cd scikit-explain
+python setup.py install
 ```
 
 ## Dependencies 
