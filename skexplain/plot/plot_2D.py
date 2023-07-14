@@ -50,30 +50,14 @@ class PlotInterpret2D(PlotStructure):
         color = kwargs.get("color", "xkcd:steel")
         edgecolor = kwargs.get("color", "white")
 
-        # data = np.clip(data, a_min=np.nan, a_max=np.nan)
-
-        cnt, bins, patches = ax.hist(
-            data,
-            bins=bins,
-            alpha=0.35,
-            color=color,
-            density=density,
-            edgecolor=edgecolor,
-            orientation=orientation,
-            zorder=1,
-        )
-
-        # data = np.sort(np.random.choice(data, size=10000), replace=True)
-        # kde = sps.gaussian_kde(data)
-        # kde_pdf = kde.pdf(data)
-
-        # if orientation == 'vertical':
-        # ax.plot(data, kde_pdf, linewidth=0.5, color='xkcd:darkish blue', alpha=0.9)
-        # ax.set_ylim([0, 1.75*np.amax(kde_pdf)])
-        # else:
-        # ax.plot(kde_pdf, data, linewidth=0.5, color='xkcd:darkish blue', alpha=0.9)
-        # ax.set_xlim([0,1.75*np.amax(kde_pdf)])
-
+        hist_values, bin_edges = np.histogram(data, bins=bins)
+        if orientation=='vertical':
+            ax.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge',
+               alpha=0.35, color=color, edgecolor=edgecolor, zorder=1)
+        else:
+            ax.barh(bin_edges[:-1], hist_values, height=np.diff(bin_edges), align='edge',
+               alpha=0.35, color=color, edgecolor=edgecolor, zorder=1)
+            
     def plot_2d_kde(self, ax, x, y):
         """
         Add contours of the kernel density estimate
@@ -82,7 +66,7 @@ class PlotInterpret2D(PlotStructure):
         ymin, ymax = np.min(y), np.max(y)
 
         # Peform the kernel density estimate
-        xx, yy = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+        xx, yy = np.mgrid[xmin:xmax:50j, ymin:ymax:50j]
         positions = np.vstack([xx.ravel(), yy.ravel()])
         values = np.vstack([x, y])
         kernel = sps.gaussian_kde(values)
@@ -123,6 +107,7 @@ class PlotInterpret2D(PlotStructure):
         display_feature_names={},
         display_units={},
         to_probability=False,
+        cbar_kwargs=None,
         **kwargs,
     ):
 
@@ -132,6 +117,7 @@ class PlotInterpret2D(PlotStructure):
         contours = kwargs.get("contours", False)
         kde_curves = kwargs.get("kde_curves", True)
         scatter = kwargs.get("scatter", True)
+        bins = kwargs.get('bins', 20) 
 
         if not is_list(estimator_names):
             estimator_names = to_list(estimator_names)
@@ -166,9 +152,12 @@ class PlotInterpret2D(PlotStructure):
             figsize = (6, 3)
             fontsize = 8
         else:
-            figsize = (11, 6)
-            fontsize = 8
+            figsize = (10, 8)
+            fontsize = 10
 
+        figsize = kwargs.get('figsize', figsize)    
+        fontsize = kwargs.get('fontsize', fontsize)
+        
         # create subplots, one for each feature
         fig, main_axes, top_axes, rhs_axes, n_rows = self._create_joint_subplots(
             n_panels=n_panels, n_columns=n_columns, figsize=figsize, ratio=5
@@ -269,7 +258,7 @@ class PlotInterpret2D(PlotStructure):
 
             if to_probability:
                 zdata *= 100.0
-
+                
             if contours:
                 cf = main_ax.contourf(
                     x1, x2, zdata, cmap=cmap, alpha=0.8, levels=levels, extend="neither"
@@ -282,6 +271,7 @@ class PlotInterpret2D(PlotStructure):
                     cmap=cmap,
                     alpha=0.8,
                     norm=BoundaryNorm(boundaries=levels, ncolors=cmap.N, clip=True),
+                    rasterized=True,
                 )
             
             """
@@ -324,7 +314,7 @@ class PlotInterpret2D(PlotStructure):
             self.add_histogram_axis(
                 top_ax,
                 xdata1_hist,
-                bins=30,
+                bins=bins,
                 orientation="vertical",
                 min_value=xdata1[1],
                 max_value=xdata1[-2],
@@ -333,7 +323,7 @@ class PlotInterpret2D(PlotStructure):
             self.add_histogram_axis(
                 rhs_ax,
                 xdata2_hist,
-                bins=30,
+                bins=bins,
                 orientation="horizontal",
                 min_value=xdata2[1],
                 max_value=xdata2[-2],
@@ -353,50 +343,49 @@ class PlotInterpret2D(PlotStructure):
             if (
                 i == (n * n_columns - 1) or (i == len(main_axes) - 1 and is_even > 1)
             ) and not only_one_model:
-                self.add_colorbar(
-                    fig,
-                    plot_obj=cf,
-                    ax=rhs_ax,
-                    colorbar_label=colorbar_label,
-                    extend="both",
-                )
+                
+                cbar_kwargs_was_None=False
+                if cbar_kwargs is None:
+                    cbar_kwargs_was_None=True
+                    cbar_kwargs = {}
+                    cbar_kwargs['ax'] = rhs_ax
+                    cbar_kwargs['label'] = colorbar_label
+                    cbar_kwargs['extend'] = 'both' 
+                    cbar_kwargs['mappable'] = cf
+                    
+                
+                cbar_kwargs['mappable'] = cf
+                cbar_kwargs['ax'] = rhs_ax
+                cbar_kwargs['label'] = colorbar_label
+                    
+                
+                self.add_colorbar(**cbar_kwargs)
                 n += 1
             i += 1
 
+            # Add tick marks to the top and right axes
+            main_ax.tick_params(axis='both', direction='inout', top=True, right=True)
+            
+            
         if only_one_model:
             major_ax = self.set_major_axis_labels(fig=fig)
-            # colorbar
-            #cax = major_ax.inset_axes(
-            #    major_ax,
-            #    width="100%",  # width = 10% of parent_bbox width
-            #    height="100%",  # height : 50%
-            #    loc="lower center",
-            #    bbox_to_anchor=(0.02, -0.1, 0.8, 0.05),
-            #    bbox_transform=major_ax.transAxes,
-            #    borderpad=0,
-            #)
             
             cax = major_ax.inset_axes(
                 bounds = (0.02, -0.1, 0.8, 0.05),
                 transform=major_ax.transAxes,
             )
-            #    width="100%",  # width = 10% of parent_bbox width
-            #    height="100%",  # height : 50%
-            #    loc="lower center",
-            #    borderpad=0,
-            #)
+     
+            if cbar_kwargs is None:
+                cbar_kwargs = {}
+                cbar_kwargs['cax'] = cax
+                cbar_kwargs['label'] = colorbar_label
+                cbar_kwargs['extend'] = 'both' 
+                cbar_kwargs['mappable'] = cf
+                cbar_kwargs['orientation'] = 'horizontal'
+                cbar_kwargs['pad'] = 0
+                cbar_kwargs['shrink'] = 0.8
             
-            
-            self.add_colorbar(
-                fig,
-                plot_obj=cf,
-                cax=cax,
-                orientation="horizontal",
-                pad=0,
-                shrink=0.8,
-                colorbar_label=colorbar_label,
-                extend="both",
-            )
+            self.add_colorbar(**cbar_kwargs)
             
         # Add an letter per panel for publication purposes.
         self.add_alphabet_label(n_panels, main_axes)
