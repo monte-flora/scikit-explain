@@ -5,10 +5,13 @@
 from os.path import join
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt 
 
+import sys, os 
+sys.path.insert(0, os.path.dirname(os.getcwd()))
 import skexplain
 
-from tests import TestLR
+from tests import TestLR, TestSciKitExplainData, TestRF
 
 # TODO: 
 # 1. Check that each plotting script works!
@@ -38,16 +41,32 @@ class Test1DPlotting(TestLR):
         # the y values should be the effect
         np.testing.assert_array_equal(eff_plt_data[:, 1], ydata)
 
+    def test_ice_and_ale(self):
+        
+        explainer = skexplain.ExplainToolkit(self.lr_estimator, X=self.X, y=self.y,)
 
-class Test2DPlotting(TestLR):
+        important_vars = ['X_1', 'X_2']
+        
+        ale_1d_ds = explainer.ale(features=important_vars, n_bootstrap=1, subsample=0.25, n_jobs=1, n_bins=20)
+        ice_ds = explainer.ice(features=important_vars,  subsample=200, n_jobs=1, n_bins=20, random_seed=50)
+
+        fig, axes = explainer.plot_ale(
+                               ale=ale_1d_ds,
+                                features = important_vars,
+                               ice_curves=ice_ds,
+                               color_by = 'X_2', 
+                                figsize=(10,6),
+                                wspace=0.25, 
+                                  )
+        
+        
+
+class Test2DPlotting(TestSciKitExplainData):
     def test_2d_plot(self):
-        pass
         ### Loading the training data and pre-fit models within the scikit-explain package
-        estimators = skexplain.load_models()
-        X,y = skexplain.load_data()
 
-        explainer = skexplain.ExplainToolkit(estimators[:2], X=X, y=y,)
-        features=[('temp2m', 'sfc_temp'), ('dwpt2m', 'sfc_temp'), ('dwpt2m', 'sfc_temp') ]
+        explainer = skexplain.ExplainToolkit(self.estimators, X=self.X, y=self.y,)
+        features=[('Feature 2', 'Feature 3'), ('Feature 2', 'Feature 5') ]
 
         ale_2d_ds = explainer.ale(features=features, 
                                  n_bootstrap=1, 
@@ -138,7 +157,46 @@ class TestContributionPlots(TestLR):
 
     # Make sure the ranking is plotted correctly
     def test_contrib_plot(self):
-        pass
+        # For the LIME, we must provide the training dataset. We also denote any categorical features. 
+        lime_kws = {'training_data' : self.X.values}
+        explainer = skexplain.ExplainToolkit(
+            estimators=self.lr_estimator,
+            X=self.X,
+            y=self.y,
+        )
+        
+        
+        results = explainer.local_attributions(method='lime', lime_kws=lime_kws)
+        
+        # Create the summary plot. 
+        explainer.scatter_plot(
+                    plot_type = 'summary',
+                    dataset=results,
+                    method = 'lime',
+                    estimator_name = self.lr_estimator[0],
+        )  
+        
+        # Create the summary plot with a custom axes
+        fig, ax = plt.subplots()
+        explainer.scatter_plot(
+                    plot_type = 'summary',
+                    dataset=results,
+                    method = 'lime',
+                    estimator_name = self.lr_estimator[0],
+                    ax=ax
+        )  
+        
+        # Note: If the plots are looking wonky, you can change the figsize. 
+        features = ['X_1', 'X_3']
+        explainer.scatter_plot(features=features,
+                    plot_type = 'dependence',
+                    dataset=results,
+                    method = 'lime', 
+                    estimator_name = self.lr_estimator[0],
+                    interaction_index=None, 
+        )
+        
+        
 
 
 if __name__ == "__main__":

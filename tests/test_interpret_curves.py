@@ -22,7 +22,7 @@ class TestALECat(TestSciKitExplainData):
         explainer = skexplain.ExplainToolkit(
             estimators=self.estimators[0], X=self.X, y=self.y
         )
-        explainer.ale(features='urban') 
+        explainer.ale(features='Feature 1') 
         
         
 class TestInterpretCurves(TestLR):
