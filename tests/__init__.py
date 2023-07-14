@@ -3,8 +3,9 @@
 # for unit testing. 
 #===================================================
 
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.datasets import make_classification 
 import shap
 import unittest
 import numpy as np
@@ -38,9 +39,15 @@ y = X.dot(WEIGHTS)
 class TestSciKitExplainData(unittest.TestCase):
     def setUp(self):
         # Load the bulit-in models and data in scikit-explain.
-        estimators = skexplain.load_models()
-        X, y = skexplain.load_data()
-        X = X.astype({"urban": "category", "rural": "category"})
+        estimators = []
+        X,y = make_classification(n_samples=5000)
+        
+        X = pd.DataFrame(X, columns=[f'Feature {i+1}' for i in range(X.shape[1])])    
+        X['Feature 1'] = np.where(X['Feature 1'] > 0.5, 1,0)
+        X = X.astype({"Feature 1": "category"})
+
+        estimators = [('LR', LogisticRegression().fit(X,y)), 
+              ('RF', RandomForestClassifier().fit(X,y))]
 
         self.X = X
         self.y = y
