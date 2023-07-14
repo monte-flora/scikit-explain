@@ -42,7 +42,6 @@ class Test1DPlotting(TestLR):
 class Test2DPlotting(TestLR):
     def test_2d_plot(self):
         pass
-        """
         ### Loading the training data and pre-fit models within the scikit-explain package
         estimators = skexplain.load_models()
         X,y = skexplain.load_data()
@@ -66,7 +65,7 @@ class Test2DPlotting(TestLR):
                                figsize=(10,8), fontsize=10,
                                cbar_kwargs=cbar_kwargs
                                   ) 
-        """
+       
     
 class TestRankPlots(TestLR):
 
