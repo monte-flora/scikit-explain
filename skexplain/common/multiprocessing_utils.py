@@ -10,7 +10,6 @@ from collections import ChainMap
 import warnings
 from copy import copy
 
-from joblib._parallel_backends import SafeFunction
 from joblib import delayed, Parallel
 import joblib 
 import time

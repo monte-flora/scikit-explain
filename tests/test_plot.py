@@ -42,8 +42,31 @@ class Test1DPlotting(TestLR):
 class Test2DPlotting(TestLR):
     def test_2d_plot(self):
         pass
+        ### Loading the training data and pre-fit models within the scikit-explain package
+        estimators = skexplain.load_models()
+        X,y = skexplain.load_data()
 
-     
+        explainer = skexplain.ExplainToolkit(estimators[:2], X=X, y=y,)
+        features=[('temp2m', 'sfc_temp'), ('dwpt2m', 'sfc_temp'), ('dwpt2m', 'sfc_temp') ]
+
+        ale_2d_ds = explainer.ale(features=features, 
+                                 n_bootstrap=1, 
+                                 subsample=0.5,
+                                 n_jobs=2,
+                                 n_bins=10
+                                )
+        
+        from matplotlib.ticker import MaxNLocator
+        cbar_kwargs = {'extend' : 'neither', 'ticks': MaxNLocator(3)}
+
+        fig, axes = explainer.plot_ale(ale=ale_2d_ds,
+                                   kde_curves=False,
+                                   scatter=False,
+                               figsize=(10,8), fontsize=10,
+                               cbar_kwargs=cbar_kwargs
+                                  ) 
+       
+    
 class TestRankPlots(TestLR):
 
     # Make sure the ranking is plotted correctly
