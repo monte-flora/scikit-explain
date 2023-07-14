@@ -1479,6 +1479,7 @@ class ExplainToolkit(Attributes):
         display_units={},
         to_probability=False,
         line_kws={},
+        cbar_kwargs=None,
         **kwargs,
     ):
         """
@@ -1505,6 +1506,7 @@ class ExplainToolkit(Attributes):
                 display_feature_names=display_feature_names,
                 display_units=display_units,
                 to_probability=to_probability,
+                cbar_kwargs=cbar_kwargs,
                 **kwargs,
             )
         else:
@@ -1534,6 +1536,7 @@ class ExplainToolkit(Attributes):
         display_units={},
         to_probability=None,
         line_kws={},
+        cbar_kwargs=None,
         **kwargs,
     ):
         """
@@ -1626,6 +1629,7 @@ class ExplainToolkit(Attributes):
             display_units=display_units,
             to_probability=to_probability,
             line_kws=line_kws,
+            cbar_kwargs=cbar_kwargs,
             **kwargs,
         )
 
@@ -1639,6 +1643,7 @@ class ExplainToolkit(Attributes):
         display_units={},
         to_probability=None,
         line_kws={},
+        cbar_kwargs=None,
         **kwargs,
     ):
         """
@@ -1724,6 +1729,8 @@ class ExplainToolkit(Attributes):
         else:
             kwargs["left_yaxis_label"] = "Centered ALE"
 
+            
+            
         return self._plot_interpret_curves(
             method="ale",
             data=ale,
@@ -1734,6 +1741,7 @@ class ExplainToolkit(Attributes):
             display_units=display_units,
             to_probability=to_probability,
             line_kws=line_kws,
+            cbar_kwargs=cbar_kwargs,
             **kwargs,
         )
 
