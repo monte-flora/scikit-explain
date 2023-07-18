@@ -79,9 +79,9 @@ class LogExceptions(object):
     def __init__(self, func):
         self.func = func
 
-    def error(self, msg, *args):
+    def error(self, msg, *args, **kwargs):
         """Shortcut to multiprocessing's logger"""
-        return mp.get_logger().error(msg, *args)
+        return mp.get_logger().error(msg, *args, **kwargs)
 
     def __call__(self, *args, **kwargs):
         try:
@@ -166,10 +166,10 @@ def run_parallel(
             args = (args,)
         
         if is_parallel:
-            p = pool.apply_async(LogExceptions(func), args=args, callback=update)
+            p = pool.apply_async(LogExceptions(func), args=args, kwds=kwargs, callback=update)
             ps.append(p)
         else:
-            results.append(LogExceptions(func)(*args))
+            results.append(LogExceptions(func)(*args, **kwargs))
             update()
     
     if is_parallel:
