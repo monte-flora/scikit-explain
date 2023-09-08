@@ -1451,7 +1451,7 @@ class GlobalExplainer(Attributes):
 
         self.data = data
         self.data_2d = data_2d
-        n_jobs = len(estimator_names)
+        n_jobs = len(estimator_names)        
         results = run_parallel(
             func=func,
             args_iterator=args_iterator,
@@ -1503,25 +1503,49 @@ class GlobalExplainer(Attributes):
 
         results : dictionary
         """
+        pred = kwargs.get('pred', None)
+        
         feature1, feature2 = features
-        feature1_pd = self.data[f"{feature1}__{estimator_name}__pd"].values
-        feature2_pd = self.data[f"{feature2}__{estimator_name}__pd"].values
+        method = self.data.attrs['method']
+        
+        ale= True if method == 'ale' else False
+        
+        arr_j = self.data[f"{feature1}__{estimator_name}__{method}"].values
+        arr_k = self.data[f"{feature2}__{estimator_name}__{method}"].values
 
-        combined_pd = self.data_2d[
-            f"{feature1}__{feature2}__{estimator_name}__pd"
+        arr_jk = self.data_2d[
+            f"{feature1}__{feature2}__{estimator_name}__{method}"
         ].values
 
-        # Calculate the H-statistics
-        pd_decomposed = feature1_pd[:, :, np.newaxis] + feature2_pd[:, np.newaxis, :]
+        n_boot = len(arr_j)
+        h_stat = np.zeros((n_boot))
+    
+        if pred is not None:
+            pred_denom = np.mean(np.square(pred-np.mean(pred)))
+    
+        for i in range(n_boot):
+            arr_decomposed = arr_j[i,:] + arr_k[i, :, np.newaxis]
+        
+            if ale:
+                # The 2nd order ALE already has the 1st order effects removed. 
+                numerator = np.mean(np.square(arr_jk))
+            else:
+                numerator = np.mean(np.square(arr_jk[i] - arr_decomposed))
+        
+            if pred is not None: 
+                denominator = pred_denom
+            else:
+                if ale:
+                    # Need to add the 1st order effects back in 
+                    denominator = np.mean(np.square(arr_jk[i] + arr_decomposed.T))
+                else:
+                    denominator = np.mean(np.square(arr_jk[i]))
+                
 
-        numer = (combined_pd - pd_decomposed) ** 2
-        denom = (combined_pd) ** 2
-        H_squared = np.sum(np.sum(numer, axis=2), axis=1) / np.sum(
-            np.sum(denom, axis=2), axis=1
-        )
+            h_stat[i] = np.sqrt(numerator / denominator)
 
         results = {
-            f"{feature1}__{feature2}__{estimator_name}_hstat": np.sqrt(H_squared)
+            f"{feature1}__{feature2}__{estimator_name}_hstat": h_stat
         }
 
         return results

@@ -400,27 +400,32 @@ def waterfall(
 
 
 def add_summary_plot_cb(color, cax=None, orientation='vertical', 
-                        fig=None, ax_dim=[0.3, 1.02, 0.5, 0.02]):
+                        fig=None, ax_dim=[0.3, 1.02, 0.5, 0.02], fontsize=12, labelpad=-40,y=1.05):
     # Add colorbar.
     import matplotlib.cm as cm
     m = cm.ScalarMappable(cmap=color)
     m.set_array([0, 1])
     if cax is None:
         cb = plt.colorbar(m, ticks=[0, 1], aspect=80)
-        cb.set_label('Feature Value', size=12, labelpad=0)
+        cb.set_label('Feature Value', size=fontsize, labelpad=0)
     else:
         # Create an additional axes for the colorbar
         cax = fig.add_axes(ax_dim)  # [left, bottom, width, height]
         cb = plt.colorbar(m, cax = cax, ticks=[0, 1], 
-                          orientation='horizontal')
+                          orientation=orientation)
         # Add a label to the colorbar
-        cb.set_label('Feature Value', labelpad=-40, y=1.05, rotation=0)
+        if orientation == 'horizontal':
+            rotation = 0
+        else:
+            rotation = 90
+        cb.set_label('Feature Value', labelpad=labelpad, y=y, rotation=rotation, size=fontsize)
         
     cb.set_ticklabels(['Low', 'High'])
     cb.ax.tick_params(labelsize=11, length=0)
     cb.set_alpha(1)
     cb.outline.set_visible(False)
 
+    return cb 
 
 class PlotFeatureContributions(PlotStructure):
     """

@@ -114,7 +114,7 @@ class ExplainToolkit(Attributes):
         
         custom_params = {"axes.spines.right": False, "axes.spines.top": False}
         sns.set_theme(style="ticks", rc=custom_params)
-        
+        ff
         If False, then seaborn settings are not used. 
         
 
@@ -1279,13 +1279,14 @@ class ExplainToolkit(Attributes):
 
         return results_ds
 
-    def friedman_h_stat(self, pd_1d, pd_2d, features, estimator_names=None, **kwargs):
+    def friedman_h_stat(self, dataset_1d=None, dataset_2d=None, features=None, estimator_names=None, **kwargs):
         """
         Compute the second-order Friedman's H-statistic for computing feature interactions [11]_ [12]_.
         Based on equation (44) from Friedman and Popescu (2008) [12]_. Only computes the interaction strength
         between two features. In future versions of skexplain we hope to include the first-order H-statistics
         that measure the interaction between a single feature and the
-        remaining set of features.
+        remaining set of features. This statistic can be computed from both the accumulated local effects 
+        and partial dependence. 
 
         References
         -----------
@@ -1298,11 +1299,13 @@ class ExplainToolkit(Attributes):
         Parameters
         -----------
 
-        pd_1d : xarray.Dataset
-            1D partial dependence dataset. Results of :func:`~ExplainToolkit.pd` for ``features``
+        dataset_1d : xarray.Dataset
+            1D partial dependence or accumulated local effect dataset. 
+            Results of :func:`~ExplainToolkit.pd` or :func:`~ExplainToolkit.ale` for ``features``
 
-        pd_2d : xarray.Dataset
-            2D partial dependence dataset. Results of :func:`~ExplainToolkit.pd`, but 2-tuple combinations
+        dataset_2d : xarray.Dataset
+            2D partial dependence or accumulated local effects dataset. 
+            Results of :func:`~ExplainToolkit.pd` or :func:`~ExplainToolkit.ale`, but 2-tuple combinations
             of ``features``.
 
         features : list of 2-tuples of strings
@@ -1312,7 +1315,6 @@ class ExplainToolkit(Attributes):
 
             If using multiple estimators, you can pass a single (or subset of) estimator name(s)
             to compute the H-statistic for.
-
 
         Returns
         ----------
@@ -1330,20 +1332,45 @@ class ExplainToolkit(Attributes):
         ...                             X=X,
         ...                             y=y,
         ...                            )
-        >>> pd_1d = explainer.pd(features='all')
-        >>> pd_2d = explainer.pd(features='all_2d')
-        >>> hstat = explainer.friedman_h_stat(pd_1d, pd_2d,)
+        >>> ale_1d = explainer.ale(features='all')
+        >>> ale_2d = explainer.ale(features='all_2d')
+        >>> hstat = explainer.friedman_h_stat(ale_1d, ale_2d,)
         """
         if estimator_names is None:
             estimator_names = self.estimator_names
         else:
             if is_str(estimator_names):
                 estimator_names = [estimator_names]
-
+         
+        
+         # Check if old arguments are provided
+        old_arg_1d = kwargs.get('pd_1d', None)
+        old_arg_2d = kwargs.get('pd_2d', None)
+    
+        if old_arg_1d is not None:
+            warnings.warn(
+            "'pd_1d' argument is deprecated and will be removed in future versions. Use 'dataset_1d' instead.",
+            DeprecationWarning
+            )
+            if dataset_1d is None:
+                dataset_1d = old_arg_1d
+    
+        if old_arg_2d is not None:
+            warnings.warn(
+                "'pd_2d' argument is deprecated and will be removed in future versions. Use 'dataset_2d' instead.",
+                DeprecationWarning
+            )
+            if dataset_2d is None:
+                dataset_2d = old_arg_2d
+    
+        # Check if the new arguments are provided
+        if dataset_1d is None or dataset_2d is None or features is None:
+            raise ValueError("Please provide the necessary arguments: 'dataset_1d', 'dataset_2d', and 'features'.")
+        
         results_ds = self.global_obj.compute_scalar_interaction_stats(
             method="hstat",
-            data=pd_1d,
-            data_2d=pd_2d,
+            data=dataset_1d,
+            data_2d=dataset_2d,
             features=features,
             estimator_names=estimator_names,
             **kwargs,

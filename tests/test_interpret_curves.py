@@ -226,7 +226,7 @@ class TestInterpretCurves(TestLR):
         # Compute the H-statistic 
         features = list(itertools.combinations(self.X.columns, r=2))
         
-        hstat_results= explainer.friedman_h_stat(pd_1d=pd_1d, pd_2d=pd_2d, features=features)
+        hstat_results= explainer.friedman_h_stat(dataset_1d=pd_1d, dataset_2d=pd_2d, features=features)
         
     def test_mec(self):
         """ Test the main effect complexity """

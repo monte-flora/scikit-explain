@@ -328,7 +328,7 @@ class PlotInterpretCurves(PlotStructure):
         Plot a line plot with an optional confidence interval polygon
         """
         # get mean curve
-        mean_ydata = np.mean(ydata, axis=0)
+        mean_ydata = np.nanmean(ydata, axis=0)
 
         # plot mean curve
         line_kws = line_kws.copy()
@@ -338,7 +338,7 @@ class PlotInterpretCurves(PlotStructure):
         self.line_plot(ax, xdata, mean_ydata, label=label, **line_kws)
 
         # get confidence interval bounds
-        lower_bound, upper_bound = np.percentile(ydata, [2.5, 97.5], axis=0)
+        lower_bound, upper_bound = np.nanpercentile(ydata, [2.5, 97.5], axis=0)
 
         # fill between CI bounds
         ax.fill_between(xdata, lower_bound, upper_bound, facecolor=facecolor, alpha=0.4)
