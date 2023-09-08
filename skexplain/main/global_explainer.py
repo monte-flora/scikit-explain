@@ -1505,8 +1505,6 @@ class GlobalExplainer(Attributes):
         """
         pred = kwargs.get('pred', None)
         
-        print(f'{pred=}')
-        
         feature1, feature2 = features
         method = self.data.attrs['method']
         

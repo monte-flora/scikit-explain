@@ -1279,7 +1279,7 @@ class ExplainToolkit(Attributes):
 
         return results_ds
 
-    def friedman_h_stat(self, dataset_1d, dataset_2d, features, estimator_names=None, **kwargs):
+    def friedman_h_stat(self, dataset_1d=None, dataset_2d=None, features=None, estimator_names=None, **kwargs):
         """
         Compute the second-order Friedman's H-statistic for computing feature interactions [11]_ [12]_.
         Based on equation (44) from Friedman and Popescu (2008) [12]_. Only computes the interaction strength
@@ -1341,7 +1341,32 @@ class ExplainToolkit(Attributes):
         else:
             if is_str(estimator_names):
                 estimator_names = [estimator_names]
-
+         
+        
+         # Check if old arguments are provided
+        old_arg_1d = kwargs.get('pd_1d', None)
+        old_arg_2d = kwargs.get('pd_2d', None)
+    
+        if old_arg_1d is not None:
+            warnings.warn(
+            "'pd_1d' argument is deprecated and will be removed in future versions. Use 'dataset_1d' instead.",
+            DeprecationWarning
+            )
+            if dataset_1d is None:
+                dataset_1d = old_arg_1d
+    
+        if old_arg_2d is not None:
+            warnings.warn(
+                "'pd_2d' argument is deprecated and will be removed in future versions. Use 'dataset_2d' instead.",
+                DeprecationWarning
+            )
+            if dataset_2d is None:
+                dataset_2d = old_arg_2d
+    
+        # Check if the new arguments are provided
+        if dataset_1d is None or dataset_2d is None or features is None:
+            raise ValueError("Please provide the necessary arguments: 'dataset_1d', 'dataset_2d', and 'features'.")
+        
         results_ds = self.global_obj.compute_scalar_interaction_stats(
             method="hstat",
             data=dataset_1d,
