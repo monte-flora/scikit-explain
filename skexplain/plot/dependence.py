@@ -159,18 +159,18 @@ def dependence_plot(
     X = X[oinds, :]
     s = attr_values[oinds, feature_ind]
     
-    xdata = X[:,feature_ind].astype(np.float64)
+    xdata = X[:,feature_ind].astype(float)
     if target_values is not None:
         target_values = target_values[oinds]
 
     # get both the raw and display color values
     if interaction_index is not None:
         cdata = X[:,interaction_index]
-        clow = np.nanpercentile(cdata.astype(np.float), 5)
-        chigh = np.nanpercentile(cdata.astype(np.float), 95)
+        clow = np.nanpercentile(cdata.astype(float), 5)
+        chigh = np.nanpercentile(cdata.astype(float), 95)
         if clow == chigh:
-            clow = np.nanmin(cdata.astype(np.float))
-            chigh = np.nanmax(cdata.astype(np.float))
+            clow = np.nanmin(cdata.astype(float))
+            chigh = np.nanmax(cdata.astype(float))
 
     # optionally add jitter to feature values
     if x_jitter > 0:
@@ -178,7 +178,7 @@ def dependence_plot(
             x_jitter = 1
         xvals = xdata.copy()
         if isinstance(xvals[0], float):
-            xvals = xvals.astype(np.float)
+            xvals = xvals.astype(float)
             xvals = xvals[~np.isnan(xvals)]
         xvals = np.unique(xvals)  # returns a sorted array
         if len(xvals) >= 2:
