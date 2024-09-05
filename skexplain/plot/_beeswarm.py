@@ -15,9 +15,23 @@ except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
 
+try:
+    import shap
+except:
+    raise ImportError('shap import failed. Likely related to numpy version issues. We recommend install numpy<1.24.0')
+        
 from shap import Explanation
 from shap.utils import safe_isinstance
-from shap.utils._exceptions import DimensionError
+
+try:
+    from shap.utils._exceptions import DimensionError
+except:
+    class DimensionError(Exception):
+        """Used for instances where dimensions are either
+        not supported or cause errors.
+        """
+        pass
+
 from shap.plots import colors
 from shap.plots._labels import labels
 from shap.plots._utils import (
