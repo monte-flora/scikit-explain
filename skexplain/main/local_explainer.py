@@ -1,4 +1,8 @@
-import shap
+try:
+    import shap
+except:
+    raise ImportError('shap import failed. Likely related to numpy version issues. We recommend install numpy<1.24.0')
+    
 import traceback
 from .tree_interpreter import TreeInterpreter
 import pandas as pd
@@ -282,7 +286,16 @@ class LocalExplainer(Attributes):
                 model = estimator.predict_proba
             else:
                 model = estimator.predict
-            
+        
+        # Due to numpy version errors, importing the shap package can fail.
+        # Raising an error here to let the user know about the issue and suggest a solution.
+        if shap is None:
+            raise ImportError(
+                "The 'shap' package could not be imported, possibly due to a version conflict with numpy. "
+                "Please ensure that you have compatible versions of 'shap' and 'numpy'. "
+                "Try updating numpy or shap, or reinstalling the shap package."
+            )
+
         explainer = shap.Explainer(
             model=model,
             masker=masker,
