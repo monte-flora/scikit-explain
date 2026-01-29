@@ -1591,7 +1591,7 @@ class ExplainToolkit(Attributes):
         display_units : dict
             For plotting purposes. Dictionary that maps the feature names
             to their units.
-            E.g., ``display_units = { 'dwpt2m' : '$^\circ$C', }``
+            E.g., ``display_units = { 'dwpt2m' : '$^\\circ$C', }``
 
         line_colors : str or list of strs of len(estimators)
             User-defined colors for curve plotting.
@@ -1698,7 +1698,7 @@ class ExplainToolkit(Attributes):
         display_units : dict
             For plotting purposes. Dictionary that maps the feature names
             to their units.
-            E.g., ``display_units = { 'dwpt2m' : '$^\circ$C', }``
+            E.g., ``display_units = { 'dwpt2m' : '$^\\circ$C', }``
 
         line_colors : str or list of strs of len(estimators)
             User-defined colors for curve plotting.
@@ -2277,7 +2277,7 @@ class ExplainToolkit(Attributes):
         display_units : dict
             For plotting purposes. Dictionary that maps the feature names
             to their units.
-            E.g., ``display_units = { 'dwpt2m' : '$^\circ$C', }``
+            E.g., ``display_units = { 'dwpt2m' : '$^\\circ$C', }``
 
         to_probability : boolean
             if True, values are multiplied by 100.
