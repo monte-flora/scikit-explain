@@ -248,7 +248,8 @@ class PlotInterpret2D(PlotStructure):
             ].values.copy()
 
             # can only do a contour plot with 2-d data
-            x1, x2 = np.meshgrid(xdata1, xdata2, indexing="xy")
+            # Use indexing="ij" to match the shape of zdata which is (len(xdata1), len(xdata2))
+            x1, x2 = np.meshgrid(xdata1, xdata2, indexing="ij")
 
             # Get the mean of the bootstrapping.
             if np.ndim(zdata) > 2:
