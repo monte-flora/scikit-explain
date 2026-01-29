@@ -70,8 +70,20 @@ def waterfall(
     features = data.loc[key].loc[model_name, vars_val]
     base_values = data.loc[key].loc[model_name, "Bias_contrib"]
 
+    # Reset index to integer positions if it's a pandas Series
+    # This helps with conversion to numpy arrays in pandas 2.x
+    if hasattr(values, 'reset_index'):
+        values = values.reset_index(drop=True)
+    if hasattr(features, 'reset_index') and features is not None:
+        features = features.reset_index(drop=True)
+
     lower_bounds = getattr(values, "lower_bounds", None)
     upper_bounds = getattr(values, "upper_bounds", None)
+
+    if lower_bounds is not None and hasattr(lower_bounds, 'reset_index'):
+        lower_bounds = lower_bounds.reset_index(drop=True)
+    if upper_bounds is not None and hasattr(upper_bounds, 'reset_index'):
+        upper_bounds = upper_bounds.reset_index(drop=True)
 
     # init variables we use for tracking the plot locations
 
@@ -81,32 +93,28 @@ def waterfall(
     order = np.argsort(-np.abs(values))
 
     # Convert pandas Series to numpy arrays to avoid indexing issues in pandas 2.x
-    # Use .values and then ensure it's actually a numpy array with np.asarray
-    if hasattr(values, 'values'):
-        temp = values.values
-        values_array = temp if isinstance(temp, np.ndarray) else np.asarray(temp)
+    # Build a fresh numpy array by extracting elements to completely break pandas ties
+    if hasattr(values, '__iter__') and not isinstance(values, (str, bytes)):
+        values_array = np.array([float(v) for v in values])
     else:
         values_array = np.asarray(values)
 
     if features is not None:
-        if hasattr(features, 'values'):
-            temp = features.values
-            features_array = temp if isinstance(temp, np.ndarray) else np.asarray(temp)
+        if hasattr(features, '__iter__') and not isinstance(features, (str, bytes)):
+            features_array = np.array([float(v) for v in features])
         else:
             features_array = np.asarray(features)
     else:
         features_array = None
 
     if lower_bounds is not None:
-        if hasattr(lower_bounds, 'values'):
-            temp = lower_bounds.values
-            lower_bounds_array = temp if isinstance(temp, np.ndarray) else np.asarray(temp)
+        if hasattr(lower_bounds, '__iter__') and not isinstance(lower_bounds, (str, bytes)):
+            lower_bounds_array = np.array([float(v) for v in lower_bounds])
         else:
             lower_bounds_array = np.asarray(lower_bounds)
 
-        if hasattr(upper_bounds, 'values'):
-            temp = upper_bounds.values
-            upper_bounds_array = temp if isinstance(temp, np.ndarray) else np.asarray(temp)
+        if hasattr(upper_bounds, '__iter__') and not isinstance(upper_bounds, (str, bytes)):
+            upper_bounds_array = np.array([float(v) for v in upper_bounds])
         else:
             upper_bounds_array = np.asarray(upper_bounds)
 
