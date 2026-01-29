@@ -269,8 +269,8 @@ def beeswarm_plot(
     # make the beeswarm dots
     for pos, i in enumerate(reversed(feature_inds)):
         ax.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
-        shaps = values[:, i]
-        fvalues = None if features is None else features[:, i]
+        shaps = values.iloc[:, i] if hasattr(values, 'iloc') else values[:, i]
+        fvalues = None if features is None else (features.iloc[:, i] if hasattr(features, 'iloc') else features[:, i])
         inds = np.arange(len(shaps))
         np.random.shuffle(inds)
         if fvalues is not None:

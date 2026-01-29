@@ -383,7 +383,7 @@ def find_correlated_pairs_among_top_features(
         # except:
         #    continue
 
-        most_corr_value = sub_corr_matrix[feature].sort_values(ascending=False)[1]
+        most_corr_value = sub_corr_matrix[feature].sort_values(ascending=False).iloc[1]
         if round(most_corr_value, 5) >= rho_threshold:
             pairs.append((feature, most_corr_feature))
 

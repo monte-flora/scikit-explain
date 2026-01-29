@@ -100,21 +100,21 @@ def waterfall(
 
     # compute the locations of the individual features and plot the dashed connecting lines
     for i in range(num_individual):
-        sval = values[order[i]]
+        sval = values.iloc[order[i]]
         loc -= sval
         if sval >= 0:
             pos_inds.append(rng[i])
             pos_widths.append(sval)
             if lower_bounds is not None:
-                pos_low.append(lower_bounds[order[i]])
-                pos_high.append(upper_bounds[order[i]])
+                pos_low.append(lower_bounds.iloc[order[i]])
+                pos_high.append(upper_bounds.iloc[order[i]])
             pos_lefts.append(loc)
         else:
             neg_inds.append(rng[i])
             neg_widths.append(sval)
             if lower_bounds is not None:
-                neg_low.append(lower_bounds[order[i]])
-                neg_high.append(upper_bounds[order[i]])
+                neg_low.append(lower_bounds.iloc[order[i]])
+                neg_high.append(upper_bounds.iloc[order[i]])
             neg_lefts.append(loc)
         if num_individual != num_features or i + 4 < num_individual:
             ax.plot(
@@ -129,14 +129,15 @@ def waterfall(
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
         else:
-            if abs(features[order[i]]) < 1:
+            feat_val = features.iloc[order[i]]
+            if abs(feat_val) < 1:
                 fmt = "%0.03f"
-            elif abs(features[order[i]]) > 10:
+            elif abs(feat_val) > 10:
                 fmt = "%0.f"
             else:
                 fmt = "%0.02f"
             yticklabels[rng[i]] = (
-                format_value(features[order[i]], fmt)
+                format_value(feat_val, fmt)
                 + " "
                 + units[order[i]]
                 + " = "
