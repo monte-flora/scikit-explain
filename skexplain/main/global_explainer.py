@@ -39,6 +39,7 @@ from ..common.utils import (
     order_groups,
     determine_feature_dtype,
     check_is_permuted,
+    ensure_str_features,
 )
 
 from ..common.importance_utils import to_skexplain_importance, all_permuted_score
@@ -2325,7 +2326,8 @@ class GlobalExplainer(Attributes):
         self.random_states = bootstrap_generator(n_bootstrap=n_permute)
 
         # Get the feature names from the dataframe.
-        feature_names = np.array(self.X.columns)
+        # Use ensure_str_features to avoid numpy.str_ type issues with SHAP
+        feature_names = np.array(ensure_str_features(self.X.columns))
 
         # Convert to numpy array
         X = self.X.values
@@ -2493,7 +2495,10 @@ class GlobalExplainer(Attributes):
             ranked_indices = np.argsort(importances)[::-1]
 
             scores_ranked = importances[ranked_indices]
-            features_ranked = np.array(list(self.X.columns))[ranked_indices]
+            # Use ensure_str_features AFTER numpy operations to avoid numpy.str_ type issues with SHAP
+            # numpy arrays convert strings to numpy.str_, so we work with lists and index them
+            feature_list = ensure_str_features(self.X.columns)
+            features_ranked = [feature_list[i] for i in ranked_indices]
             
             data = {}
             data[f"sobol_total_rankings__{estimator_name}"] = (
