@@ -101,7 +101,10 @@ class Attributes:
             self.X = X
 
         if X is not None:
-            self.feature_names = self.X.columns.to_list()
+            # Ensure feature names are Python strings, not numpy.str_
+            # See: https://github.com/shap/shap/issues/3304
+            from .utils import ensure_str_features
+            self.feature_names = ensure_str_features(self.X.columns)
 
     def set_estimator_output(self, estimator_output, estimator):
         """

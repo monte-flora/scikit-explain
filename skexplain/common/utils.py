@@ -8,6 +8,48 @@ from scipy.stats import t
 from sklearn.linear_model import Ridge
 
 
+def ensure_str_features(feature_names):
+    """
+    Convert feature names to native Python strings to avoid numpy.str_ type issues.
+
+    This is necessary because SHAP's convert_name function uses type(ind) == str
+    rather than isinstance(ind, str), causing numpy.str_ types to fail.
+    See: https://github.com/shap/shap/issues/3304
+
+    Parameters
+    ----------
+    feature_names : array-like
+        Feature names as pandas Index, numpy array, or list
+
+    Returns
+    -------
+    list
+        Feature names as native Python strings
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> # From pandas DataFrame columns
+    >>> df = pd.DataFrame({'feat1': [1, 2], 'feat2': [3, 4]})
+    >>> ensure_str_features(df.columns)
+    ['feat1', 'feat2']
+    >>> # From numpy array (which might contain numpy.str_)
+    >>> arr = np.array(['feat1', 'feat2'])
+    >>> ensure_str_features(arr)
+    ['feat1', 'feat2']
+    """
+    if hasattr(feature_names, 'tolist'):
+        # pandas Index or numpy array - use tolist() to ensure Python strings
+        return [str(name) for name in feature_names.tolist()]
+    elif isinstance(feature_names, (list, tuple)):
+        # Already a list/tuple - ensure each element is a Python string
+        return [str(name) for name in feature_names]
+    else:
+        # Fallback for other iterables
+        return [str(name) for name in feature_names]
+
+
 class MissingFeaturesError(Exception):
     """ Raised when features are missing. 
         E.g., All features are require for 
