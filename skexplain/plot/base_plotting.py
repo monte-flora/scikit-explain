@@ -17,13 +17,14 @@ from ..common.utils import is_outlier
 from ..common.contrib_utils import combine_like_features
 import shap
 
+
 class PlotStructure:
     """
     Plot handles figure and subplot generation
     """
 
     def __init__(self, BASE_FONT_SIZE=12, seaborn_kws=None):
-        
+
         GENERIC_FONT_SIZE_NAMES = [
             "teensie",
             "tiny",
@@ -32,39 +33,31 @@ class PlotStructure:
             "big",
             "large",
             "huge",
-            ]
+        ]
 
         FONT_SIZES_ARRAY = np.arange(-6, 8, 2) + BASE_FONT_SIZE
 
         self.FONT_SIZES = {
-                name: size for name, size in zip(GENERIC_FONT_SIZE_NAMES, FONT_SIZES_ARRAY)
-            }
-        
+            name: size for name, size in zip(GENERIC_FONT_SIZE_NAMES, FONT_SIZES_ARRAY)
+        }
+
         if seaborn_kws is None:
             custom_params = {"axes.spines.right": False, "axes.spines.top": False}
             sns.set_theme(style="ticks", rc=custom_params)
         else:
             if seaborn_kws is not None and isinstance(seaborn_kws, dict):
                 sns.set_theme(**seaborn_kws)
-        
+
         # Setting the font style to serif
         rcParams["font.family"] = "serif"
 
         plt.rc("font", size=self.FONT_SIZES["normal"])  # controls default text sizes
         plt.rc("axes", titlesize=self.FONT_SIZES["tiny"])  # fontsize of the axes title
-        plt.rc(
-                 "axes", labelsize=self.FONT_SIZES["normal"]
-                )  # fontsize of the x and y labels
-        plt.rc(
-                "xtick", labelsize=self.FONT_SIZES["teensie"]
-                )  # fontsize of the x-axis tick marks
-        plt.rc(
-                "ytick", labelsize=self.FONT_SIZES["teensie"]
-                )  # fontsize of the y-axis tick marks
+        plt.rc("axes", labelsize=self.FONT_SIZES["normal"])  # fontsize of the x and y labels
+        plt.rc("xtick", labelsize=self.FONT_SIZES["teensie"])  # fontsize of the x-axis tick marks
+        plt.rc("ytick", labelsize=self.FONT_SIZES["teensie"])  # fontsize of the y-axis tick marks
         plt.rc("legend", fontsize=self.FONT_SIZES["teensie"])  # legend fontsize
-        plt.rc(
-                "figure", titlesize=self.FONT_SIZES["big"]
-                )  # fontsize of the figure title
+        plt.rc("figure", titlesize=self.FONT_SIZES["big"])  # fontsize of the figure title
 
     def get_fig_props(self, n_panels, **kwargs):
         """Determine appropriate figure properties"""
@@ -257,9 +250,7 @@ class PlotStructure:
         ax = fig.add_subplot(111, frameon=False)
 
         # hide tick and tick label of the big axis
-        plt.tick_params(
-            labelcolor="none", top=False, bottom=False, left=False, right=False
-        )
+        plt.tick_params(labelcolor="none", top=False, bottom=False, left=False, right=False)
 
         # set axes labels
         ax.set_xlabel(xlabel, fontsize=fontsize, labelpad=labelpad)
@@ -267,9 +258,7 @@ class PlotStructure:
 
         if ylabel_right is not None:
             ax_right = fig.add_subplot(1, 1, 1, sharex=ax, frameon=False)
-            plt.tick_params(
-                labelcolor="none", top=False, bottom=False, left=False, right=False
-            )
+            plt.tick_params(labelcolor="none", top=False, bottom=False, left=False, right=False)
 
             ax_right.yaxis.set_label_position("right")
             ax_right.set_ylabel(
@@ -281,13 +270,12 @@ class PlotStructure:
             ax_right.grid(False)
 
         ax.set_title(title)
-        
+
         ax.grid(False)
 
         return ax
 
-    def set_row_labels(self, labels, axes, pos=-1, pad=1.15, rotation=270,
-                       **kwargs):
+    def set_row_labels(self, labels, axes, pos=-1, pad=1.15, rotation=270, **kwargs):
         """
         Give a label to each row in a series of subplots
         """
@@ -297,7 +285,7 @@ class PlotStructure:
         if np.ndim(axes) == 2:
             iterator = axes[:, pos]
         else:
-            iterator = axes.flat #[axes[pos]]
+            iterator = axes.flat  # [axes[pos]]
 
         for ax, row, color in zip(iterator, labels, colors):
             ax.yaxis.set_label_position("right")
@@ -411,9 +399,7 @@ class PlotStructure:
 
         return values
 
-    def set_tick_labels(
-        self, ax, feature_names, display_feature_names, return_labels=False
-    ):
+    def set_tick_labels(self, ax, feature_names, display_feature_names, return_labels=False):
         """
         Setting the tick labels for the tree interpreter plots.
         """
@@ -439,9 +425,7 @@ class PlotStructure:
         """
         fontsize = kwargs.get("fontsize", self.FONT_SIZES["tiny"])
         if xaxis_label is not None:
-            xaxis_label_pretty = self.display_feature_names.get(
-                xaxis_label, xaxis_label
-            )
+            xaxis_label_pretty = self.display_feature_names.get(xaxis_label, xaxis_label)
             units = self.display_units.get(xaxis_label, "")
             if units == "":
                 xaxis_label_with_units = f"{xaxis_label_pretty}"
@@ -451,9 +435,7 @@ class PlotStructure:
             ax.set_xlabel(xaxis_label_with_units, fontsize=fontsize)
 
         if yaxis_label is not None:
-            yaxis_label_pretty = self.display_feature_names.get(
-                yaxis_label, yaxis_label
-            )
+            yaxis_label_pretty = self.display_feature_names.get(yaxis_label, yaxis_label)
             units = self.display_units.get(yaxis_label, "")
             if units == "":
                 yaxis_label_with_units = f"{yaxis_label_pretty}"
@@ -469,15 +451,15 @@ class PlotStructure:
         """
         if major_ax is None:
             major_ax = self.set_major_axis_labels(fig)
-        
+
         fontsize = kwargs.get("fontsize", "medium")
         ncol = kwargs.get("ncol", 3)
         handles = kwargs.get("handles", None)
         labels = kwargs.get("labels", None)
-        
-        if handles is None: 
+
+        if handles is None:
             handles, _ = ax.get_legend_handles_labels()
-        
+
         if labels is None:
             _, labels = ax.get_legend_handles_labels()
 
@@ -490,9 +472,7 @@ class PlotStructure:
 
         # Shrink current axis's height by 10% on the bottom
         box = major_ax.get_position()
-        major_ax.set_position(
-            [box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9]
-        )
+        major_ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
 
         # Put a legend below current axis
         major_ax.legend(
@@ -521,7 +501,7 @@ class PlotStructure:
         """
         if option == "y" or option == "both":
             ax.yaxis.set_major_locator(MaxNLocator(nticks))
-            
+
         if option == "x" or option == "both":
             ax.xaxis.set_major_locator(MaxNLocator(nticks))
 
@@ -555,8 +535,8 @@ class PlotStructure:
         ax.spines["bottom"].set_visible(False)
 
     def annotate_bars(self, ax, num1, num2, y, width, dh=0.01, barh=0.05, delta=0):
-        """ 
-        Annotate barplot with connections between correlated variables. 
+        """
+        Annotate barplot with connections between correlated variables.
 
         Parameters
         ----------------
@@ -572,17 +552,17 @@ class PlotStructure:
         rx, ry = y[num2], width[num2]
 
         ax_y0, ax_y1 = plt.gca().get_xlim()
-        dh *= (ax_y1 - ax_y0)
-        barh *= (ax_y1 - ax_y0)
+        dh *= ax_y1 - ax_y0
+        barh *= ax_y1 - ax_y0
 
         y = max(ly, ry) + dh
 
         barx = [lx, lx, rx, rx]
-        bary = [y, y+barh, y+barh, y]
-        mid = ((lx+rx)/2, y+barh)
+        bary = [y, y + barh, y + barh, y]
+        mid = ((lx + rx) / 2, y + barh)
 
-        ax.plot(np.array(bary)+delta, barx, alpha=0.8, clip_on=False)   
-        
+        ax.plot(np.array(bary) + delta, barx, alpha=0.8, clip_on=False)
+
     '''
     Deprecated 14 March 2022. 
     def annotate_bars(self, ax, bottom_idx, top_idx, x=0, **kwargs):
@@ -638,26 +618,26 @@ class PlotStructure:
     def add_colorbar(self, **kwargs):
         """Adds a colorbar to the right of a panel"""
         # Add a colobar
-        kwargs['orientation'] = kwargs.get("orientation", "vertical")
-        kwargs['pad'] = kwargs.get("pad", 0.1)
-        kwargs['shrink'] = kwargs.get("shrink", 1.1)
-        kwargs['extend'] = kwargs.get("extend", "neither")
-        kwargs['ax'] = kwargs.get('ax', None)
-        kwargs['cax'] = kwargs.get('cax', None) 
-        kwargs['label'] = kwargs.get('label', '')
-        kwargs['ticks'] = kwargs.get('ticks', MaxNLocator(5))
+        kwargs["orientation"] = kwargs.get("orientation", "vertical")
+        kwargs["pad"] = kwargs.get("pad", 0.1)
+        kwargs["shrink"] = kwargs.get("shrink", 1.1)
+        kwargs["extend"] = kwargs.get("extend", "neither")
+        kwargs["ax"] = kwargs.get("ax", None)
+        kwargs["cax"] = kwargs.get("cax", None)
+        kwargs["label"] = kwargs.get("label", "")
+        kwargs["ticks"] = kwargs.get("ticks", MaxNLocator(5))
 
-        fig = kwargs.get('fig', None)
-        if 'fig' in kwargs:
-            del kwargs['fig']
-        kwargs['mappable'] = kwargs.get('mappable', None)
+        fig = kwargs.get("fig", None)
+        if "fig" in kwargs:
+            del kwargs["fig"]
+        kwargs["mappable"] = kwargs.get("mappable", None)
 
         cbar = plt.colorbar(**kwargs)
-        
+
         cbar.ax.tick_params(labelsize=self.FONT_SIZES["tiny"])
-        cbar.set_label(kwargs['label'], size=self.FONT_SIZES["small"])
+        cbar.set_label(kwargs["label"], size=self.FONT_SIZES["small"])
         cbar.outline.set_visible(False)
-        
+
         # bbox = cbar.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
         # cbar.ax.set_aspect((bbox.height - 0.7) * 20)
 

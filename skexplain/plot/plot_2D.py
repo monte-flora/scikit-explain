@@ -51,13 +51,29 @@ class PlotInterpret2D(PlotStructure):
         edgecolor = kwargs.get("color", "white")
 
         hist_values, bin_edges = np.histogram(data, bins=bins)
-        if orientation=='vertical':
-            ax.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge',
-               alpha=0.35, color=color, edgecolor=edgecolor, zorder=1)
+        if orientation == "vertical":
+            ax.bar(
+                bin_edges[:-1],
+                hist_values,
+                width=np.diff(bin_edges),
+                align="edge",
+                alpha=0.35,
+                color=color,
+                edgecolor=edgecolor,
+                zorder=1,
+            )
         else:
-            ax.barh(bin_edges[:-1], hist_values, height=np.diff(bin_edges), align='edge',
-               alpha=0.35, color=color, edgecolor=edgecolor, zorder=1)
-            
+            ax.barh(
+                bin_edges[:-1],
+                hist_values,
+                height=np.diff(bin_edges),
+                align="edge",
+                alpha=0.35,
+                color=color,
+                edgecolor=edgecolor,
+                zorder=1,
+            )
+
     def plot_2d_kde(self, ax, x, y):
         """
         Add contours of the kernel density estimate
@@ -110,18 +126,17 @@ class PlotInterpret2D(PlotStructure):
         cbar_kwargs=None,
         **kwargs,
     ):
-
         """
         Generic function for 2-D PDP/ALE
         """
         contours = kwargs.get("contours", False)
         kde_curves = kwargs.get("kde_curves", True)
         scatter = kwargs.get("scatter", True)
-        bins = kwargs.get('bins', 20) 
+        bins = kwargs.get("bins", 20)
 
         if not is_list(estimator_names):
             estimator_names = to_list(estimator_names)
-   
+
         unnormalize = kwargs.get("unnormalize", None)
         self.display_feature_names = display_feature_names
         self.display_units = display_units
@@ -155,9 +170,9 @@ class PlotInterpret2D(PlotStructure):
             figsize = (10, 8)
             fontsize = 10
 
-        figsize = kwargs.get('figsize', figsize)    
-        fontsize = kwargs.get('fontsize', fontsize)
-        
+        figsize = kwargs.get("figsize", figsize)
+        fontsize = kwargs.get("fontsize", fontsize)
+
         # create subplots, one for each feature
         fig, main_axes, top_axes, rhs_axes, n_rows = self._create_joint_subplots(
             n_panels=n_panels, n_columns=n_columns, figsize=figsize, ratio=5
@@ -225,9 +240,7 @@ class PlotInterpret2D(PlotStructure):
             rhs_ax = rhs_axes[i]
 
             if counter <= len(estimator_names) - 1 and not only_one_model:
-                top_ax.set_title(
-                    model_name, fontsize=self.FONT_SIZES["normal"], alpha=0.9
-                )
+                top_ax.set_title(model_name, fontsize=self.FONT_SIZES["normal"], alpha=0.9)
                 counter += 1
 
             xdata1 = data[f"{feature_set[0]}__bin_values"].values
@@ -259,7 +272,7 @@ class PlotInterpret2D(PlotStructure):
 
             if to_probability:
                 zdata *= 100.0
-                
+
             if contours:
                 cf = main_ax.contourf(
                     x1, x2, zdata, cmap=cmap, alpha=0.8, levels=levels, extend="neither"
@@ -274,7 +287,7 @@ class PlotInterpret2D(PlotStructure):
                     norm=BoundaryNorm(boundaries=levels, ncolors=cmap.N, clip=True),
                     rasterized=True,
                 )
-            
+
             """
             mark_empty = False
             if mark_empty:
@@ -297,12 +310,8 @@ class PlotInterpret2D(PlotStructure):
             """
 
             if scatter:
-                idx = np.random.choice(
-                    len(xdata1_hist), size=min(2000, len(xdata1_hist))
-                )
-                main_ax.scatter(
-                    xdata1_hist[idx], xdata2_hist[idx], alpha=0.3, color="grey", s=1
-                )
+                idx = np.random.choice(len(xdata1_hist), size=min(2000, len(xdata1_hist)))
+                main_ax.scatter(xdata1_hist[idx], xdata2_hist[idx], alpha=0.3, color="grey", s=1)
 
             if kde_curves:
                 try:
@@ -344,50 +353,47 @@ class PlotInterpret2D(PlotStructure):
             if (
                 i == (n * n_columns - 1) or (i == len(main_axes) - 1 and is_even > 1)
             ) and not only_one_model:
-                
-                cbar_kwargs_was_None=False
+
+                cbar_kwargs_was_None = False
                 if cbar_kwargs is None:
-                    cbar_kwargs_was_None=True
+                    cbar_kwargs_was_None = True
                     cbar_kwargs = {}
-                    cbar_kwargs['ax'] = rhs_ax
-                    cbar_kwargs['label'] = colorbar_label
-                    cbar_kwargs['extend'] = 'both' 
-                    cbar_kwargs['mappable'] = cf
-                    
-                
-                cbar_kwargs['mappable'] = cf
-                cbar_kwargs['ax'] = rhs_ax
-                cbar_kwargs['label'] = colorbar_label
-                    
-                
+                    cbar_kwargs["ax"] = rhs_ax
+                    cbar_kwargs["label"] = colorbar_label
+                    cbar_kwargs["extend"] = "both"
+                    cbar_kwargs["mappable"] = cf
+
+                cbar_kwargs["mappable"] = cf
+                cbar_kwargs["ax"] = rhs_ax
+                cbar_kwargs["label"] = colorbar_label
+
                 self.add_colorbar(**cbar_kwargs)
                 n += 1
             i += 1
 
             # Add tick marks to the top and right axes
-            main_ax.tick_params(axis='both', direction='inout', top=True, right=True)
-            
-            
+            main_ax.tick_params(axis="both", direction="inout", top=True, right=True)
+
         if only_one_model:
             major_ax = self.set_major_axis_labels(fig=fig)
-            
+
             cax = major_ax.inset_axes(
-                bounds = (0.02, -0.1, 0.8, 0.05),
+                bounds=(0.02, -0.1, 0.8, 0.05),
                 transform=major_ax.transAxes,
             )
-     
+
             if cbar_kwargs is None:
                 cbar_kwargs = {}
-                cbar_kwargs['cax'] = cax
-                cbar_kwargs['label'] = colorbar_label
-                cbar_kwargs['extend'] = 'both' 
-                cbar_kwargs['mappable'] = cf
-                cbar_kwargs['orientation'] = 'horizontal'
-                cbar_kwargs['pad'] = 0
-                cbar_kwargs['shrink'] = 0.8
-            
+                cbar_kwargs["cax"] = cax
+                cbar_kwargs["label"] = colorbar_label
+                cbar_kwargs["extend"] = "both"
+                cbar_kwargs["mappable"] = cf
+                cbar_kwargs["orientation"] = "horizontal"
+                cbar_kwargs["pad"] = 0
+                cbar_kwargs["shrink"] = 0.8
+
             self.add_colorbar(**cbar_kwargs)
-            
+
         # Add an letter per panel for publication purposes.
         self.add_alphabet_label(n_panels, main_axes)
 

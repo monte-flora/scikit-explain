@@ -39,7 +39,7 @@ def ensure_str_features(feature_names):
     >>> ensure_str_features(arr)
     ['feat1', 'feat2']
     """
-    if hasattr(feature_names, 'tolist'):
+    if hasattr(feature_names, "tolist"):
         # pandas Index or numpy array - use tolist() to ensure Python strings
         return [str(name) for name in feature_names.tolist()]
     elif isinstance(feature_names, (list, tuple)):
@@ -51,24 +51,25 @@ def ensure_str_features(feature_names):
 
 
 class MissingFeaturesError(Exception):
-    """ Raised when features are missing. 
-        E.g., All features are require for 
-        IAS or MEC
+    """Raised when features are missing.
+    E.g., All features are require for
+    IAS or MEC
     """
+
     def __init__(self, estimator_name, missing_features):
         self.message = f"""ALE for {estimator_name} was not computed for all features. 
                         These features were missing: {missing_features}"""
         super().__init__(self.message)
-    
+
 
 def check_all_features_for_ale(ale, estimator_names, features):
-    """ Is there ALE values for each feature """
+    """Is there ALE values for each feature"""
     data_vars = ale.data_vars
     for estimator_name in estimator_names:
-        _list = [True if f'{f}__{estimator_name}__ale' in data_vars else False for f in features]
+        _list = [True if f"{f}__{estimator_name}__ale" in data_vars else False for f in features]
         if not all(_list):
             missing_features = np.array(features)[np.where(~np.array(_list))[0]]
-            raise MissingFeaturesError(estimator_name, missing_features) 
+            raise MissingFeaturesError(estimator_name, missing_features)
 
 
 def flatten_nested_list(list_of_lists):
@@ -223,12 +224,9 @@ def to_dataframe(results, estimator_names, feature_names):
             contribs_dict = results[0][name][key]
             vals_dict = results[1][name][key]
             data.append(
-                [contribs_dict[f] for f in contrib_names]
-                + [vals_dict[f] for f in feature_names]
+                [contribs_dict[f] for f in contrib_names] + [vals_dict[f] for f in feature_names]
             )
-        column_names = [f + "_contrib" for f in contrib_names] + [
-            f + "_val" for f in feature_names
-        ]
+        column_names = [f + "_contrib" for f in contrib_names] + [f + "_val" for f in feature_names]
         df = pd.DataFrame(data, columns=column_names, index=estimator_names)
         dframes.append(df)
 
@@ -335,8 +333,7 @@ def compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=1, seed=90):
     size = int(n_samples * subsample) if subsample <= 1.0 else subsample
 
     bootstrap_indices = [
-        random_state.choice(range(n_samples), size=size).tolist()
-        for random_state in random_states
+        random_state.choice(range(n_samples), size=size).tolist() for random_state in random_states
     ]
     return bootstrap_indices
 
@@ -432,24 +429,25 @@ def cmds(D, k=2):
     ret = eigenvecs[:, 0:k].dot(eigen_sqrt_diag)
     return ret
 
+
 def order_groups(X, feature):
     features = X.columns
     groups = X[feature].unique()
     K = len(groups)
     D_cumu = pd.DataFrame(0, index=groups, columns=groups)
 
-    ###print(groups) 
-    
+    ###print(groups)
+
     for j in set(features) - set([feature]):
         # Preallocating memory for D DataFrame
         D = pd.DataFrame(np.zeros((K, K)), index=groups, columns=groups)
 
-        #if (X[j].dtypes.name == "category") | ((len(X[j].unique()) <= 10) & ("float" not in X[j].dtypes.name)):
-        if True:    
-            
+        # if (X[j].dtypes.name == "category") | ((len(X[j].unique()) <= 10) & ("float" not in X[j].dtypes.name)):
+        if True:
+
             cross_counts = pd.crosstab(X[feature], X[j])
             cross_props = cross_counts.div(np.sum(cross_counts, axis=1), axis=0)
-            
+
             for group in groups:
                 D_values = abs(cross_props - cross_props.loc[group]).sum(axis=1) / 2
                 D[group] = D_values
@@ -459,7 +457,7 @@ def order_groups(X, feature):
             q_X_j = X[j].quantile(seq).to_list()
             X_ecdf = X.groupby(feature)[j].agg(ECDF)
             q_ecdf = X_ecdf.apply(lambda x: x(q_X_j))
-            
+
             for group in groups:
                 D_values = q_ecdf.apply(lambda x: max(abs(x - q_ecdf[group])))
                 D[group] = D_values
@@ -470,7 +468,7 @@ def order_groups(X, feature):
     D_cumu = D_cumu.astype(float)
     D1D = cmds(D_cumu, 1).flatten()
     groups_ordered = D_cumu.index[D1D.argsort()]
-    
+
     return pd.Series(range(K), index=groups_ordered)
 
 
@@ -495,9 +493,7 @@ def quantile_ied(x_vec, q):
     g = n * q + m - j
 
     gamma = (g != 0).astype(int)
-    quant_res = (1 - gamma) * x_vec.shift(1, fill_value=0).iloc[j] + gamma * x_vec.iloc[
-        j
-    ]
+    quant_res = (1 - gamma) * x_vec.shift(1, fill_value=0).iloc[j] + gamma * x_vec.iloc[j]
     quant_res.index = q
     # add min at quantile zero and max at quantile one (if needed)
     if 0 in q:
@@ -522,32 +518,29 @@ def CI_estimate(x_vec, C=0.95):
 
 
 dict_disc_to_bin = {
-    'quartile': [25, 50, 75],
-    'quintile': [20, 40, 60, 80],
-    'decile': [10, 20, 30, 40, 50, 60, 70, 80, 90]
+    "quartile": [25, 50, 75],
+    "quintile": [20, 40, 60, 80],
+    "decile": [10, 20, 30, 40, 50, 60, 70, 80, 90],
 }
+
 
 def ridge_solve(tup):
     data_synthetic_onehot, model_pred, weights = tup
     solver = Ridge(alpha=1, fit_intercept=True)
-    solver.fit(data_synthetic_onehot,
-               model_pred,
-               sample_weight=weights.ravel())
+    solver.fit(data_synthetic_onehot, model_pred, sample_weight=weights.ravel())
     # Get explanations
-    importance = solver.coef_[
-        data_synthetic_onehot[0].toarray().ravel() == 1].ravel()
-    
+    importance = solver.coef_[data_synthetic_onehot[0].toarray().ravel() == 1].ravel()
+
     bias = solver.intercept_
-    
+
     return importance, bias
 
 
 def kernel_fn(distances, kernel_width):
-    return np.sqrt(np.exp(-(distances ** 2) / kernel_width ** 2))
+    return np.sqrt(np.exp(-(distances**2) / kernel_width**2))
 
 
 def discretize(X, percentiles=[25, 50, 75], all_bins=None):
     if all_bins is None:
         all_bins = np.percentile(X, percentiles, axis=0).T
-    return (np.array([np.digitize(a, bins)
-                      for (a, bins) in zip(X.T, all_bins)]).T, all_bins)
+    return (np.array([np.digitize(a, bins) for (a, bins) in zip(X.T, all_bins)]).T, all_bins)

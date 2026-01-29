@@ -1,6 +1,6 @@
 """These utilities are designed to check whether the given data and variable
-names match the expected format. For the training or scoring data, we accept 
-either a pandas dataframe with the target column indicated, two different 
+names match the expected format. For the training or scoring data, we accept
+either a pandas dataframe with the target column indicated, two different
 dataframes, or two numpy arrays"""
 
 import numpy as np
@@ -78,9 +78,7 @@ def determine_variable_names(data, variable_names):
         try:
             iter(variable_names)
         except TypeError:
-            raise InvalidInputException(
-                variable_names, "Variable names must be iterable"
-            )
+            raise InvalidInputException(variable_names, "Variable names must be iterable")
         else:
             if len(variable_names) != data[0].shape[1]:
                 raise InvalidInputException(

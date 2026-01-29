@@ -1,10 +1,10 @@
-"""In a variable importance method, the ``scoring_strategy`` is a function which 
-is used to determine which of the scores corresponding to a given variable 
+"""In a variable importance method, the ``scoring_strategy`` is a function which
+is used to determine which of the scores corresponding to a given variable
 indicates that the variable is "most important". This will be dependent on the
 particular type of object which is returned as a score.
 
-Here, we provide a few functions which can be used directly as scoring 
-strategies as well as some utilities for construction scoring strategies. 
+Here, we provide a few functions which can be used directly as scoring
+strategies as well as some utilities for construction scoring strategies.
 Moreover, we also provide a dictionary of aliases for several commonly used
 strategies in ``VALID_SCORING_STRATEGIES``.
 """

@@ -1,5 +1,5 @@
 ####################################################################################
-# Based on the Faster-LIME package (https://github.com/seansaito/Faster-LIME) 
+# Based on the Faster-LIME package (https://github.com/seansaito/Faster-LIME)
 # by author seansaito (https://github.com/seansaito)
 # Slight modifications have been made to make it compatiable with scikit-explain.
 ####################################################################################
@@ -13,11 +13,17 @@ from sklearn.preprocessing import StandardScaler
 
 from ..common.utils import ridge_solve, kernel_fn, discretize, dict_disc_to_bin
 
+
 class BaseTabularExplainer(ABC):
 
-    def __init__(self, training_data, feature_names=None,
-                 categorical_names=None, 
-                 discretizer='quartile', **kwargs):
+    def __init__(
+        self,
+        training_data,
+        feature_names=None,
+        categorical_names=None,
+        discretizer="quartile",
+        **kwargs
+    ):
         """
         Args:
             training_data (np.ndarray): Training data to measure training data statistics
@@ -40,29 +46,36 @@ class BaseTabularExplainer(ABC):
             self.feature_names = list(feature_names)
         else:
             self.feature_names = list(range(self.num_features))
-            
+
         categorical_feature_idxes = [feature_names.index(f) for f in categorical_names]
-            
+
         self.categorical_feature_idxes = categorical_feature_idxes
         if self.categorical_feature_idxes:
-            self.categorical_features = [self.feature_names[i] for i in
-                                         self.categorical_feature_idxes]
-            self.numerical_features = [f for f in self.feature_names if
-                                       f not in self.categorical_features]
-            self.numerical_feature_idxes = [idx for idx in range(self.num_features) if
-                                            idx not in self.categorical_feature_idxes]
+            self.categorical_features = [
+                self.feature_names[i] for i in self.categorical_feature_idxes
+            ]
+            self.numerical_features = [
+                f for f in self.feature_names if f not in self.categorical_features
+            ]
+            self.numerical_feature_idxes = [
+                idx for idx in range(self.num_features) if idx not in self.categorical_feature_idxes
+            ]
         else:
             self.categorical_features = []
             self.numerical_features = self.feature_names
             self.numerical_feature_idxes = list(range(self.num_features))
 
         # Some book-keeping: keep track of the original indices of each feature
-        self.dict_num_feature_to_idx = {feature: idx for (idx, feature) in
-                                        enumerate(self.numerical_features)}
-        self.dict_feature_to_idx = {feature: idx for (idx, feature) in
-                                    enumerate(self.feature_names)}
-        self.list_reorder = [self.dict_feature_to_idx[feature] for feature in
-                             self.numerical_features + self.categorical_features]
+        self.dict_num_feature_to_idx = {
+            feature: idx for (idx, feature) in enumerate(self.numerical_features)
+        }
+        self.dict_feature_to_idx = {
+            feature: idx for (idx, feature) in enumerate(self.feature_names)
+        }
+        self.list_reorder = [
+            self.dict_feature_to_idx[feature]
+            for feature in self.numerical_features + self.categorical_features
+        ]
 
         # Get training data statistics
         # Numerical feature statistics
@@ -77,29 +90,38 @@ class BaseTabularExplainer(ABC):
         if self.categorical_features:
             training_data_cat = self.training_data[:, self.categorical_feature_idxes]
             training_data_cat = training_data_cat.astype(int)
-            
+
             self.dict_categorical_hist = {
-                feature: np.bincount(training_data_cat[:, idx]) / self.training_data.shape[0] for
-                (idx, feature) in enumerate(self.categorical_features)
+                feature: np.bincount(training_data_cat[:, idx]) / self.training_data.shape[0]
+                for (idx, feature) in enumerate(self.categorical_features)
             }
 
         # Another mapping from feature to type
         self.dict_feature_to_type = {
-            feature: 'categorical' if feature in self.categorical_features else 'numerical' for
-            feature in self.feature_names}
+            feature: "categorical" if feature in self.categorical_features else "numerical"
+            for feature in self.feature_names
+        }
 
     @abstractmethod
     def explain_instance(self, **kwargs):
         raise NotImplementedError
 
 
-
 class FastLimeTabularExplainer(BaseTabularExplainer):
     """
     A basic tabular explainer
     """
-    def explain_instance(self, data_row, predict_fn, label=0, num_samples=5000, num_features=10,
-                         kernel_width=None, **kwargs):
+
+    def explain_instance(
+        self,
+        data_row,
+        predict_fn,
+        label=0,
+        num_samples=5000,
+        num_features=10,
+        kernel_width=None,
+        **kwargs
+    ):
         """
         Explain a prediction on a given instance
 
@@ -126,13 +148,15 @@ class FastLimeTabularExplainer(BaseTabularExplainer):
             data_synthetic_num = np.tile(data_num, (num_samples, 1))
             # Add noise
             data_synthetic_num = data_synthetic_num + np.random.normal(
-                size=(num_samples, data_num.shape[1]))
+                size=(num_samples, data_num.shape[1])
+            )
             data_synthetic_num[0] = data_num.ravel()
             # Convert back to original domain
             data_synthetic_num_original = self.sc.inverse_transform(data_synthetic_num)
             # Discretize
-            data_synthetic_num_disc, _ = discretize(data_synthetic_num_original, self.percentiles,
-                                                    self.all_bins_num)
+            data_synthetic_num_disc, _ = discretize(
+                data_synthetic_num_original, self.percentiles, self.all_bins_num
+            )
             list_disc.append(data_synthetic_num_disc)
             list_orig.append(data_synthetic_num_original)
 
@@ -141,9 +165,13 @@ class FastLimeTabularExplainer(BaseTabularExplainer):
             data_cat = data_row[:, self.categorical_feature_idxes]
             list_buf = []
             for feature in self.categorical_features:
-                list_buf.append(np.random.choice(a=len(self.dict_categorical_hist[feature]),
-                                                 size=(1, num_samples),
-                                                 p=self.dict_categorical_hist[feature]))
+                list_buf.append(
+                    np.random.choice(
+                        a=len(self.dict_categorical_hist[feature]),
+                        size=(1, num_samples),
+                        p=self.dict_categorical_hist[feature],
+                    )
+                )
             data_cat_original = data_cat_disc = np.concatenate(list_buf).T
             data_cat_original[0] = data_cat.ravel()
             data_cat_disc[0] = data_cat.ravel()
@@ -158,11 +186,10 @@ class FastLimeTabularExplainer(BaseTabularExplainer):
 
         # Get model predictions (i.e. groundtruth)
         model_pred = predict_fn(data_synthetic_original)
-        
-        # For classification tasks.
-        if np.ndim(model_pred)==2:
-            model_pred=model_pred[:,label]
 
+        # For classification tasks.
+        if np.ndim(model_pred) == 2:
+            model_pred = model_pred[:, label]
 
         # Get distances between original sample and neighbors
         if self.numerical_features:
@@ -181,9 +208,9 @@ class FastLimeTabularExplainer(BaseTabularExplainer):
         # Solve
         tup = (data_synthetic_onehot, model_pred, weights)
         importances, bias = ridge_solve(tup)
-        #print(importances.shape, bias.shape)
-        
-        #explanations = sorted(list(zip(self.feature_names, importances)),
+        # print(importances.shape, bias.shape)
+
+        # explanations = sorted(list(zip(self.feature_names, importances)),
         #                      key=lambda x: x[1], reverse=True)[:num_features]
 
-        return importances, bias 
+        return importances, bias

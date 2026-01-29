@@ -3,67 +3,72 @@
 # =========================================================
 import pandas as pd
 import numpy as np
-import xarray as xr 
+import xarray as xr
 from sklearn.preprocessing import MinMaxScaler
 
 from .utils import to_xarray
 
+
 def group_local_values(explain_ds, groups, X, inds=None):
     """
-    Using a dictionary of feature groups, compute the grouped 
-    SHAP values. 
+    Using a dictionary of feature groups, compute the grouped
+    SHAP values.
     """
     if inds is None:
         inds = np.arange(len(X))
-    
-    estimator_name = explain_ds.attrs['estimators used']
-    method = explain_ds.attrs['method']
-    
-    explain_df = pd.DataFrame(explain_ds[f'{method}_values__{estimator_name}'], 
-                           columns=explain_ds.attrs['features'])
 
-    names=[]
-    vals =[]
+    estimator_name = explain_ds.attrs["estimators used"]
+    method = explain_ds.attrs["method"]
+
+    explain_df = pd.DataFrame(
+        explain_ds[f"{method}_values__{estimator_name}"], columns=explain_ds.attrs["features"]
+    )
+
+    names = []
+    vals = []
 
     for name, features in groups.items():
         names.append(name)
-        these_vals = explain_df[features].values[inds,:]
+        these_vals = explain_df[features].values[inds, :]
         sum_vals = np.sum(these_vals, axis=1)
         vals.append(sum_vals)
 
-    dataset={}
+    dataset = {}
     dataset[f"{method}_values__{estimator_name}"] = (
-                    ["n_examples", "n_features"],
-                    np.array(vals).T,
-                )
-    #dataset[f"{method}_bias__{estimator_name}"] = (
+        ["n_examples", "n_features"],
+        np.array(vals).T,
+    )
+    # dataset[f"{method}_bias__{estimator_name}"] = (
     #                ["n_examples"],
     #                bias.astype(np.float64),
     #            )
 
     dataset["X"] = (["n_examples", "n_features"], X.values)
-    
+
     ds = to_xarray(dataset)
-    
-    ds.attrs['features'] = groups.keys()
-    ds.attrs['method'] = method
-    
+
+    ds.attrs["features"] = groups.keys()
+    ds.attrs["method"] = method
+
     return ds
 
 
 def group_feature_values(X, groups, inds=None, func=np.mean):
     if inds is None:
         inds = np.arange(len(X))
-    
-    # Perform min-max scaling 
+
+    # Perform min-max scaling
     X_scaled = pd.DataFrame(MinMaxScaler().fit_transform(X.values[inds]), columns=X.columns)
 
     return pd.DataFrame(
         np.array([func(X_scaled[groups[feature]], axis=1) for feature in groups.keys()]).T,
-        columns = groups.keys()) 
-    
+        columns=groups.keys(),
+    )
 
-def get_indices_based_on_performance(estimator, X, y, estimator_output, n_samples=None, class_idx=1):
+
+def get_indices_based_on_performance(
+    estimator, X, y, estimator_output, n_samples=None, class_idx=1
+):
     """
      Determines the best hits, worst false alarms, worst misses, and best
      correct negatives using the data provided during initialization.
@@ -79,9 +84,7 @@ def get_indices_based_on_performance(estimator, X, y, estimator_output, n_sample
           listed above
     """
     if len(y) < 1:
-        raise ValueError(
-            "y is empty! User likely did not initialize ExplainToolkit with 'y'"
-        )
+        raise ValueError("y is empty! User likely did not initialize ExplainToolkit with 'y'")
 
     # default is to use all X
     if n_samples is None:
@@ -105,21 +108,15 @@ def get_indices_based_on_performance(estimator, X, y, estimator_output, n_sample
         nonevent_X = df[y != class_idx]
         event_X = df[y == class_idx]
 
-        event_X_sorted_indices = event_X.sort_values(
-            by="diff", ascending=True
-        ).index.values
+        event_X_sorted_indices = event_X.sort_values(by="diff", ascending=True).index.values
 
-        nonevent_X_sorted_indices = nonevent_X.sort_values(
-            by="diff", ascending=False
-        ).index.values
+        nonevent_X_sorted_indices = nonevent_X.sort_values(by="diff", ascending=False).index.values
 
         best_hit_indices = event_X_sorted_indices[:n_samples].astype(int)
         worst_miss_indices = event_X_sorted_indices[-n_samples:][::-1].astype(int)
 
         best_corr_neg_indices = nonevent_X_sorted_indices[:n_samples].astype(int)
-        worst_false_alarm_indices = nonevent_X_sorted_indices[-n_samples:][::-1].astype(
-            int
-        )
+        worst_false_alarm_indices = nonevent_X_sorted_indices[-n_samples:][::-1].astype(int)
 
         sorted_dict = {
             "Best Hits": best_hit_indices,
@@ -174,12 +171,8 @@ def avg_and_sort_contributions(contrib_dict, feature_val_dict):
         sorted_contrib_df = contrib_series.reindex(indices)
         sorted_feature_val_df = feature_val_series.reindex(indices)
 
-        top_contrib = {
-            var: contrib_series[var] for var in list(sorted_contrib_df.index)
-        }
-        top_values = {
-            var: feature_val_series[var] for var in list(sorted_feature_val_df.index)
-        }
+        top_contrib = {var: contrib_series[var] for var in list(sorted_contrib_df.index)}
+        top_values = {var: feature_val_series[var] for var in list(sorted_feature_val_df.index)}
 
         avg_contrib_dict[key] = top_contrib
         avg_feature_val_dict[key] = top_values

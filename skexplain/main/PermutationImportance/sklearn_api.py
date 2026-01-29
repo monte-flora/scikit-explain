@@ -1,21 +1,21 @@
-"""While the various variable importance methods can, in general, for many 
-different situations, such as evaluating the model-agnostic presence of 
+"""While the various variable importance methods can, in general, for many
+different situations, such as evaluating the model-agnostic presence of
 information withing a dataset, the most typical application of the method is to
-determine the importance of variables as evaluated by a particular model. The 
-tools provide here are useful to assist in the training and evaluation of 
-sklearn models. This is done by wrapping the training and evaluation of the 
-model into a single function which is then used as the ``scoring_fn`` of a 
+determine the importance of variables as evaluated by a particular model. The
+tools provide here are useful to assist in the training and evaluation of
+sklearn models. This is done by wrapping the training and evaluation of the
+model into a single function which is then used as the ``scoring_fn`` of a
 generalized variable importance method.
 
-All of the variable importance methods with a ``sklearn_`` prefix use these 
-tools to determine 1) whether to retrain a model at each step (as is necessary 
-for Sequential Selection, but not for Permutation Importance) and 2) how to 
+All of the variable importance methods with a ``sklearn_`` prefix use these
+tools to determine 1) whether to retrain a model at each step (as is necessary
+for Sequential Selection, but not for Permutation Importance) and 2) how to
 evaluate the resulting predictions of a model.
 
-Here, the powerhouse is the ``model_scorer`` object, which handles all of the 
+Here, the powerhouse is the ``model_scorer`` object, which handles all of the
 typical use-cases for any model by separately applying a training, prediction,
 and evaluation function. Supplied with proper functions for each of these, the
-``model_scorer`` object could also be implemented to score other types of 
+``model_scorer`` object could also be implemented to score other types of
 models, such as Keras models."""
 
 import numpy as np
@@ -62,18 +62,15 @@ def predict_proba_model(model, X_score):
     scoring data"""
     pred = model.predict_proba(X_score)
     # Binary classification.
-    if pred.shape[1] == 2: 
-        return pred[:,1]
+    if pred.shape[1] == 2:
+        return pred[:, 1]
     else:
-        return pred 
+        return pred
+
 
 def forward_permutations(X, inds, var_idx):
-    return np.array(
-                    [
-                        X[:, i] if i == var_idx else X[inds, i]
-                        for i in range(X.shape[1])
-                    ]
-                ).T
+    return np.array([X[:, i] if i == var_idx else X[inds, i] for i in range(X.shape[1])]).T
+
 
 class model_scorer(object):
     """General purpose scoring method which takes a particular model, trains the
@@ -81,12 +78,13 @@ class model_scorer(object):
     given scoring data, and then evaluates those predictions using some
     evaluation function. Additionally provides the tools for bootstrapping the
     scores and providing a distribution of scores to be used for statistics.
-    
-    NOTE: Since these method is used internally, the scoring inputs into 
-    this method for different rounds of multipass permutation importance 
-    are already permuted for the top most features. Thus, in any current 
-    iteration, we need only permute a single column at a time. 
+
+    NOTE: Since these method is used internally, the scoring inputs into
+    this method for different rounds of multipass permutation importance
+    are already permuted for the top most features. Thus, in any current
+    iteration, we need only permute a single column at a time.
     """
+
     def __init__(
         self,
         model,
@@ -97,7 +95,7 @@ class model_scorer(object):
         default_score=0.0,
         n_permute=1,
         subsample=1,
-        direction='backward', 
+        direction="backward",
         **kwargs
     ):
         """Initializes the scoring object by storing the training, predicting,
@@ -146,15 +144,11 @@ class model_scorer(object):
 
     def _scorer(self, X, y):
         predictions = self.prediction_fn(self.model, X)
-        return self.evaluation_fn(y,predictions)
-    
+        return self.evaluation_fn(y, predictions)
+
     def get_subsample_size(self, full_size):
-        return (
-            int(full_size * self.subsample)
-            if self.subsample <= 1
-            else self.subsample
-        )
-    
+        return int(full_size * self.subsample) if self.subsample <= 1 else self.subsample
+
     def _train(self):
         # Try to train model
         trained_model = self.training_fn(self.model, X_train, y_train)
@@ -165,39 +159,39 @@ class model_scorer(object):
                 return [self.default_score]
             else:
                 return np.full((self.n_permute,), self.default_score)
-    
+
     def get_permuted_data(self, idx, var_idx):
-        """ Get permuted data """
+        """Get permuted data"""
         X_score_sub = self.X_score
         y_score_sub = self.y_score
         X_train_sub = self.X_train
-        
+
         inds = self.shuffled_indices[idx]
-        
-        if len(self.rows[0]) != self.y_score.shape[0]: 
+
+        if len(self.rows[0]) != self.y_score.shape[0]:
             X_score_sub = get_data_subset(self.X_score, self.rows[idx])
             y_score_sub = get_data_subset(self.y_score, self.rows[idx])
-        
-            if self.direction == 'forward':
+
+            if self.direction == "forward":
                 X_train_sub = get_data_subset(self.X_train, self.rows[idx])
-                
-            #inds = inds[idx]
-        
+
+            # inds = inds[idx]
+
         if var_idx is None:
             return X_score_sub, y_score_sub
-        
-        # For the backward, X_score is mostly unpermuted expect for 
-        # the top features. For the forward, X_score is all permuted 
-        # expect for the top features. 
+
+        # For the backward, X_score is mostly unpermuted expect for
+        # the top features. For the forward, X_score is all permuted
+        # expect for the top features.
         X_perm = X_score_sub.copy()
-        
-        if self.direction == 'backward':
-            X_perm[:,var_idx] = X_score_sub[inds, var_idx]
+
+        if self.direction == "backward":
+            X_perm[:, var_idx] = X_score_sub[inds, var_idx]
         else:
-            X_perm[:,var_idx] = X_train_sub[:, var_idx]
-            
+            X_perm[:, var_idx] = X_train_sub[:, var_idx]
+
         return X_perm, y_score_sub
-        
+
     def __call__(self, training_data, scoring_data, var_idx):
         """Uses the training, predicting, and evaluation functions to score the
         model given the training and scoring data
@@ -211,16 +205,14 @@ class model_scorer(object):
         """
         (self.X_train, self.y_train) = training_data
         (self.X_score, self.y_score) = scoring_data
-        
-        permuted_set = [self.get_permuted_data(idx, var_idx) for idx in range(self.n_permute)] 
-        scores = np.array([self._scorer(*arg) for arg in permuted_set]) 
-    
-        return np.array(scores) 
-    
 
-def score_untrained_sklearn_model(
-    model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs
-):
+        permuted_set = [self.get_permuted_data(idx, var_idx) for idx in range(self.n_permute)]
+        scores = np.array([self._scorer(*arg) for arg in permuted_set])
+
+        return np.array(scores)
+
+
+def score_untrained_sklearn_model(model, evaluation_fn, nbootstrap=None, subsample=1, **kwargs):
     """A convenience method which uses the default training and the
     deterministic prediction methods for scikit-learn to evaluate a model
 
@@ -289,7 +281,7 @@ def score_untrained_sklearn_model_with_probabilities(
 
 
 def score_trained_sklearn_model(
-    model, evaluation_fn, n_permute=1, subsample=1, direction='backward', **kwargs
+    model, evaluation_fn, n_permute=1, subsample=1, direction="backward", **kwargs
 ):
     """A convenience method which does not retrain a scikit-learn model and uses
     deterministic prediction methods to evaluate the model
@@ -319,13 +311,13 @@ def score_trained_sklearn_model(
         evaluation_fn=evaluation_fn,
         n_permute=n_permute,
         subsample=subsample,
-        direction=direction, 
+        direction=direction,
         **kwargs
     )
 
 
 def score_trained_sklearn_model_with_probabilities(
-    model, evaluation_fn, n_permute=1, subsample=1, direction='backward', **kwargs
+    model, evaluation_fn, n_permute=1, subsample=1, direction="backward", **kwargs
 ):
     """A convenience method which does not retrain a scikit-learn model and uses
     probabilistic prediction methods to evaluate the model

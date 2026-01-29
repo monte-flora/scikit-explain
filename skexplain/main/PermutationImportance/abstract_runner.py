@@ -1,16 +1,16 @@
 """The general algorithm for all of the data-based variable importance methods
-is the same, regardless of whether the method is Sequential Selection or 
-Permutation Importance or something else. This is represented in the 
-``abstract_variable_importance`` function. All of the different methods we 
+is the same, regardless of whether the method is Sequential Selection or
+Permutation Importance or something else. This is represented in the
+``abstract_variable_importance`` function. All of the different methods we
 provide use this function under the hood and the only difference between them is
-the ``selection_strategy`` object, which is detailed in 
-:mod:`PermutationImportance.selection_strategies`. Typically, you will not need 
-to use this method but can instead use one of the methods imported directly into 
+the ``selection_strategy`` object, which is detailed in
+:mod:`PermutationImportance.selection_strategies`. Typically, you will not need
+to use this method but can instead use one of the methods imported directly into
 the top package of **PermutationImportance**.
 
 If you wish to implement your own variable importance method, you will need to
 devise your own ``selection_strategy``. We recommend using
-:mod:`PermutationImportance.selection_strategies` as a template for implementing 
+:mod:`PermutationImportance.selection_strategies` as a template for implementing
 your own variable importance method."""
 
 import numpy as np
@@ -25,6 +25,7 @@ from .utils import add_ranks_to_dict, get_data_subset, bootstrap_generator
 
 from ...common.multiprocessing_utils import run_parallel
 from ...common.utils import merge_dict
+
 
 def abstract_variable_importance(
     training_data,
@@ -65,19 +66,17 @@ def abstract_variable_importance(
     :returns: :class:`PermutationImportance.result.ImportanceResult` object
         which contains the results for each run
     """
-    #training_data = #verify_data(training_data)
+    # training_data = #verify_data(training_data)
     scoring_data = verify_data(scoring_data)
-    
-    # Sending the scoring_data in as training_data so that for the 
-    # forward permutation importance methods, we can un-permuted data. 
+
+    # Sending the scoring_data in as training_data so that for the
+    # forward permutation importance methods, we can un-permuted data.
     training_data = (scoring_data[0].copy(), scoring_data[1].copy())
-    
+
     scoring_strategy = verify_scoring_strategy(scoring_strategy)
     variable_names = determine_variable_names(scoring_data, variable_names)
 
-    nimportant_vars = (
-        len(variable_names) if nimportant_vars is None else nimportant_vars
-    )
+    nimportant_vars = len(variable_names) if nimportant_vars is None else nimportant_vars
 
     method = (
         getattr(selection_strategy, "name", getattr(selection_strategy, "__name__"))
@@ -97,26 +96,26 @@ def abstract_variable_importance(
     # variables are not left in poor permutations to bias the results.
     random_states = bootstrap_generator(n_bootstrap=nimportant_vars, seed=156)
     permute_rs = bootstrap_generator(n_bootstrap=scoring_fn.n_permute, seed=42)
-    
+
     subsample_size = scoring_fn.get_subsample_size(full_size=len(scoring_data[1]))
-    
+
     rows = [rs.choice(len(scoring_data[1]), subsample_size) for rs in permute_rs]
     inds = [rs.permutation(subsample_size) for rs in permute_rs]
-   
-    # Setting the shuffled indices to reduce computational costs. 
+
+    # Setting the shuffled indices to reduce computational costs.
     scoring_fn.shuffled_indices = inds
-    scoring_fn.rows = rows 
+    scoring_fn.rows = rows
 
     # Compute the original score over all the data
     original_score = scoring_fn(training_data, scoring_data, var_idx=None)
     result_obj = ImportanceResult(method, variable_names, original_score)
-    
-    for i, _ in tqdm(enumerate(range(nimportant_vars)), total=nimportant_vars, desc='Perm. Imp.'):
-        #if verbose:
+
+    for i, _ in tqdm(enumerate(range(nimportant_vars)), total=nimportant_vars, desc="Perm. Imp."):
+        # if verbose:
         #    print(f"Multi-pass iteration {i+1} out of {nimportant_vars}...")
 
-        # Sending the scoring_data in as training_data so that for the 
-        # forward permutation importance methods, we can un-permuted data. 
+        # Sending the scoring_data in as training_data so that for the
+        # forward permutation importance methods, we can un-permuted data.
         selection_iter = selection_strategy(
             training_data,
             scoring_data,
@@ -130,7 +129,7 @@ def abstract_variable_importance(
             result = PermImpIterator(selection_iter, scoring_fn)._singlethread_iteration()
         else:
             result = PermImpIterator(selection_iter, scoring_fn, njobs)._multithread_iteration()
-   
+
         next_result = add_ranks_to_dict(result, variable_names, scoring_strategy)
         best_var = min(next_result.keys(), key=lambda key: next_result[key][0])
         best_index = np.flatnonzero(variable_names == best_var)[0]
@@ -138,6 +137,7 @@ def abstract_variable_importance(
         important_vars.append(best_index)
 
     return result_obj
+
 
 class PermImpIterator:
     """
@@ -149,11 +149,12 @@ class PermImpIterator:
         :param num_jobs: number of processes to use
         :returns: a dict of ``{var: score}``
     """
+
     def __init__(self, selection_iter, scoring_fn, n_jobs=1):
         self.scoring_fn = scoring_fn
         self.selection_iterator = selection_iter
-        self.n_jobs=n_jobs
-                                     
+        self.n_jobs = n_jobs
+
     def _singlethread_iteration(self):
         """Handles a single pass of the abstract variable importance algorithm,
         assuming a single worker thread
@@ -164,12 +165,13 @@ class PermImpIterator:
             result[var] = score
         return result
 
-
     def _multithread_iteration(self):
         """Handles a single pass of the abstract variable importance algorithm using
         multithreading
         """
         result = dict()
-        for index, score in pool_imap_unordered(self.scoring_fn, self.selection_iterator, self.n_jobs):
+        for index, score in pool_imap_unordered(
+            self.scoring_fn, self.selection_iterator, self.n_jobs
+        ):
             result[index] = score
         return result

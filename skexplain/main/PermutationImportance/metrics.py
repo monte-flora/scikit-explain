@@ -1,13 +1,12 @@
-"""These are metric functions which can be used to score model predictions 
+"""These are metric functions which can be used to score model predictions
 against the true values. They are designed to be used either as a component of
-an ``scoring_fn`` of the method-specific variable importance methods or 
-stand-alone as the ``evaluation_fn`` of a model-based variable importance 
+an ``scoring_fn`` of the method-specific variable importance methods or
+stand-alone as the ``evaluation_fn`` of a model-based variable importance
 method.
 
 In addition to these metrics, all of the metrics and loss functions provided in
 `sklearn.metrics <https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics>`_
 should also work."""
-
 
 import numpy as np
 
@@ -29,19 +28,25 @@ def RPS(truths, predictions):
     :returns: a single value for the Ranked Probability Score
     """
     try:
-        truths = truths[:,0]
+        truths = truths[:, 0]
     except:
         pass
     num_samples = predictions.shape[0]
     num_classes = predictions.shape[1]
     truths2 = np.zeros(predictions.shape)
     for n in range(num_classes):
-        truths2[:,n] = np.where((truths==n), 1, 0)
+        truths2[:, n] = np.where((truths == n), 1, 0)
 
-    RPS = np.sum( 
-        np.sum( (np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+    RPS = (
+        np.sum(
+            np.sum((np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1)) ** 2, axis=1)
+            / (num_classes - 1)
+        )
+        / num_samples
+    )
 
     return RPS
+
 
 def RPSS(truths, predictions):
     """Computes the Ranked Probability Skill Score
@@ -51,19 +56,30 @@ def RPSS(truths, predictions):
     :returns: a single value for the Ranked Probability Skill Score
     """
 
-    truths = truths[:,0]
+    truths = truths[:, 0]
     num_samples = predictions.shape[0]
     num_classes = predictions.shape[1]
-    truths2 = np.zeros(predictions.shape); y_clim = np.zeros(predictions.shape)
+    truths2 = np.zeros(predictions.shape)
+    y_clim = np.zeros(predictions.shape)
     for n in range(num_classes):
-        truths2[:,n] = np.where((truths==n), 1, 0)
-        y_clim[:,n] = len(truths[truths==n])/len(truths)
+        truths2[:, n] = np.where((truths == n), 1, 0)
+        y_clim[:, n] = len(truths[truths == n]) / len(truths)
 
-    RPS = np.sum( 
-        np.sum( (np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+    RPS = (
+        np.sum(
+            np.sum((np.cumsum(predictions, axis=1) - np.cumsum(truths2, axis=1)) ** 2, axis=1)
+            / (num_classes - 1)
+        )
+        / num_samples
+    )
 
-    RPS_climo = np.sum( 
-        np.sum( (np.cumsum(y_clim, axis=1) - np.cumsum(truths2, axis=1))**2, axis=1) / (num_classes-1) ) / num_samples
+    RPS_climo = (
+        np.sum(
+            np.sum((np.cumsum(y_clim, axis=1) - np.cumsum(truths2, axis=1)) ** 2, axis=1)
+            / (num_classes - 1)
+        )
+        / num_samples
+    )
 
     RPSS = 1 - RPS / RPS_climo
 
@@ -148,9 +164,7 @@ def _get_contingency_table(truths, predictions, classes=None):
         table = np.zeros((len(classes), len(classes)), dtype=np.float32)
         for i, c1 in enumerate(classes):
             for j, c2 in enumerate(classes):
-                table[i, j] = [
-                    p == c1 and t == c2 for p, t in zip(preds, truths)
-                ].count(True)
+                table[i, j] = [p == c1 and t == c2 for p, t in zip(preds, truths)].count(True)
     return table
 
 
@@ -198,15 +212,11 @@ def _gerrity_score(table):
     p_sum = np.cumsum(p_o)[:-1]
     a = (1.0 - p_sum) / p_sum
     s = np.zeros(table.shape, dtype=float)
-    for (i, j) in np.ndindex(*s.shape):
+    for i, j in np.ndindex(*s.shape):
         if i == j:
             s[i, j] = 1.0 / (k - 1.0) * (np.sum(1.0 / a[0:j]) + np.sum(a[j : k - 1]))
         elif i < j:
-            s[i, j] = (
-                1.0
-                / (k - 1.0)
-                * (np.sum(1.0 / a[0:i]) - (j - i) + np.sum(a[j : k - 1]))
-            )
+            s[i, j] = 1.0 / (k - 1.0) * (np.sum(1.0 / a[0:i]) - (j - i) + np.sum(a[j : k - 1]))
         else:
             s[i, j] = s[j, i]
     return np.sum(table / float(table.sum()) * s)

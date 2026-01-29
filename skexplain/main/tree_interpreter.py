@@ -35,7 +35,7 @@ class TreeInterpreter:
         self._examples = examples
         self._joint_contribution = joint_contribution
         self._n_jobs = n_jobs
-        
+
     def _get_tree_paths(self, tree, node_id, depth=0):
         """
         Returns all paths through the tree as list of node_ids
@@ -113,8 +113,7 @@ class TreeInterpreter:
                     contrib = values_list[path[i + 1]] - values_list[path[i]]
                     # path_features.sort()
                     contributions[row][tuple(sorted(path_features))] = (
-                        contributions[row].get(tuple(sorted(path_features)), 0)
-                        + contrib
+                        contributions[row].get(tuple(sorted(path_features)), 0) + contrib
                     )
             return direct_prediction, biases, contributions
 
@@ -140,7 +139,6 @@ class TreeInterpreter:
             return direct_prediction, biases, np.array(contributions)
 
     def predict_forest(self):
-
         """
         For a given RandomForestRegressor, RandomForestClassifier,
         ExtraTreesRegressor, or ExtraTreesClassifier returns a triple of
@@ -182,27 +180,29 @@ class TreeInterpreter:
             )
 
         else:
-            
+
             if self._n_jobs > 1:
                 pool = Pool(processes=self._n_jobs)
                 # iterates return values from the issued tasks
                 iterator = self._model.estimators_
-                for pred, bias, contribution in tqdm(pool.map(self.predict_tree, iterator), desc='Tree'):  
+                for pred, bias, contribution in tqdm(
+                    pool.map(self.predict_tree, iterator), desc="Tree"
+                ):
                     biases.append(bias)
                     contributions.append(contribution)
                     predictions.append(pred)
-            
+
                 pool.close()
                 pool.join()
-            
-            else:            
-                for tree in tqdm(self._model.estimators_, desc='Tree'):
+
+            else:
+                for tree in tqdm(self._model.estimators_, desc="Tree"):
                     pred, bias, contribution = self.predict_tree(tree)
 
                     biases.append(bias)
                     contributions.append(contribution)
                     predictions.append(pred)
-  
+
             return (
                 np.mean(predictions, axis=0),
                 np.mean(biases, axis=0),
@@ -210,7 +210,6 @@ class TreeInterpreter:
             )
 
     def predict(self):
-
         """Returns a triple (prediction, bias, feature_contributions), such
         that prediction ≈ bias + feature_contributions.
 

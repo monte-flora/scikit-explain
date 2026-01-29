@@ -84,31 +84,27 @@ def save_netcdf(fname, ds, complevel=5, **kwargs):
     """Save netcdf file with xarray"""
     comp = dict(zlib=True, complevel=complevel)
     encoding = {var: comp for var in ds.data_vars}
-    
-    kwargs['encoding'] = kwargs.get('encoding', encoding)
+
+    kwargs["encoding"] = kwargs.get("encoding", encoding)
     try:
         ds.to_netcdf(path=fname, **kwargs)
     except PermissionError:
-        # If the file already exists, then that can raise 
-        # an PermissionError. Check if in fact the 
+        # If the file already exists, then that can raise
+        # an PermissionError. Check if in fact the
         # file already exists.
         if Path(fname).is_file():
-            # If so, let's delete it. We should be able to save it 
-            # now. 
+            # If so, let's delete it. We should be able to save it
+            # now.
             Path(fname).unlink()
-    
+
     ds.to_netcdf(path=fname, **kwargs)
-    
+
     ds.close()
     del ds
 
-def save_dataframe(
-    fname,
-    dframe,
-    df_save_func, 
-    **kwargs
-):
+
+def save_dataframe(fname, dframe, df_save_func, **kwargs):
     """Save dataframe as pickle file"""
     getattr(dframe, df_save_func)(fname, **kwargs)
-    
+
     del dframe

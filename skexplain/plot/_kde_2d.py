@@ -47,12 +47,8 @@ class PlotScatter(PlotStructure):
     and whether the learned relationships are consistent with the data.
     """
 
-    oranges = ListedColormap(
-        ["xkcd:peach", "xkcd:orange", "xkcd:bright orange", "xkcd:rust brown"]
-    )
-    blues = ListedColormap(
-        ["xkcd:periwinkle blue", "xkcd:clear blue", "xkcd:navy blue"]
-    )
+    oranges = ListedColormap(["xkcd:peach", "xkcd:orange", "xkcd:bright orange", "xkcd:rust brown"])
+    blues = ListedColormap(["xkcd:periwinkle blue", "xkcd:clear blue", "xkcd:navy blue"])
 
     def __init__(self, BASE_FONT_SIZE=12):
         super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE)
@@ -260,8 +256,6 @@ class PlotScatter(PlotStructure):
         fmt = {}
         for l, s in zip(cs.levels, temp_thresh[::-1]):
             fmt[l] = f"{int(s)}%"
-        ax.clabel(
-            cs, cs.levels, inline=True, fontsize=self.FONT_SIZES["teensie"], fmt=fmt
-        )
+        ax.clabel(cs, cs.levels, inline=True, fontsize=self.FONT_SIZES["teensie"], fmt=fmt)
 
         return cs

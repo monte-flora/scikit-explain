@@ -49,16 +49,16 @@ class Attributes:
 
         # Check that the estimator objects have been fit!
 
-        #if not estimator_is_none:
+        # if not estimator_is_none:
         #    for m in estimator_objs:
         #        check_is_fitted(m)
 
-        # Check that the estimator objects have predict or predict_proba. 
+        # Check that the estimator objects have predict or predict_proba.
         if not estimator_is_none:
             for m in estimator_objs:
-                if not (hasattr(m, 'predict') or  hasattr(m, 'predict_proba')):
-                    raise AttributeError(f'{m} does not have .predict or .predict_proba')
-                
+                if not (hasattr(m, "predict") or hasattr(m, "predict_proba")):
+                    raise AttributeError(f"{m} does not have .predict or .predict_proba")
+
         # Create a dictionary from the estimator_objs and estimator_names.
         # Then set the attributes.
         self.estimators = OrderedDict(
@@ -104,6 +104,7 @@ class Attributes:
             # Ensure feature names are Python strings, not numpy.str_
             # See: https://github.com/shap/shap/issues/3304
             from .utils import ensure_str_features
+
             self.feature_names = ensure_str_features(self.X.columns)
 
     def set_estimator_output(self, estimator_output, estimator):
