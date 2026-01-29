@@ -22,11 +22,16 @@ jobs:
         python -m pip install --upgrade pytest-cov codecov coverage
         python -m pip install -r requirements.txt
     - name: Install package
-      run: pip install -e .
+      run: |
+        pip install -e .
+        python -c "import skexplain; print('✓ Package installed successfully')"
+
+    - name: List installed packages
+      run: pip list | grep -E "scikit-learn|numpy|pandas|shap|xarray|pytest"
 
     - name: Run the test scripts
       run: |
-        python -m pytest tests/test* --cov=./ --cov-report=xml
+        python -m pytest tests/ -v --cov=./ --cov-report=xml --tb=short
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
