@@ -81,12 +81,34 @@ def waterfall(
     order = np.argsort(-np.abs(values))
 
     # Convert pandas Series to numpy arrays to avoid indexing issues in pandas 2.x
-    # Use .values attribute to get underlying numpy array
-    values_array = values.values if hasattr(values, 'values') else np.array(values)
-    features_array = features.values if (features is not None and hasattr(features, 'values')) else (np.array(features) if features is not None else None)
+    # Use .values and then ensure it's actually a numpy array with np.asarray
+    if hasattr(values, 'values'):
+        temp = values.values
+        values_array = temp if isinstance(temp, np.ndarray) else np.asarray(temp)
+    else:
+        values_array = np.asarray(values)
+
+    if features is not None:
+        if hasattr(features, 'values'):
+            temp = features.values
+            features_array = temp if isinstance(temp, np.ndarray) else np.asarray(temp)
+        else:
+            features_array = np.asarray(features)
+    else:
+        features_array = None
+
     if lower_bounds is not None:
-        lower_bounds_array = lower_bounds.values if hasattr(lower_bounds, 'values') else np.array(lower_bounds)
-        upper_bounds_array = upper_bounds.values if hasattr(upper_bounds, 'values') else np.array(upper_bounds)
+        if hasattr(lower_bounds, 'values'):
+            temp = lower_bounds.values
+            lower_bounds_array = temp if isinstance(temp, np.ndarray) else np.asarray(temp)
+        else:
+            lower_bounds_array = np.asarray(lower_bounds)
+
+        if hasattr(upper_bounds, 'values'):
+            temp = upper_bounds.values
+            upper_bounds_array = temp if isinstance(temp, np.ndarray) else np.asarray(temp)
+        else:
+            upper_bounds_array = np.asarray(upper_bounds)
 
     pos_lefts = []
     pos_inds = []
