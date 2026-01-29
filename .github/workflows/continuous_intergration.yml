@@ -22,7 +22,7 @@ jobs:
         python -m pip install --upgrade pytest-cov codecov coverage
         python -m pip install -r requirements.txt
     - name: Install package
-      run: python setup.py install
+      run: pip install -e .
 
     - name: Run the test scripts
       run: |
