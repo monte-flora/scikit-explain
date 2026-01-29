@@ -81,11 +81,12 @@ def waterfall(
     order = np.argsort(-np.abs(values))
 
     # Convert pandas Series to numpy arrays to avoid indexing issues in pandas 2.x
-    values_array = values.to_numpy() if hasattr(values, 'to_numpy') else np.array(values)
-    features_array = features.to_numpy() if hasattr(features, 'to_numpy') and features is not None else (np.array(features) if features is not None else None)
+    # Force a copy to ensure we get a true numpy array, not a view
+    values_array = np.array(values, copy=True)
+    features_array = np.array(features, copy=True) if features is not None else None
     if lower_bounds is not None:
-        lower_bounds_array = lower_bounds.to_numpy() if hasattr(lower_bounds, 'to_numpy') else np.array(lower_bounds)
-        upper_bounds_array = upper_bounds.to_numpy() if hasattr(upper_bounds, 'to_numpy') else np.array(upper_bounds)
+        lower_bounds_array = np.array(lower_bounds, copy=True)
+        upper_bounds_array = np.array(upper_bounds, copy=True)
 
     pos_lefts = []
     pos_inds = []
