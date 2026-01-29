@@ -100,21 +100,21 @@ def waterfall(
 
     # compute the locations of the individual features and plot the dashed connecting lines
     for i in range(num_individual):
-        sval = values.iloc[order[i]]
+        sval = values.iloc[int(order[i])]
         loc -= sval
         if sval >= 0:
             pos_inds.append(rng[i])
             pos_widths.append(sval)
             if lower_bounds is not None:
-                pos_low.append(lower_bounds.iloc[order[i]])
-                pos_high.append(upper_bounds.iloc[order[i]])
+                pos_low.append(lower_bounds.iloc[int(order[i])])
+                pos_high.append(upper_bounds.iloc[int(order[i])])
             pos_lefts.append(loc)
         else:
             neg_inds.append(rng[i])
             neg_widths.append(sval)
             if lower_bounds is not None:
-                neg_low.append(lower_bounds.iloc[order[i]])
-                neg_high.append(upper_bounds.iloc[order[i]])
+                neg_low.append(lower_bounds.iloc[int(order[i])])
+                neg_high.append(upper_bounds.iloc[int(order[i])])
             neg_lefts.append(loc)
         if num_individual != num_features or i + 4 < num_individual:
             ax.plot(
@@ -129,7 +129,7 @@ def waterfall(
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
         else:
-            feat_val = features.iloc[order[i]]
+            feat_val = features.iloc[int(order[i])]
             if abs(feat_val) < 1:
                 fmt = "%0.03f"
             elif abs(feat_val) > 10:
