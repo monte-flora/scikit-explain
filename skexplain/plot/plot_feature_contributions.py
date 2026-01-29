@@ -14,8 +14,8 @@ from copy import copy
 
 import re
 from shap.plots import colors
-import itertools 
-import warnings 
+import itertools
+import warnings
 
 
 def format_value(s, format_str):
@@ -40,7 +40,6 @@ def waterfall(
     label_fontsize=8,
     **kwargs,
 ):
-
     """Plots an explantion of a single prediction as a waterfall plot.
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
     output. The waterfall plot is designed to visually display how the SHAP values (evidence) of each feature
@@ -71,15 +70,54 @@ def waterfall(
     features = data.loc[key].loc[model_name, vars_val]
     base_values = data.loc[key].loc[model_name, "Bias_contrib"]
 
+    # Reset index to integer positions if it's a pandas Series
+    # This helps with conversion to numpy arrays in pandas 2.x
+    if hasattr(values, 'reset_index'):
+        values = values.reset_index(drop=True)
+    if hasattr(features, 'reset_index') and features is not None:
+        features = features.reset_index(drop=True)
+
     lower_bounds = getattr(values, "lower_bounds", None)
     upper_bounds = getattr(values, "upper_bounds", None)
 
+    if lower_bounds is not None and hasattr(lower_bounds, 'reset_index'):
+        lower_bounds = lower_bounds.reset_index(drop=True)
+    if upper_bounds is not None and hasattr(upper_bounds, 'reset_index'):
+        upper_bounds = upper_bounds.reset_index(drop=True)
+
     # init variables we use for tracking the plot locations
-    
-    num_features = kwargs.get('num_features', min(max_display, len(values)))
+
+    num_features = kwargs.get("num_features", min(max_display, len(values)))
     row_height = 0.5
     rng = range(num_features - 1, -1, -1)
     order = np.argsort(-np.abs(values))
+
+    # Convert pandas Series to numpy arrays to avoid indexing issues in pandas 2.x
+    # Build a fresh numpy array by extracting elements to completely break pandas ties
+    if hasattr(values, '__iter__') and not isinstance(values, (str, bytes)):
+        values_array = np.array([float(v) for v in values])
+    else:
+        values_array = np.asarray(values)
+
+    if features is not None:
+        if hasattr(features, '__iter__') and not isinstance(features, (str, bytes)):
+            features_array = np.array([float(v) for v in features])
+        else:
+            features_array = np.asarray(features)
+    else:
+        features_array = None
+
+    if lower_bounds is not None:
+        if hasattr(lower_bounds, '__iter__') and not isinstance(lower_bounds, (str, bytes)):
+            lower_bounds_array = np.array([float(v) for v in lower_bounds])
+        else:
+            lower_bounds_array = np.asarray(lower_bounds)
+
+        if hasattr(upper_bounds, '__iter__') and not isinstance(upper_bounds, (str, bytes)):
+            upper_bounds_array = np.array([float(v) for v in upper_bounds])
+        else:
+            upper_bounds_array = np.asarray(upper_bounds)
+
     pos_lefts = []
     pos_inds = []
     pos_widths = []
@@ -101,21 +139,21 @@ def waterfall(
 
     # compute the locations of the individual features and plot the dashed connecting lines
     for i in range(num_individual):
-        sval = values[order[i]]
+        sval = values_array[order[i]]
         loc -= sval
         if sval >= 0:
             pos_inds.append(rng[i])
             pos_widths.append(sval)
             if lower_bounds is not None:
-                pos_low.append(lower_bounds[order[i]])
-                pos_high.append(upper_bounds[order[i]])
+                pos_low.append(lower_bounds_array[order[i]])
+                pos_high.append(upper_bounds_array[order[i]])
             pos_lefts.append(loc)
         else:
             neg_inds.append(rng[i])
             neg_widths.append(sval)
             if lower_bounds is not None:
-                neg_low.append(lower_bounds[order[i]])
-                neg_high.append(upper_bounds[order[i]])
+                neg_low.append(lower_bounds_array[order[i]])
+                neg_high.append(upper_bounds_array[order[i]])
             neg_lefts.append(loc)
         if num_individual != num_features or i + 4 < num_individual:
             ax.plot(
@@ -130,14 +168,15 @@ def waterfall(
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
         else:
-            if abs(features[order[i]]) < 1:
+            feat_val = features_array[order[i]]
+            if abs(feat_val) < 1:
                 fmt = "%0.03f"
-            elif abs(features[order[i]]) > 10:
+            elif abs(feat_val) > 10:
                 fmt = "%0.f"
             else:
                 fmt = "%0.02f"
             yticklabels[rng[i]] = (
-                format_value(features[order[i]], fmt)
+                format_value(feat_val, fmt)
                 + " "
                 + units[order[i]]
                 + " = "
@@ -214,9 +253,7 @@ def waterfall(
             ax.errorbar(
                 pos_lefts[i] + pos_widths[i],
                 pos_inds[i],
-                xerr=np.array(
-                    [[pos_widths[i] - pos_low[i]], [pos_high[i] - pos_widths[i]]]
-                ),
+                xerr=np.array([[pos_widths[i] - pos_low[i]], [pos_high[i] - pos_widths[i]]]),
                 ecolor=colors.light_red_rgb,
             )
 
@@ -265,9 +302,7 @@ def waterfall(
             ax.errorbar(
                 neg_lefts[i] + neg_widths[i],
                 neg_inds[i],
-                xerr=np.array(
-                    [[neg_widths[i] - neg_low[i]], [neg_high[i] - neg_widths[i]]]
-                ),
+                xerr=np.array([[neg_widths[i] - neg_low[i]], [neg_high[i] - neg_widths[i]]]),
                 ecolor=colors.light_blue_rgb,
             )
 
@@ -383,9 +418,7 @@ def waterfall(
     )
     tick_labels[1].set_transform(
         tick_labels[1].get_transform()
-        + matplotlib.transforms.ScaledTranslation(
-            22 / 72.0, -1 / 72.0, fig.dpi_scale_trans
-        )
+        + matplotlib.transforms.ScaledTranslation(22 / 72.0, -1 / 72.0, fig.dpi_scale_trans)
     )
 
     tick_labels[1].set_color("#999999")
@@ -399,33 +432,43 @@ def waterfall(
     return fx, base_values
 
 
-def add_summary_plot_cb(color, cax=None, orientation='vertical', 
-                        fig=None, ax_dim=[0.3, 1.02, 0.5, 0.02], fontsize=12, labelpad=-40,y=1.05, ax=None):
+def add_summary_plot_cb(
+    color,
+    cax=None,
+    orientation="vertical",
+    fig=None,
+    ax_dim=[0.3, 1.02, 0.5, 0.02],
+    fontsize=12,
+    labelpad=-40,
+    y=1.05,
+    ax=None,
+):
     # Add colorbar.
     import matplotlib.cm as cm
+
     m = cm.ScalarMappable(cmap=color)
     m.set_array([0, 1])
     if cax is None:
         cb = plt.colorbar(m, ticks=[0, 1], aspect=80, ax=ax)
-        cb.set_label('Feature Value', size=fontsize, labelpad=0)
+        cb.set_label("Feature Value", size=fontsize, labelpad=0)
     else:
         # Create an additional axes for the colorbar
         cax = fig.add_axes(ax_dim)  # [left, bottom, width, height]
-        cb = plt.colorbar(m, cax = cax, ticks=[0, 1], 
-                          orientation=orientation)
+        cb = plt.colorbar(m, cax=cax, ticks=[0, 1], orientation=orientation)
         # Add a label to the colorbar
-        if orientation == 'horizontal':
+        if orientation == "horizontal":
             rotation = 0
         else:
             rotation = 90
-        cb.set_label('Feature Value', labelpad=labelpad, y=y, rotation=rotation, size=fontsize)
-        
-    cb.set_ticklabels(['Low', 'High'])
+        cb.set_label("Feature Value", labelpad=labelpad, y=y, rotation=rotation, size=fontsize)
+
+    cb.set_ticklabels(["Low", "High"])
     cb.ax.tick_params(labelsize=11, length=0)
     cb.set_alpha(1)
     cb.outline.set_visible(False)
 
-    return cb 
+    return cb
+
 
 class PlotFeatureContributions(PlotStructure):
     """
@@ -437,7 +480,7 @@ class PlotFeatureContributions(PlotStructure):
     def __init__(self, BASE_FONT_SIZE=12, seaborn_kws=None):
         super().__init__(BASE_FONT_SIZE=BASE_FONT_SIZE, seaborn_kws=seaborn_kws)
         sns.set_style("white")
-        
+
     def plot_contributions(
         self,
         data,
@@ -458,7 +501,7 @@ class PlotFeatureContributions(PlotStructure):
                 result dataframe from tree_interpreter_simple
         """
         methods = list(data.keys())
-        
+
         kwargs["max_display"] = kwargs.get("max_display", 10)
         estimator_output = kwargs.get("estimator_output", None)
         only_one_model = True if len(estimator_names) == 1 else False
@@ -480,22 +523,18 @@ class PlotFeatureContributions(PlotStructure):
 
         n_perf_keys = len(perf_keys)
         n_panels = (
-            len(estimator_names)*len(methods)
+            len(estimator_names) * len(methods)
             if "non_performance" in outer_indexs
             else len(estimator_names) * n_perf_keys * len(methods)
         )
 
         figsize = (
-            (3, 2.5)
-            if (n_panels == 1 and "non_performance" not in outer_indexs)
-            else (8, 6.5)
+            (3, 2.5) if (n_panels == 1 and "non_performance" not in outer_indexs) else (8, 6.5)
         )
         kwargs["figsize"] = kwargs.get("figsize", figsize)
         n_columns = 1
         additional_columns = (
-            1
-            if (n_panels > 1 and not (estimator_output == "raw" and "non_performance"))
-            else 0
+            1 if (n_panels > 1 and not (estimator_output == "raw" and "non_performance")) else 0
         )
 
         n_columns += additional_columns
@@ -548,21 +587,20 @@ class PlotFeatureContributions(PlotStructure):
                         alpha=0.8,
                         fontdict={"fontsize": self.FONT_SIZES["teensie"]},
                     )
-                elif not only_one_method: 
-                    if not only_one_model and i < len(estimator_names)-1:
-                            ax.set_title(
-                            method.replace('_', ' ').upper(),
+                elif not only_one_method:
+                    if not only_one_model and i < len(estimator_names) - 1:
+                        ax.set_title(
+                            method.replace("_", " ").upper(),
                             alpha=0.8,
                             fontdict={"fontsize": self.FONT_SIZES["tiny"]},
                         )
                     else:
-                            ax.set_title(
-                                method.replace('_', ' ').upper(),
-                                alpha=0.8,
-                                fontdict={"fontsize": self.FONT_SIZES["tiny"]},
+                        ax.set_title(
+                            method.replace("_", " ").upper(),
+                            alpha=0.8,
+                            fontdict={"fontsize": self.FONT_SIZES["tiny"]},
                         )
-             
-                    
+
         else:
             # Hard coded in to maintain correct ordering
             if estimator_output == "probability":
@@ -576,7 +614,7 @@ class PlotFeatureContributions(PlotStructure):
                 outer_indexs = ["Least Error Predictions", "Most Error Predictions"]
             # loop over each model creating one panel per model
             c = 0
-            #for i, model_name in enumerate(estimator_names):
+            # for i, model_name in enumerate(estimator_names):
             for i, (model_name, method) in enumerate(itertools.product(estimator_names, methods)):
                 perf_keys = kwargs.get("perf_keys", outer_indexs)
                 for k, perf_key in enumerate(perf_keys):
@@ -634,16 +672,14 @@ class PlotFeatureContributions(PlotStructure):
                 pad=1.5,
                 fontsize=self.FONT_SIZES["tiny"],
             )
-            
+
         if "non_performance" in outer_indexs:
             pos = (0.95, 0.05)
         else:
             pos = (1.15, -0.025)
 
         if using_internal_ax:
-            self.add_alphabet_label(
-                n_panels, axes, pos=pos, fontsize=self.FONT_SIZES["tiny"]
-            )
+            self.add_alphabet_label(n_panels, axes, pos=pos, fontsize=self.FONT_SIZES["tiny"])
 
         return fig, axes
 
@@ -659,7 +695,7 @@ class PlotFeatureContributions(PlotStructure):
         feature_values=None,
         target_values=None,
         interaction_index="auto",
-        estimator_name=None, 
+        estimator_name=None,
         to_probability=False,
         **kwargs,
     ):
@@ -667,48 +703,49 @@ class PlotFeatureContributions(PlotStructure):
         Plot SHAP-style summary or dependence plot.
 
         """
-        max_display = kwargs.get('max_display', 10) 
-        alpha = kwargs.get('alpha', 0.8) 
-        add_colorbar = kwargs.get('add_colorbar', True)
-        
-        if len(methods)>1:
-            interaction_index=None
-            warnings.warn("When plotting multiple methods, the color-coding for feature interactions is turned off.")
-        
-        markers = kwargs.get('markers', ['o', 'v', 'x', 'D']) 
-        
+        max_display = kwargs.get("max_display", 10)
+        alpha = kwargs.get("alpha", 0.8)
+        add_colorbar = kwargs.get("add_colorbar", True)
+
+        if len(methods) > 1:
+            interaction_index = None
+            warnings.warn(
+                "When plotting multiple methods, the color-coding for feature interactions is turned off."
+            )
+
+        markers = kwargs.get("markers", ["o", "v", "x", "D"])
+
         self.display_units = display_units
         self.display_feature_names = display_feature_names
 
-        display_feature_names_list = [
-            display_feature_names.get(f, f) for f in self.feature_names
-        ]
+        display_feature_names_list = [display_feature_names.get(f, f) for f in self.feature_names]
 
         if plot_type == "summary":
-            ax = kwargs.get('ax', None)
-            fig = kwargs.get('fig', None)
-            
-            order = kwargs.get('order', shap._explanation.Explanation.abs.mean(axis=0))
-            explain_obj = shap._explanation.Explanation(values = attr_values, 
-                                            feature_names = display_feature_names_list,
-                                            data=X,                  
-                                           )
-            
-            #shap.plots.beeswarm
-            
+            ax = kwargs.get("ax", None)
+            fig = kwargs.get("fig", None)
+
+            order = kwargs.get("order", shap._explanation.Explanation.abs.mean(axis=0))
+            explain_obj = shap._explanation.Explanation(
+                values=attr_values,
+                feature_names=display_feature_names_list,
+                data=X,
+            )
+
+            # shap.plots.beeswarm
+
             ax, color = beeswarm_plot(
                 explain_obj,
                 max_display=max_display,
-                show=False, 
+                show=False,
                 alpha=alpha,
-                ax=ax, 
+                ax=ax,
                 fig=fig,
-                order = order,
+                order=order,
             )
 
             if add_colorbar:
                 add_summary_plot_cb(color, ax=ax)
-            
+
             """
             # Add colorbar.
             import matplotlib.cm as cm
@@ -723,22 +760,22 @@ class PlotFeatureContributions(PlotStructure):
             """
             if ax is None:
                 ax = plt.gca()
-                ax.set_xlabel('SHAP Value')
-            
+                ax.set_xlabel("SHAP Value")
+
             return ax, color
 
         elif plot_type == "dependence":
             # Set up the font sizes for matplotlib
             self.display_feature_names = display_feature_names
-            left_yaxis_label = kwargs.get('ylabel', "Attribution Value")
+            left_yaxis_label = kwargs.get("ylabel", "Attribution Value")
             n_panels = len(features)
             if n_panels <= 6:
                 figsize = (8, 5)
             else:
                 figsize = (10, 8)
 
-            figsize = kwargs.get('figsize', figsize)    
-                
+            figsize = kwargs.get("figsize", figsize)
+
             using_internal_ax = True
             if kwargs.get("ax") is not None:
                 using_internal_ax = False
@@ -749,10 +786,10 @@ class PlotFeatureContributions(PlotStructure):
             else:
                 wspace = 0.4 if interaction_index is None else 0.7
                 hspace = 0.5 if interaction_index is None else 0.6
-                
-                wspace = kwargs.get('wspace', wspace)
-                hspace = kwargs.get('hspace', hspace)
-                
+
+                wspace = kwargs.get("wspace", wspace)
+                hspace = kwargs.get("hspace", hspace)
+
                 fig, axes = self.create_subplots(
                     n_panels=n_panels,
                     sharex=False,
@@ -764,14 +801,14 @@ class PlotFeatureContributions(PlotStructure):
 
             ax_iterator = self.axes_to_iterator(n_panels, axes)
             nticks = 5 if n_panels < 10 else 3
-            
+
             for method, marker in zip(methods, markers):
-                values = attr_values[f'{method}_values__{estimator_name}'].values
+                values = attr_values[f"{method}_values__{estimator_name}"].values
                 for ax, feature in zip(ax_iterator, features):
                     ind = interaction_index
                     if interaction_index == feature:
-                        ind = 'auto'
-                    
+                        ind = "auto"
+
                     dependence_plot(
                         feature=feature,
                         method=method,
@@ -782,7 +819,7 @@ class PlotFeatureContributions(PlotStructure):
                         target_values=target_values,
                         ax=ax,
                         fig=fig,
-                        marker=marker, 
+                        marker=marker,
                         **kwargs,
                     )
 
@@ -790,12 +827,8 @@ class PlotFeatureContributions(PlotStructure):
                         self.set_n_ticks(ax, nticks)
                         if n_panels < 10:
                             self.set_minor_ticks(ax)
-                        self.set_axis_label(
-                            ax, xaxis_label="".join(feature), yaxis_label=""
-                        )
-                        ax.axhline(
-                            y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed"
-                        )
+                        self.set_axis_label(ax, xaxis_label="".join(feature), yaxis_label="")
+                        ax.axhline(y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed")
                         ###ax.set_yticks(self.calculate_ticks(ax=ax, nticks=5, center=False))
                         self.set_n_ticks(ax, nticks)
                         ax.tick_params(axis="both", labelsize=8)
@@ -809,7 +842,7 @@ class PlotFeatureContributions(PlotStructure):
 
             if using_internal_ax:
                 histdata = kwargs.get("histdata", None)
-                ylabel_right= '' if histdata is None else 'Probability Density'
+                ylabel_right = "" if histdata is None else "Probability Density"
                 major_ax = self.set_major_axis_labels(
                     fig,
                     xlabel=None,
@@ -820,9 +853,8 @@ class PlotFeatureContributions(PlotStructure):
                 )
 
                 self.add_alphabet_label(n_panels, axes)
-                
-                if len(methods)>1:
+
+                if len(methods) > 1:
                     self.set_legend(n_panels, fig, ax, major_ax)
-                
 
             return fig, axes

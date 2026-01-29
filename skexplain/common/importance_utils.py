@@ -3,6 +3,7 @@ import numpy as np
 from skexplain.common.utils import compute_bootstrap_indices
 import pandas as pd
 
+
 def method_average_ranking(data, features, methods, estimator_names, n_features=12):
     """
     Compute the median ranking across the results of different ranking methods.
@@ -48,9 +49,7 @@ def method_average_ranking(data, features, methods, estimator_names, n_features=
             delta = max_len - len(l)
             rankings_dict[k] = l + [np.nan] * delta
 
-    rankings_dict_avg = {
-        f: np.nanpercentile(rankings_dict[f], 50) for f in rankings_dict.keys()
-    }
+    rankings_dict_avg = {f: np.nanpercentile(rankings_dict[f], 50) for f in rankings_dict.keys()}
 
     features = np.array(list(rankings_dict_avg.keys()))
     rankings = np.array([rankings_dict_avg[f] for f in features])
@@ -92,9 +91,9 @@ def compute_importance(results, scoring_strategy, direction):
     results : InterpretToolkit.permutation_importance results
               xr.Dataset
     scoring_strategy : 'minimize' or 'maximize'
-        Whether the strategy for assessing importance was 
-        based on minimizing or maximing the performance metric 
-        after permuting features (e.g., the goal is to 'maximize' 
+        Whether the strategy for assessing importance was
+        based on minimizing or maximing the performance metric
+        after permuting features (e.g., the goal is to 'maximize'
         loss metrics like MSE, but 'minimize' rank metrics like AUC)
 
     direction : 'forward' or 'backward'
@@ -107,50 +106,49 @@ def compute_importance(results, scoring_strategy, direction):
         scores for each estimator and multi/singlepass are
         converted to proper importance scores.
     """
-    if scoring_strategy == 'argmin_of_mean':
-        scoring_strategy = 'minimize'
-    elif scoring_strategy == 'argmax_of_mean':
-        scoring_strategy = 'maximize' 
-    
+    if scoring_strategy == "argmin_of_mean":
+        scoring_strategy = "minimize"
+    elif scoring_strategy == "argmax_of_mean":
+        scoring_strategy = "maximize"
+
     ##print(direction, scoring_strategy)
     estimators = results.attrs["estimators used"]
     for estimator in estimators:
         orig_score = results[f"original_score__{estimator}"].values
-        if direction == 'forward':
+        if direction == "forward":
             all_permuted_score = results[f"all_permuted_score__{estimator}"].values
-            
+
         for mode in ["singlepass", "multipass"]:
             permute_scores = results[f"{mode}_scores__{estimator}"].values
 
-            if direction == 'forward':
-                # For a loss metric, forward importance is generically defined 
-                # as the error(X_J') - error(X_j') where J is the set of 
+            if direction == "forward":
+                # For a loss metric, forward importance is generically defined
+                # as the error(X_J') - error(X_j') where J is the set of
                 # all features while j is some subset of J or a single feature.
-                if scoring_strategy == 'maximize':
+                if scoring_strategy == "maximize":
                     # E.g., AUC, NAUPDC, CSI, BSS
                     imp = permute_scores - all_permuted_score
-                   
-                elif scoring_strategy == 'minimize':
-                # For a rank-based metric, importance is defined opposite 
-                # of the loss metric [ error(X_j') - error(X_J') ] 
+
+                elif scoring_strategy == "minimize":
+                    # For a rank-based metric, importance is defined opposite
+                    # of the loss metric [ error(X_j') - error(X_J') ]
                     # E.g., MSE, BS, etc.
-                    print('This happened for forward!')
+                    print("This happened for forward!")
                     imp = all_permuted_score - permute_scores
-                    
-            elif direction == 'backward':
+
+            elif direction == "backward":
                 #  For a loss metric, backward importance is generically defined
                 # as the error(X_j') - error(X_j) where j is some subset or
-                # a single feature. 
-                if scoring_strategy == 'minimize':
+                # a single feature.
+                if scoring_strategy == "minimize":
                     imp = orig_score - permute_scores
-                elif scoring_strategy == 'maximize':
-                # For a rank-based metric, it is defined opposite of that above.
-                # i.e., error(X_j) - error(X_j') 
-                    
-                    print('this happened for backward!')
+                elif scoring_strategy == "maximize":
+                    # For a rank-based metric, it is defined opposite of that above.
+                    # i.e., error(X_j) - error(X_j')
+
+                    print("this happened for backward!")
                     imp = permute_scores - orig_score
 
-            
             """
             decreasing = non_increasing(np.mean(permute_scores, axis=1))
 
@@ -185,47 +183,48 @@ def compute_importance(results, scoring_strategy, direction):
 
 
 def to_skexplain_importance(
-    importances, estimator_name, 
-    feature_names, 
-    method, 
-    normalize=False, 
-    bootstrap_axis=0, 
-    absolute_values=True
+    importances,
+    estimator_name,
+    feature_names,
+    method,
+    normalize=False,
+    bootstrap_axis=0,
+    absolute_values=True,
 ):
     """
     Convert feature ranking-based scores from non-permutation-importance methods
     computed by scikit-explain or other methods into a skexplain-style
-    datset to leverage the built-in plotting code. This method handles the 
-    ranking and sorting of the importance values by assuming higher values 
+    datset to leverage the built-in plotting code. This method handles the
+    ranking and sorting of the importance values by assuming higher values
     equal higher importance.
-    
+
     Caution: This method assumes that higher values equal higher importance!
-    
+
     Parameters
     ---------------
-    importances : 1d or 2d array-like 
-        The feature importance scores. The code assumes that 2D arrays are the result 
+    importances : 1d or 2d array-like
+        The feature importance scores. The code assumes that 2D arrays are the result
         of bootstrapping. Users can declare the bootstrapping axis with `bootstrap_axis`.
-        By default, the first axis (=0) is the bootstrap axis for  skexplain methods 
-    
+        By default, the first axis (=0) is the bootstrap axis for  skexplain methods
+
     bootstrap_axis : int (default=0)
-    
-    estimator_name : str 
-        The estimator name. Used for plotting and creating the dataset. 
-    
+
+    estimator_name : str
+        The estimator name. Used for plotting and creating the dataset.
+
     feature_names : array-like of shape (n_features)
-        The feature names. Used for plotting and creating the dataset. 
+        The feature names. Used for plotting and creating the dataset.
         Feature name index should correspond with the same index in
         importances
-    
+
     method : 'sage', 'coefs', 'shap_std', 'shap_sum', 'tree_interpreter', 'lime' or str
-        The name of the feature ranking method. The named method perform specific 
-        operations. For example, local methods like 'shap_sum', 'tree_interpreter', 
-        'lime' will sum the importance values to determine feature ranking. 
-        
+        The name of the feature ranking method. The named method perform specific
+        operations. For example, local methods like 'shap_sum', 'tree_interpreter',
+        'lime' will sum the importance values to determine feature ranking.
+
     normalize : True/False (default=False)
-        If True, normalize the feature importance values using min-max scaling. 
-        This is useful when comparing importance across different methods. 
+        If True, normalize the feature importance values using min-max scaling.
+        This is useful when comparing importance across different methods.
     """
     bootstrap = False
     if method == "sage":
@@ -236,30 +235,32 @@ def to_skexplain_importance(
     elif method == "shap_std":
         # Compute the std(SHAP)
         importances = np.nanstd(importances, axis=0)
-    elif method == "shap_sum" or method == "tree_interpreter" or method == 'lime':
+    elif method == "shap_sum" or method == "tree_interpreter" or method == "lime":
         # Compute sum of abs values
         importances = np.nansum(np.absolute(importances), axis=0)
     else:
         if np.ndim(importances) == 2:
-            # average over bootstrapping of the absolute values. 
+            # average over bootstrapping of the absolute values.
             bootstrap = True
             importances_to_save = importances.copy()
-            # Convert to absolute values (optional) 
+            # Convert to absolute values (optional)
             vals = np.absolute(importances) if absolute_values else importances
             importances = np.nanmean(vals, axis=bootstrap_axis)
 
-            assert len(importances) == len(feature_names), """Number of features not equal to number of 
+            assert len(importances) == len(
+                feature_names
+            ), """Number of features not equal to number of 
             importance values! Check bootstrap_axis"""
         else:
             importances_to_save = importances.copy()
-            # Convert to absolute values (optional) 
+            # Convert to absolute values (optional)
             vals = np.absolute(importances) if absolute_values else importances
-            
+
     # Sort from higher score to lower score
     ranked_indices = np.argsort(importances)[::-1]
 
     if bootstrap:
-        if bootstrap_axis==0:
+        if bootstrap_axis == 0:
             scores_ranked = importances_to_save[:, ranked_indices]
         else:
             scores_ranked = importances_to_save[ranked_indices, :]
@@ -346,8 +347,8 @@ def retrieve_important_vars(results, estimator_names, multipass=True):
     """
     perm_method = "multipass" if multipass else "singlepass"
 
-    direction = results.attrs['direction']
-    
+    direction = results.attrs["direction"]
+
     important_vars_dict = {}
     for estimator_name in estimator_names:
         top_features = list(results[f"{direction}_{perm_method}_rankings__{estimator_name}"].values)
@@ -378,52 +379,49 @@ def find_correlated_pairs_among_top_features(
     pairs = []
     for feature in top_features:
         # try:
-        most_corr_feature = (
-            sub_corr_matrix[feature].sort_values(ascending=False).index[1]
-        )
+        most_corr_feature = sub_corr_matrix[feature].sort_values(ascending=False).index[1]
         # except:
         #    continue
 
-        most_corr_value = sub_corr_matrix[feature].sort_values(ascending=False)[1]
+        most_corr_value = sub_corr_matrix[feature].sort_values(ascending=False).iloc[1]
         if round(most_corr_value, 5) >= rho_threshold:
             pairs.append((feature, most_corr_feature))
 
     pairs = list(set([tuple(sorted(t)) for t in pairs]))
-    pair_indices = [
-        (top_feature_indices[p[0]], top_feature_indices[p[1]]) for p in pairs
-    ]
+    pair_indices = [(top_feature_indices[p[0]], top_feature_indices[p[1]]) for p in pairs]
 
     return pairs, pair_indices
 
-def all_permuted_score(estimator, X, y, evaluation_fn, n_permute, subsample, random_seed=123, class_index=1):
+
+def all_permuted_score(
+    estimator, X, y, evaluation_fn, n_permute, subsample, random_seed=123, class_index=1
+):
     random_state = np.random.RandomState(random_seed)
     inds = random_state.permutation(len(X))
     if isinstance(X, pd.DataFrame):
         X = X.values
-    
+
     inds_set = compute_bootstrap_indices(X, subsample=1.0, n_bootstrap=n_permute, seed=90)
-    
+
     scores = []
-    
+
     for inds in inds_set:
         X_sampled = X[inds, :]
-        
-        X_permuted = np.array([ X_sampled[inds, i] for i in range(X.shape[1])]).T
-    
-        if hasattr(estimator, 'predict_proba'):
+
+        X_permuted = np.array([X_sampled[inds, i] for i in range(X.shape[1])]).T
+
+        if hasattr(estimator, "predict_proba"):
             predictions = estimator.predict_proba(X_permuted)[:]
-            # For binary classification problems. 
-            if predictions.shape[1] == 2: 
-                predictions = predictions[:,1]
-            
-            #print (predictions.shape)
-        elif hasattr(estimator, 'predict'):
+            # For binary classification problems.
+            if predictions.shape[1] == 2:
+                predictions = predictions[:, 1]
+
+            # print (predictions.shape)
+        elif hasattr(estimator, "predict"):
             predictions = estimator.predict(X_permuted)[:]
         else:
-            raise AttributeError(f'{estimator} does not have .predict or .predict_proba!')
-    
-        scores.append(evaluation_fn(y, predictions))
-        
-    return np.array(scores)
-    
+            raise AttributeError(f"{estimator} does not have .predict or .predict_proba!")
 
+        scores.append(evaluation_fn(y, predictions))
+
+    return np.array(scores)

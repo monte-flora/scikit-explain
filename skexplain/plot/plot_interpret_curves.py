@@ -4,6 +4,7 @@ from math import log10
 import numpy as np
 import warnings
 
+
 class PlotInterpretCurves(PlotStructure):
     """
     InterpretCurves handles plotting the ALE and PDP curves and the corresponding
@@ -101,13 +102,13 @@ class PlotInterpretCurves(PlotStructure):
 
         # loop over each feature and add relevant plotting stuff
         for lineplt_ax, feature, color_by in zip(ax_iterator, features, color_bys):
-            
+
             lineplt_ax.grid(False)
-            
+
             xdata = data[f"{feature}__bin_values"].values
             if add_hist:
                 hist_data = data[f"{feature}"].values
-              
+
                 # add histogram
                 hist_ax = self.make_twin_ax(lineplt_ax)
                 twin_yaxis_label = self.add_histogram_axis(
@@ -119,7 +120,7 @@ class PlotInterpretCurves(PlotStructure):
                     **kwargs,
                 )
                 hist_ax.grid(False)
-                
+
             for i, model_name in enumerate(estimator_names):
                 if ice_curves:
                     kwargs["color_by"] = color_by
@@ -148,7 +149,7 @@ class PlotInterpretCurves(PlotStructure):
                         xdata,
                         ydata,
                         label=model_name,
-                        facecolor = line_colors[i], 
+                        facecolor=line_colors[i],
                         **line_kws_copy,
                     )
                 else:
@@ -162,23 +163,21 @@ class PlotInterpretCurves(PlotStructure):
 
             nticks = 5 if n_panels < 10 else 3
             self.set_n_ticks(lineplt_ax, nticks)
-            
+
             if n_panels < 10:
                 self.set_minor_ticks(lineplt_ax)
-      
-            self.set_axis_label(lineplt_ax, xaxis_label="".join(feature))
-            lineplt_ax.axhline(
-                y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed"
-            )
 
-            #nticks = 5 if n_panels < 10 else 3
+            self.set_axis_label(lineplt_ax, xaxis_label="".join(feature))
+            lineplt_ax.axhline(y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed")
+
+            # nticks = 5 if n_panels < 10 else 3
             # Deprecated 10 Mar 2022
-            #lineplt_ax.set_yticks(
-                #self.calculate_ticks(ax=lineplt_ax, nticks=nticks, center=False)
-                #)
-   
+            # lineplt_ax.set_yticks(
+            # self.calculate_ticks(ax=lineplt_ax, nticks=nticks, center=False)
+            # )
+
         majoraxis_fontsize = self.FONT_SIZES["teensie"]
-   
+
         if fig is not None and add_hist and using_internal_ax:
             major_ax = self.set_major_axis_labels(
                 fig,
@@ -284,12 +283,12 @@ class PlotInterpretCurves(PlotStructure):
             zorder=1,
         )
 
-        # We want to set the X-limit as the 
+        # We want to set the X-limit as the
         # resulting histogram is not concurrent
-        # with the feature effect curves 
-        # and could plot extra regions. 
+        # with the feature effect curves
+        # and could plot extra regions.
         ax.set_xlim([min_value, max_value])
-        
+
         if density:
             return "Relative Frequency"
         else:

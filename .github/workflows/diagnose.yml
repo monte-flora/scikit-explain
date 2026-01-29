@@ -1,0 +1,67 @@
+name: Diagnostic
+
+on: [workflow_dispatch]
+
+jobs:
+  diagnose:
+    name: Diagnose Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Show Python version
+      run: |
+        python --version
+        python -c "import sys; print(sys.version)"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install --upgrade pytest-cov codecov coverage
+        python -m pip install -r requirements.txt
+
+    - name: Show installed packages
+      run: |
+        pip list
+
+    - name: Install package
+      run: |
+        pip install -e .
+        python -c "import skexplain; print('✓ skexplain imported successfully')"
+
+    - name: Run simple test
+      run: |
+        python -c "
+        import numpy as np
+        import pandas as pd
+        from sklearn.ensemble import RandomForestRegressor
+        import skexplain
+
+        print('Testing basic functionality...')
+        X = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
+        y = pd.Series([1,2,3])
+        model = RandomForestRegressor(n_estimators=2, random_state=42)
+        model.fit(X, y)
+
+        explainer = skexplain.ExplainToolkit(('RF', model), X=X, y=y)
+        print('✓ ExplainToolkit created successfully')
+        print('Feature names:', explainer.feature_names)
+        "
+
+    - name: Run pytest with verbose output
+      run: |
+        python -m pytest tests/test_plot.py::Test1DPlotting::test_1d_plot -v -s --tb=long
+      continue-on-error: true
+
+    - name: Run all tests with failure details
+      run: |
+        python -m pytest tests/ -v --tb=short --maxfail=1
+      continue-on-error: true

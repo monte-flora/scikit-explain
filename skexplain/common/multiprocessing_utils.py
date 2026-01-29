@@ -4,14 +4,15 @@ from multiprocessing.pool import Pool
 from datetime import datetime
 
 from tqdm import tqdm
-#from tqdm.notebook import tqdm
+
+# from tqdm.notebook import tqdm
 import traceback
 from collections import ChainMap
 import warnings
 from copy import copy
 
 from joblib import delayed, Parallel
-import joblib 
+import joblib
 import time
 import contextlib
 
@@ -19,9 +20,11 @@ import contextlib
 # models like RandomForest
 warnings.simplefilter("ignore", UserWarning)
 
+
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
     """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+
     class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
         def __call__(self, *args, **kwargs):
             tqdm_object.update(n=self.batch_size)
@@ -61,6 +64,7 @@ all_bar_funcs = {
     "None": lambda args: iter,
 }
 
+
 def ParallelExecutor(use_bar="tqdm", joblib_args={}, tqdm_args={}):
     def aprun(bar=use_bar, **tqdm_args):
         def tmp(op_iter):
@@ -98,6 +102,7 @@ class LogExceptions(object):
         # It was fine, give a normal answer
         return result
 
+
 def to_iterator(*lists):
     """
     turn list
@@ -116,7 +121,7 @@ def run_parallel(
 ):
     """
     Runs a series of python scripts in parallel. Scripts uses the tqdm to create a
-    progress bar. If n_jobs == 1, then process is run in serial. 
+    progress bar. If n_jobs == 1, then process is run in serial.
     Args:
     -------------------------
         func : callable
@@ -129,52 +134,54 @@ def run_parallel(
             if float (between 0 and 1), taken as the percentage of available processors to use
         kwargs : dict
             keyword arguments to be passed to the func
-    """    
+    """
     if nprocs_to_use is not None:
-        warnings.warn('nprocs_to_use will deprecated and replaced by n_jobs.', 
-                     DeprecationWarning)
+        warnings.warn("nprocs_to_use will deprecated and replaced by n_jobs.", DeprecationWarning)
         n_jobs = nprocs_to_use
-    
+
     iter_copy = copy(args_iterator)
-    
+
     total = len(list(iter_copy))
     pbar = tqdm(total=total, desc=description)
-    results = [] 
+    results = []
+
     def update(*a):
         # This is called whenever a process returns a result.
-        # results is modified only by the main process, not by the pool workers. 
+        # results is modified only by the main process, not by the pool workers.
         pbar.update()
-    
+
     if 0 <= n_jobs < 1:
         n_jobs = int(n_jobs * mp.cpu_count())
     else:
         n_jobs = int(n_jobs)
 
     if n_jobs > mp.cpu_count():
-        print(f"User requested {n_jobs} processors, but system only has {mp.cpu_count()}! Setting n_jobs to CPU count.")
+        print(
+            f"User requested {n_jobs} processors, but system only has {mp.cpu_count()}! Setting n_jobs to CPU count."
+        )
         n_jobs = mp.cpu_count()
-        
+
     is_parallel = True if n_jobs != 1 else False
-        
-    if is_parallel:   
+
+    if is_parallel:
         pool = Pool(processes=n_jobs)
-        
+
     ps = []
-    results=[]
+    results = []
     for args in args_iterator:
         if isinstance(args, str):
             args = (args,)
-        
+
         if is_parallel:
             p = pool.apply_async(LogExceptions(func), args=args, kwds=kwargs, callback=update)
             ps.append(p)
         else:
             results.append(LogExceptions(func)(*args, **kwargs))
             update()
-    
+
     if is_parallel:
         pool.close()
         pool.join()
         results = [p.get() for p in ps]
-    
-    return results 
+
+    return results

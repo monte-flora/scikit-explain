@@ -1,14 +1,14 @@
 """Permutation Importance determines which variables are important by comparing
-performance on a dataset where some of the variables are permuted in their 
+performance on a dataset where some of the variables are permuted in their
 individual columns to performance on the dataset without any permutation. The
 permutation of an individual variable in this manner has the effect of breaking
 any relationship between the input variable and the target. The variable which,
 when permuted, results in the worst performance is typically taken as the most
 important variable.
 
-Typically, when using a performance metric or skill score with Permutation 
-Importance, the ``scoring_strategy`` should be to minimize the performance. On 
-the other hand, when using an error or loss function, the ``scoring_strategy`` 
+Typically, when using a performance metric or skill score with Permutation
+Importance, the ``scoring_strategy`` should be to minimize the performance. On
+the other hand, when using an error or loss function, the ``scoring_strategy``
 should be to maximize the error or loss function."""
 
 import numpy as np
@@ -30,13 +30,15 @@ __all__ = ["permutation_importance", "sklearn_permutation_importance"]
 # variable_names = ['' for i in range(len(fake_data))]
 # from sklearn.metrics import roc_auc_score
 
-def is_classification(y): 
-    # Are there less 10 unique categories? 
+
+def is_classification(y):
+    # Are there less 10 unique categories?
     if len(np.unique(y)) <= 10:
         return True
-    
+
     return False
-            
+
+
 def permutation_importance(
     scoring_data,
     scoring_fn,
@@ -97,6 +99,7 @@ def permutation_importance(
             direction=direction,
         )
 
+
 def sklearn_permutation_importance(
     model,
     scoring_data,
@@ -112,7 +115,6 @@ def sklearn_permutation_importance(
     random_seed=1,
     **scorer_kwargs,
 ):
-
     """Performs permutation importance for a particular model,
     ``scoring_data``, ``evaluation_fn``, and strategy for determining optimal
     variables

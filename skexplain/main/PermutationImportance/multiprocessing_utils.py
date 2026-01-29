@@ -1,7 +1,7 @@
 """These are utilities designed for carefully handling communication between
 processes while multithreading.
 
-The code for ``pool_imap_unordered`` is copied nearly wholesale from GrantJ's 
+The code for ``pool_imap_unordered`` is copied nearly wholesale from GrantJ's
 `Stack Overflow answer here
 <https://stackoverflow.com/questions/5318936/python-multiprocessing-pool-lazy-iteration?noredirect=1&lq=1>`_.
 It allows for a lazy imap over an iterable and the return of very large objects
@@ -22,10 +22,10 @@ __all__ = ["pool_imap_unordered"]
 def worker(func, recvq, sendq):
     for args in iter(recvq.get, None):
         # The args are training_data, scoring_data, var_idx
-        # Thus, we want to return the var_idx and then 
-        # send those args to the abstract runner. 
+        # Thus, we want to return the var_idx and then
+        # send those args to the abstract runner.
         result = (args[-1], func(*args))
-        
+
         sendq.put(result)
 
 

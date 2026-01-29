@@ -61,9 +61,7 @@ def get_data_subset(data, rows=None, columns=None):
         else:
             return data[np.ix_(rows, columns)]
     else:
-        raise InvalidDataException(
-            data, "Data must be a pandas dataframe or numpy array"
-        )
+        raise InvalidDataException(data, "Data must be a pandas dataframe or numpy array")
 
 
 def make_data_from_columns(columns_list, index=None):
@@ -75,9 +73,7 @@ def make_data_from_columns(columns_list, index=None):
         raise InvalidDataException(
             columns_list, "Must have at least one column to synthesize dataset"
         )
-    if isinstance(columns_list[0], pd.DataFrame) or isinstance(
-        columns_list[0], pd.Series
-    ):
+    if isinstance(columns_list[0], pd.DataFrame) or isinstance(columns_list[0], pd.Series):
         df = pd.concat([c.reset_index(drop=True) for c in columns_list], axis=1)
         if index is not None:
             return df.set_index(index)
@@ -123,9 +119,7 @@ def conditional_permutations(data, n_bins, random_state):
         elif isinstance(data, np.ndarray):
             feature_values = data[:, i]
         else:
-            raise InvalidDataException(
-                data, "Data must be a pandas dataframe or numpy array"
-            )
+            raise InvalidDataException(data, "Data must be a pandas dataframe or numpy array")
 
         bin_edges = np.unique(
             np.percentile(
@@ -135,9 +129,7 @@ def conditional_permutations(data, n_bins, random_state):
             )
         )
 
-        bin_indices = np.clip(
-            np.digitize(feature_values, bin_edges, right=True) - 1, 0, None
-        )
+        bin_indices = np.clip(np.digitize(feature_values, bin_edges, right=True) - 1, 0, None)
 
         shuffled_indices = bin_indices.copy()
         unique_bin_values = np.unique(bin_indices)
@@ -173,9 +165,7 @@ def check_random_state(seed):
         return np.random.RandomState(seed)
     if isinstance(seed, np.random.RandomState):
         return seed
-    raise ValueError(
-        "%r cannot be used to seed a numpy.random.RandomState" " instance" % seed
-    )
+    raise ValueError("%r cannot be used to seed a numpy.random.RandomState" " instance" % seed)
 
 
 def bootstrap_generator(n_bootstrap, seed=42):

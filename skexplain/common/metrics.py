@@ -50,9 +50,7 @@ def _binary_uninterpolated_average_precision(
     return -np.sum(np.diff(recall) * np.array(precision)[:-1])
 
 
-def min_aupdc(
-    y_true, pos_label, average, sample_weight=None, known_skew=None, new_skew=None
-):
+def min_aupdc(y_true, pos_label, average, sample_weight=None, known_skew=None, new_skew=None):
     """
     Compute the minimum possible area under the performance
     diagram curve. Essentially, a vote of NO for all predictions.

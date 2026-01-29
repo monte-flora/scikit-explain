@@ -1,21 +1,24 @@
 try:
     import shap
 except:
-    raise ImportError('shap import failed. Likely related to numpy version issues. We recommend install numpy<1.24.0')
-    
+    raise ImportError(
+        "shap import failed. Likely related to numpy version issues. We recommend install numpy<1.24.0"
+    )
+
 import traceback
 from .tree_interpreter import TreeInterpreter
 import pandas as pd
 import numpy as np
-from tqdm import tqdm 
+from tqdm import tqdm
 
-from joblib import delayed, Parallel 
+from joblib import delayed, Parallel
 from joblib import wrap_non_picklable_objects
 from joblib.externals.loky import set_loky_pickler
 
-# This should allow for more shared memory for the LIME calcuations. 
+# This should allow for more shared memory for the LIME calcuations.
 import os
-os.environ['JOBLIB_TEMP_FOLDER'] = '/tmp'
+
+os.environ["JOBLIB_TEMP_FOLDER"] = "/tmp"
 
 ###from lime.lime_tabular import LimeTabularExplainer
 from .lime_fast import FastLimeTabularExplainer
@@ -24,7 +27,7 @@ from ..common.attributes import Attributes
 from ..common.importance_utils import retrieve_important_vars
 from ..common.utils import to_dataframe, determine_feature_dtype
 from ..common.metrics import brier_skill_score
-from ..common.multiprocessing_utils import tqdm_joblib, delayed, Parallel 
+from ..common.multiprocessing_utils import tqdm_joblib, delayed, Parallel
 import warnings
 
 from ..common.contrib_utils import (
@@ -41,21 +44,19 @@ list_of_acceptable_tree_estimators = [
     "ExtraTreesRegressor",
 ]
 
+
 def _ds_to_df(ds, method, estimator_name, feature_names):
     """Convert the Dataset to DataFrame"""
-    df = pd.DataFrame(ds[f'{method}_values__{estimator_name}'].values, 
-                                           columns = feature_names)
-                   
-    df['Bias'] = ds[f'{method}_bias__{estimator_name}'].values
-              
+    df = pd.DataFrame(ds[f"{method}_values__{estimator_name}"].values, columns=feature_names)
+
+    df["Bias"] = ds[f"{method}_bias__{estimator_name}"].values
+
     X = pd.DataFrame(ds.X.values, columns=feature_names)
-    
-    return df, X 
-                    
+
+    return df, X
 
 
 class LocalExplainer(Attributes):
-
     """
     ExplainToolkit inherits functionality from LocalExplainer and is not meant to be
     instantiated by the end-user.
@@ -128,13 +129,13 @@ class LocalExplainer(Attributes):
     def _average_attributions(
         self,
         method,
-        data=None, 
+        data=None,
         performance_based=True,
         n_samples=100,
         shap_kws=None,
-        lime_kws=None, 
-        ti_kws=None, 
-        n_jobs=1
+        lime_kws=None,
+        ti_kws=None,
+        n_jobs=1,
     ):
         """
         Explain individual predictions using SHAP (SHapley Additive exPlanations;
@@ -143,9 +144,9 @@ class LocalExplainer(Attributes):
 
         Parameters
         ------------
-        data: xarray.Dataset 
+        data: xarray.Dataset
            Results of :func:`~ExplainToolkit.local_attributions`
-        
+
         performance_based : boolean (default=False)
             If True, will average feature contributions over the best and worst
             performing of the given X. The number of X to average over
@@ -174,12 +175,8 @@ class LocalExplainer(Attributes):
 
         """
         # will be returned; a list of pandas dataframes, one for each performance dict key
-        contributions_dict = {
-            estimator_name: {} for estimator_name in self.estimator_names
-        }
-        feature_values_dict = {
-            estimator_name: {} for estimator_name in self.estimator_names
-        }
+        contributions_dict = {estimator_name: {} for estimator_name in self.estimator_names}
+        feature_values_dict = {estimator_name: {} for estimator_name in self.estimator_names}
 
         if shap_kws is not None and bool(shap_kws):
             class_idx = shap_kws.get("class_idx", 1)
@@ -188,7 +185,7 @@ class LocalExplainer(Attributes):
         elif ti_kws is not None and bool(ti_kws):
             class_idx = ti_kws.get("class_idx", 1)
         else:
-            class_idx = 1 
+            class_idx = 1
 
         for estimator_name, estimator in self.estimators.items():
             # create entry for current estimator
@@ -201,7 +198,7 @@ class LocalExplainer(Attributes):
                     y=self.y,
                     n_samples=n_samples,
                     estimator_output=self.estimator_output,
-                    class_idx = class_idx,
+                    class_idx=class_idx,
                 )
 
                 for key, indices in performance_dict.items():
@@ -210,13 +207,13 @@ class LocalExplainer(Attributes):
                     else:
                         X = self.X.iloc[indices, :]
                         cont_dict = self._get_feature_contributions(
-                        estimator=estimator,
-                        X=X,
-                        shap_kws=shap_kws,
-                        lime_kws=lime_kws,
-                        ti_kws=ti_kws, 
-                        method=method, 
-                        n_jobs=n_jobs
+                            estimator=estimator,
+                            X=X,
+                            shap_kws=shap_kws,
+                            lime_kws=lime_kws,
+                            ti_kws=ti_kws,
+                            method=method,
+                            n_jobs=n_jobs,
                         )
 
                     contributions_dict[estimator_name][key] = cont_dict
@@ -225,16 +222,16 @@ class LocalExplainer(Attributes):
             else:
                 if data is not None:
                     cont_dict, X = _ds_to_df(data, method, estimator_name, self.feature_names)
-                
+
                 else:
                     cont_dict = self._get_feature_contributions(
-                    estimator=estimator,
-                    X=self.X,
-                    shap_kws=shap_kws,
-                    lime_kws=lime_kws,
-                    ti_kws=ti_kws, 
-                    method=method, 
-                    n_jobs=n_jobs
+                        estimator=estimator,
+                        X=self.X,
+                        shap_kws=shap_kws,
+                        lime_kws=lime_kws,
+                        ti_kws=ti_kws,
+                        method=method,
+                        n_jobs=n_jobs,
                     )
                     X = self.X
 
@@ -268,7 +265,7 @@ class LocalExplainer(Attributes):
         shap_kws = {} if shap_kws is None else shap_kws
         masker = shap_kws.get("masker", shap.maskers.Independent(self.X))
         algorithm = shap_kws.get("algorithm", "auto")
-        class_idx = shap_kws.get('class_idx', 1)
+        class_idx = shap_kws.get("class_idx", 1)
 
         if masker is None:
             warnings.warn(
@@ -276,17 +273,18 @@ class LocalExplainer(Attributes):
                              This will cause issues with SHAP. We recommend starting with
                              shap_kws = {'masker' = shap.maskers.Partition(X, max_samples=100, clustering="correlation")}
                              where X is the original dataset and not the examples SHAP is being computed for. 
-                             """, UserWarning
+                             """,
+                UserWarning,
             )
 
-        if algorithm == 'tree':
+        if algorithm == "tree":
             model = estimator
         else:
             if self.estimator_output == "probability":
                 model = estimator.predict_proba
             else:
                 model = estimator.predict
-        
+
         # Due to numpy version errors, importing the shap package can fail.
         # Raising an error here to let the user know about the issue and suggest a solution.
         if shap is None:
@@ -304,18 +302,17 @@ class LocalExplainer(Attributes):
 
         shap_results = explainer(X)
 
-        #if self.estimator_output == "probability":
-        #    print(shap_results, class_idx) 
+        # if self.estimator_output == "probability":
+        #    print(shap_results, class_idx)
         #    shap_results = shap_results[..., class_idx]
 
         contributions = shap_results.values
         bias = shap_results.base_values
-        
+
         if self.estimator_output == "probability":
-            contributions = contributions[..., class_idx] 
+            contributions = contributions[..., class_idx]
             bias = bias[:, class_idx]
-        
-        
+
         return contributions, bias
 
     def _get_ti_values(self, estimator, X, ti_kws):
@@ -332,8 +329,8 @@ class LocalExplainer(Attributes):
 
         # TODO: generalize for the joint_contributions=True.
         ti_kws = {} if ti_kws is None else ti_kws
-        class_idx = ti_kws.get('class_idx', 1)
-        
+        class_idx = ti_kws.get("class_idx", 1)
+
         ti = TreeInterpreter(estimator, X, n_jobs=self._n_jobs)
 
         prediction, bias, contributions = ti.predict()
@@ -346,95 +343,109 @@ class LocalExplainer(Attributes):
 
         return contributions, bias
 
-    #@delayed
-    #@wrap_non_picklable_objects
+    # @delayed
+    # @wrap_non_picklable_objects
     def _explain_lime(self, explainer, predict_fn, X, label):
         """Get explanation from LIME"""
-        
+
         num_features = len(X)
-        contrib, bias = explainer.explain_instance(X, predict_fn, label=label, 
-                                                 num_features=num_features, num_samples=2500)
-        
-        #if isinstance(explainer, LimeTabularExplainer):
+        contrib, bias = explainer.explain_instance(
+            X, predict_fn, label=label, num_features=num_features, num_samples=2500
+        )
+
+        # if isinstance(explainer, LimeTabularExplainer):
         #    sorted_exp = sorted(explanation.local_exp[1], key=lambda x: x[0])
         #    contrib = np.array([[val[1] for val in sorted_exp]])[0,:]
         #    bias = explanation.intercept[1]
-        #else:
-        #contrib, bias = explanation
+        # else:
+        # contrib, bias = explanation
 
-        return contrib, bias 
-    
-    
+        return contrib, bias
+
     def _get_lime_values(self, estimator, X, lime_kws):
         """
         Compute the Local Interpretable Model-Agnostic Explanations
         """
-        lime_kws['fast_lime'] = True
-        
+        lime_kws["fast_lime"] = True
+
         if lime_kws is None:
-            raise KeyError('lime_kws is None, but lime_kws must contain training_data!')
-        
+            raise KeyError("lime_kws is None, but lime_kws must contain training_data!")
+
         # Convert dataframe to array.
-        if isinstance(lime_kws['training_data'], pd.DataFrame):
-            lime_kws['training_data'] = lime_kws['training_data'].values
-        
-        lime_kws['feature_names'] = list(X.columns)
-        
+        if isinstance(lime_kws["training_data"], pd.DataFrame):
+            lime_kws["training_data"] = lime_kws["training_data"].values
+
+        lime_kws["feature_names"] = list(X.columns)
+
         # Determine categorical features
-        if lime_kws.get('categorical_names', None) is None and lime_kws.get('categorical_features', None) is None:
+        if (
+            lime_kws.get("categorical_names", None) is None
+            and lime_kws.get("categorical_features", None) is None
+        ):
             features, cat_features = determine_feature_dtype(X, X.columns)
-            lime_kws['categorical_names'] = cat_features
-        
+            lime_kws["categorical_names"] = cat_features
+
         # Determine whether its a classification or regression task.
-        if lime_kws.get('mode', None) is None:
-            mode = 'classification' if hasattr(estimator, 'predict_proba') else 'regression'
-            lime_kws['mode'] = mode
-        
-        # Set the random state for reproducible results. 
-        if lime_kws.get('random_state', None) is None:
-            lime_kws['random_state'] = 123 
-        
-        if lime_kws['fast_lime']:
-            del lime_kws['fast_lime']
-            lime_kws['feature_names'] = self.feature_names
+        if lime_kws.get("mode", None) is None:
+            mode = "classification" if hasattr(estimator, "predict_proba") else "regression"
+            lime_kws["mode"] = mode
+
+        # Set the random state for reproducible results.
+        if lime_kws.get("random_state", None) is None:
+            lime_kws["random_state"] = 123
+
+        if lime_kws["fast_lime"]:
+            del lime_kws["fast_lime"]
+            lime_kws["feature_names"] = self.feature_names
             explainer = FastLimeTabularExplainer(**lime_kws)
         else:
-            del lime_kws['fast_lime']
+            del lime_kws["fast_lime"]
             explainer = LimeTabularExplainer(**lime_kws)
-        
-        if lime_kws['mode'] == 'classification' and hasattr(estimator, 'predict_proba'):
-            predict_fn = estimator.predict_proba 
-            label = lime_kws.get('class_idx', 1) 
+
+        if lime_kws["mode"] == "classification" and hasattr(estimator, "predict_proba"):
+            predict_fn = estimator.predict_proba
+            label = lime_kws.get("class_idx", 1)
         else:
-            predict_fn = estimator.predict 
-            label = 0 
-        
+            predict_fn = estimator.predict
+            label = 0
+
         n_examples = X.shape[0]
         contributions = np.zeros(X.shape)
         bias = np.zeros((n_examples))
-        
-        X_values = X.values 
-    
-        # With the FAST-Lime code, parallelization is unneccsary. 
+
+        X_values = X.values
+
+        # With the FAST-Lime code, parallelization is unneccsary.
         if self._n_jobs == -1:
-            parallel = Parallel(n_jobs=self._n_jobs, backend='loky')
+            parallel = Parallel(n_jobs=self._n_jobs, backend="loky")
             with tqdm_joblib(tqdm(desc="LIME", total=n_examples)) as progress_bar:
-                results = parallel(delayed(self._explain_lime)(explainer, predict_fn, X_values[i,:], label) 
-                       for i in range(n_examples))
-       
+                results = parallel(
+                    delayed(self._explain_lime)(explainer, predict_fn, X_values[i, :], label)
+                    for i in range(n_examples)
+                )
+
             for j, (contrib, b) in enumerate(results):
-                contributions[j,:] = contrib 
+                contributions[j, :] = contrib
                 bias[j] = b
         else:
-            for i in tqdm(range(n_examples), desc='LIME'):
-                contrib, b = self._explain_lime(explainer, predict_fn, X.values[i,:], label)
-                contributions[i,:] = contrib
+            for i in tqdm(range(n_examples), desc="LIME"):
+                contrib, b = self._explain_lime(explainer, predict_fn, X.values[i, :], label)
+                contributions[i, :] = contrib
                 bias[i] = b
-        
+
         return contributions, bias
-        
-    def _get_feature_contributions(self, estimator, X, n_jobs=1, shap_kws=None, 
-                                   lime_kws=None, ti_kws=None, method=None, estimator_output=None):
+
+    def _get_feature_contributions(
+        self,
+        estimator,
+        X,
+        n_jobs=1,
+        shap_kws=None,
+        lime_kws=None,
+        ti_kws=None,
+        method=None,
+        estimator_output=None,
+    ):
         """
         FOR INTERNAL PURPOSES ONLY.
 
@@ -446,19 +457,19 @@ class LocalExplainer(Attributes):
         X : pandas.DataFrame of shape (n_samples, n_features)
 
         """
-        self._n_jobs=n_jobs
-        
+        self._n_jobs = n_jobs
+
         if method is not None:
             self.method = method
-        
+
         if estimator_output is not None:
             self.estimator_output = estimator_output
-        
+
         if self.method == "shap":
             contributions, bias = self._get_shap_values(estimator, X, shap_kws)
         elif self.method == "tree_interpreter":
             contributions, bias = self._get_ti_values(estimator, X, ti_kws)
-        elif self.method == 'lime':
+        elif self.method == "lime":
             contributions, bias = self._get_lime_values(estimator, X, lime_kws)
 
         n_samples = len(X)

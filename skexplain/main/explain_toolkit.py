@@ -26,7 +26,7 @@ from ..common.utils import (
     is_dataset,
     is_dataframe,
     is_tuple,
-    check_all_features_for_ale
+    check_all_features_for_ale,
 )
 
 from ..common.importance_utils import (
@@ -42,7 +42,6 @@ from ..common.io import load_netcdf, load_dataframe, save_netcdf, save_dataframe
 
 
 class ExplainToolkit(Attributes):
-
     """
 
     ExplainToolkit is the primary interface of scikit-explain. The modules contained within compute several
@@ -108,15 +107,15 @@ class ExplainToolkit(Attributes):
         index for NumPy array and their column name for pandas dataframe.
         Feature names are only required if ``X`` is an ndnumpy.array, a it will be
         converted to a pandas.DataFrame internally.
-        
+
     seaborn_kws : dict, None, or False (default is None)
-        Arguments for the seaborn.set_theme(). By default, we use the following settings. 
-        
+        Arguments for the seaborn.set_theme(). By default, we use the following settings.
+
         custom_params = {"axes.spines.right": False, "axes.spines.top": False}
         sns.set_theme(style="ticks", rc=custom_params)
         ff
-        If False, then seaborn settings are not used. 
-        
+        If False, then seaborn settings are not used.
+
 
     Raises
     ---------
@@ -138,20 +137,24 @@ class ExplainToolkit(Attributes):
         y=np.array([]),
         estimator_output=None,
         feature_names=None,
-        seaborn_kws=None, 
+        seaborn_kws=None,
     ):
-        self.seaborn_kws=seaborn_kws
+        self.seaborn_kws = seaborn_kws
         if estimators is not None:
             if not is_list(estimators) and estimators:
                 estimators = [estimators]
-            
+
             # Check that the estimator name is provided!
             for e in estimators:
                 if not is_tuple(e):
-                    raise TypeError('The estimators arg must be a tuple of (estimator_name, estimator)!')
+                    raise TypeError(
+                        "The estimators arg must be a tuple of (estimator_name, estimator)!"
+                    )
                 else:
                     if not is_str(e[0]):
-                        raise TypeError('Estimator name is suppose to be string. Make sure that the tuple is (estimator_name, estimator.')
+                        raise TypeError(
+                            "Estimator name is suppose to be string. Make sure that the tuple is (estimator_name, estimator."
+                        )
 
             estimator_names = [e[0] for e in estimators]
             estimators = [e[1] for e in estimators]
@@ -210,7 +213,6 @@ class ExplainToolkit(Attributes):
             )
         )
 
-    
     def _append_attributes(self, ds):
         """
         FOR INTERNAL PURPOSES ONLY.
@@ -242,7 +244,7 @@ class ExplainToolkit(Attributes):
         verbose=False,
         return_iterations=False,
         random_seed=1,
-        to_importance=False, 
+        to_importance=False,
     ):
         """
         Performs single-pass and/or multi-pass permutation importance using a modified version of the
@@ -390,14 +392,14 @@ class ExplainToolkit(Attributes):
         )
 
         # Rename the results:
-        for opt in ['multipass', 'singlepass']:
+        for opt in ["multipass", "singlepass"]:
             pimp_vars = [v for v in results_ds.data_vars if opt in v]
-            name_dict = { v : f'{direction}_{v}' for v in pimp_vars}
+            name_dict = {v: f"{direction}_{v}" for v in pimp_vars}
             results_ds = results_ds.rename(name_dict)
-        
+
         if not is_str(evaluation_fn):
             evaluation_fn = evaluation_fn.__name__
-        
+
         self.attrs_dict["n_multipass_vars"] = n_vars
         self.attrs_dict["method"] = "permutation_importance"
         self.attrs_dict["direction"] = direction
@@ -414,8 +416,8 @@ class ExplainToolkit(Attributes):
         self,
         perm_method,
         evaluation_fn,
-        scoring_strategy= None,
-        n_permute= 1,
+        scoring_strategy=None,
+        n_permute=1,
         groups=None,
         sample_size=100,
         subsample=1.0,
@@ -478,7 +480,7 @@ class ExplainToolkit(Attributes):
 
         sample_size : integer (default=100)
             Number of random samples to determine the correlation for the feature clusterings
-            
+
         subsample: float or integer (default=1.0 for no subsampling)
             if value is between 0-1, it is interpreted as fraction of total X to use
             if value > 1, interpreted as the number of X to randomly sample
@@ -553,9 +555,11 @@ class ExplainToolkit(Attributes):
         'group 9': array(['tmp2m_hrs_ab_frez'], dtype=object)
         }
         """
-        if perm_method not in ['grouped', 'grouped_only']:
-            raise ValueError("Invalid perm_method! Available options are 'grouped' and 'grouped_only'")
-        
+        if perm_method not in ["grouped", "grouped_only"]:
+            raise ValueError(
+                "Invalid perm_method! Available options are 'grouped' and 'grouped_only'"
+            )
+
         return_names = False
         if groups is None:
             return_names = True
@@ -594,7 +598,7 @@ class ExplainToolkit(Attributes):
         features=None,
         estimator_names=None,
         interaction=False,
-        method='ale',
+        method="ale",
     ):
         """
         Compute the standard deviation (std) of the ALE values for each
@@ -718,10 +722,10 @@ class ExplainToolkit(Attributes):
         """
         if (features == "all" or features is None) and interaction:
             features = list(itertools.combinations(self.feature_names, r=2))
-        elif (features == "all" or features is None):
-            # Assume all features. 
+        elif features == "all" or features is None:
+            # Assume all features.
             features = self.feature_names
-             
+
         if estimator_names is None:
             estimator_names = self.estimator_names
 
@@ -730,9 +734,7 @@ class ExplainToolkit(Attributes):
 
         if interaction:
             if ale.attrs["dimension"] != "2D":
-                raise Exception(
-                    "ale must be second-order if interaction == True"
-                )
+                raise Exception("ale must be second-order if interaction == True")
 
         # Check that ale_data is an xarray.Dataset
         if not isinstance(ale, xr.core.dataset.Dataset):
@@ -744,13 +746,9 @@ class ExplainToolkit(Attributes):
                                  """
             )
         else:
-            any_missing = all(
-                [m in ale.attrs["estimators used"] for m in estimator_names]
-            )
+            any_missing = all([m in ale.attrs["estimators used"] for m in estimator_names])
             if not any_missing:
-                raise ValueError(
-                    "ale does not contain values for all the estimator names given!"
-                )
+                raise ValueError("ale does not contain values for all the estimator names given!")
 
         if interaction:
             func = self.global_obj.compute_interaction_rankings
@@ -784,23 +782,21 @@ class ExplainToolkit(Attributes):
         estimator_names=None,
         interaction=False,
     ):
-        """ See ale_variance for documentation."""
+        """See ale_variance for documentation."""
         results_ds = self.ale_variance(
             pd,
             features=features,
             estimator_names=estimator_names,
             interaction=interaction,
-            method='pd',
-            )
-        
+            method="pd",
+        )
+
         self.attrs_dict["method"] = "pd_variance"
-        results_ds = self._append_attributes(results_ds) 
-        
+        results_ds = self._append_attributes(results_ds)
+
         return results_ds
-    
-    def main_effect_complexity(
-        self, ale, estimator_names=None, max_segments=10, approx_error=0.05
-    ):
+
+    def main_effect_complexity(self, ale, estimator_names=None, max_segments=10, approx_error=0.05):
         """
         Compute the Main Effect Complexity (MEC; Molnar et al. 2019) [5]_.
         MEC is the number of linear segements required to approximate
@@ -1183,7 +1179,7 @@ class ExplainToolkit(Attributes):
         subsample=1.0,
         n_bootstrap=1,
         random_seed=42,
-        class_index=1, 
+        class_index=1,
     ):
         """
         Compute the 1D or 2D centered accumulated local effects (ALE) [9]_ [10]_.
@@ -1266,7 +1262,7 @@ class ExplainToolkit(Attributes):
             subsample=subsample,
             n_bootstrap=n_bootstrap,
             random_seed=random_seed,
-            class_index=class_index, 
+            class_index=class_index,
         )
 
         dimension = "2D" if isinstance(list(features)[0], tuple) else "1D"
@@ -1279,14 +1275,16 @@ class ExplainToolkit(Attributes):
 
         return results_ds
 
-    def friedman_h_stat(self, dataset_1d=None, dataset_2d=None, features=None, estimator_names=None, **kwargs):
+    def friedman_h_stat(
+        self, dataset_1d=None, dataset_2d=None, features=None, estimator_names=None, **kwargs
+    ):
         """
         Compute the second-order Friedman's H-statistic for computing feature interactions [11]_ [12]_.
         Based on equation (44) from Friedman and Popescu (2008) [12]_. Only computes the interaction strength
         between two features. In future versions of skexplain we hope to include the first-order H-statistics
         that measure the interaction between a single feature and the
-        remaining set of features. This statistic can be computed from both the accumulated local effects 
-        and partial dependence. 
+        remaining set of features. This statistic can be computed from both the accumulated local effects
+        and partial dependence.
 
         References
         -----------
@@ -1300,11 +1298,11 @@ class ExplainToolkit(Attributes):
         -----------
 
         dataset_1d : xarray.Dataset
-            1D partial dependence or accumulated local effect dataset. 
+            1D partial dependence or accumulated local effect dataset.
             Results of :func:`~ExplainToolkit.pd` or :func:`~ExplainToolkit.ale` for ``features``
 
         dataset_2d : xarray.Dataset
-            2D partial dependence or accumulated local effects dataset. 
+            2D partial dependence or accumulated local effects dataset.
             Results of :func:`~ExplainToolkit.pd` or :func:`~ExplainToolkit.ale`, but 2-tuple combinations
             of ``features``.
 
@@ -1341,32 +1339,33 @@ class ExplainToolkit(Attributes):
         else:
             if is_str(estimator_names):
                 estimator_names = [estimator_names]
-         
-        
-         # Check if old arguments are provided
-        old_arg_1d = kwargs.get('pd_1d', None)
-        old_arg_2d = kwargs.get('pd_2d', None)
-    
+
+        # Check if old arguments are provided
+        old_arg_1d = kwargs.get("pd_1d", None)
+        old_arg_2d = kwargs.get("pd_2d", None)
+
         if old_arg_1d is not None:
             warnings.warn(
-            "'pd_1d' argument is deprecated and will be removed in future versions. Use 'dataset_1d' instead.",
-            DeprecationWarning
+                "'pd_1d' argument is deprecated and will be removed in future versions. Use 'dataset_1d' instead.",
+                DeprecationWarning,
             )
             if dataset_1d is None:
                 dataset_1d = old_arg_1d
-    
+
         if old_arg_2d is not None:
             warnings.warn(
                 "'pd_2d' argument is deprecated and will be removed in future versions. Use 'dataset_2d' instead.",
-                DeprecationWarning
+                DeprecationWarning,
             )
             if dataset_2d is None:
                 dataset_2d = old_arg_2d
-    
+
         # Check if the new arguments are provided
         if dataset_1d is None or dataset_2d is None or features is None:
-            raise ValueError("Please provide the necessary arguments: 'dataset_1d', 'dataset_2d', and 'features'.")
-        
+            raise ValueError(
+                "Please provide the necessary arguments: 'dataset_1d', 'dataset_2d', and 'features'."
+            )
+
         results_ds = self.global_obj.compute_scalar_interaction_stats(
             method="hstat",
             data=dataset_1d,
@@ -1429,8 +1428,8 @@ class ExplainToolkit(Attributes):
             if is_str(estimator_names):
                 estimator_names = [estimator_names]
 
-        check_all_features_for_ale(ale, estimator_names, self.feature_names)        
-                
+        check_all_features_for_ale(ale, estimator_names, self.feature_names)
+
         # Check that ale_data is an xarray.Dataset
         if not isinstance(ale, xr.core.dataset.Dataset):
             raise ValueError(
@@ -1440,13 +1439,9 @@ class ExplainToolkit(Attributes):
                                  """
             )
         else:
-            any_missing = all(
-                [m in ale.attrs["estimators used"] for m in estimator_names]
-            )
+            any_missing = all([m in ale.attrs["estimators used"] for m in estimator_names])
             if not any_missing:
-                raise ValueError(
-                    f"ale does not contain data for all the estimator names given!"
-                )
+                raise ValueError(f"ale does not contain data for all the estimator names given!")
 
         kwargs["estimator_output"] = self.estimator_output
 
@@ -1460,13 +1455,12 @@ class ExplainToolkit(Attributes):
 
         return results_ds
 
-    
     def sobol_indices(self, n_bootstrap=5000, class_index=1):
         """
-        Compute the 1st Order and Total order Sobol Indices. Useful for diagnosing feature 
+        Compute the 1st Order and Total order Sobol Indices. Useful for diagnosing feature
         interactions.
-        
-        
+
+
         Parameters
         ------------
 
@@ -1487,14 +1481,12 @@ class ExplainToolkit(Attributes):
         >>> ale = explainer.ale(features='all')
         >>> ias = explainer.interaction_strength(ale)
         """
-        
+
         results_ds = self.global_obj.compute_sobol(n_bootstrap, class_idx=class_index)
         results_ds = self._append_attributes(results_ds)
 
         return results_ds
-    
-    
-    
+
     def _plot_interpret_curves(
         self,
         method,
@@ -1539,7 +1531,9 @@ class ExplainToolkit(Attributes):
         else:
             base_font_size = 12 if len(features) <= 6 else 16
             base_font_size = kwargs.get("base_font_size", base_font_size)
-            plot_obj = PlotInterpretCurves(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
+            plot_obj = PlotInterpretCurves(
+                BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws
+            )
             return plot_obj.plot_1d_curve(
                 method=method,
                 data=data,
@@ -1597,7 +1591,7 @@ class ExplainToolkit(Attributes):
         display_units : dict
             For plotting purposes. Dictionary that maps the feature names
             to their units.
-            E.g., ``display_units = { 'dwpt2m' : '$^\circ$C', }``
+            E.g., ``display_units = { 'dwpt2m' : '$^\\circ$C', }``
 
         line_colors : str or list of strs of len(estimators)
             User-defined colors for curve plotting.
@@ -1704,7 +1698,7 @@ class ExplainToolkit(Attributes):
         display_units : dict
             For plotting purposes. Dictionary that maps the feature names
             to their units.
-            E.g., ``display_units = { 'dwpt2m' : '$^\circ$C', }``
+            E.g., ``display_units = { 'dwpt2m' : '$^\\circ$C', }``
 
         line_colors : str or list of strs of len(estimators)
             User-defined colors for curve plotting.
@@ -1756,8 +1750,6 @@ class ExplainToolkit(Attributes):
         else:
             kwargs["left_yaxis_label"] = "Centered ALE"
 
-            
-            
         return self._plot_interpret_curves(
             method="ale",
             data=ale,
@@ -1777,29 +1769,32 @@ class ExplainToolkit(Attributes):
         method="shap",
         performance_based=False,
         n_samples=100,
-        shap_kwargs={},#None,
-        lime_kws={},#None
+        shap_kwargs={},  # None,
+        lime_kws={},  # None
     ):
-        warnings.warn(f'ExplainToolkit.local_contributions is deprecated. Use local_attributions in the future.', 
-                      DeprecationWarning, stacklevel=2)
-        return self.local_attributions(**kws) 
-        
+        warnings.warn(
+            f"ExplainToolkit.local_contributions is deprecated. Use local_attributions in the future.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.local_attributions(**kws)
+
     def local_attributions(self, method, shap_kws={}, lime_kws={}, n_jobs=1):
         """
-        Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_, 
+        Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_,
         Local Interpretable Model Explanations (LIME) or the Tree Interpreter local
-        attributions for a set of examples. 
-        . 
-        By default, we set the SHAP algorithm = ``'auto'``, so that the best algorithm 
-        for a model is determined internally in the SHAP package. 
+        attributions for a set of examples.
+        .
+        By default, we set the SHAP algorithm = ``'auto'``, so that the best algorithm
+        for a model is determined internally in the SHAP package.
 
         Parameters
         ------------------
-        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` or list 
+        method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` or list
             Can use SHAP, treeinterpreter, or LIME to compute the feature attributions.
             SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
-            select decision-tree based estimators in scikit-learn (e.g., random forests). 
-        
+            select decision-tree based estimators in scikit-learn (e.g., random forests).
+
         shap_kws : dict (default is None)
             Arguments passed to the shap.Explainer object. See
             https://shap.readthedocs.io/en/latest/generated/shap.Explainer.html#shap.Explainer
@@ -1816,21 +1811,21 @@ class ExplainToolkit(Attributes):
         lime_kws : dict (default is None)
             Arguments passed to the LimeTabularExplainer object. See https://github.com/marcotcr/lime
             for details. Generally, you'll pass the in the following:
-            
-            - training_data 
-            - categorical_names (scikit-explain will attempt to determine it internally, 
+
+            - training_data
+            - categorical_names (scikit-explain will attempt to determine it internally,
                                  if it is not passed in)
-            - random_state (for reproduciability) 
-    
+            - random_state (for reproduciability)
+
         n_jobs : float or integer (default=1)
 
             - if integer, interpreted as the number of processors to use for multiprocessing
             - if float, interpreted as the fraction of proceesors to use for multiprocessing
-            
-            For treeinterpreter, parallelization is used to process the trees of a random forest 
-            in parallel. For LIME, each example is computed in parallel. We do not apply 
-            parallelization to SHAP as we found it is faster without it. 
-            
+
+            For treeinterpreter, parallelization is used to process the trees of a random forest
+            in parallel. For LIME, each example is computed in parallel. We do not apply
+            parallelization to SHAP as we found it is faster without it.
+
         Returns
         -------------------
 
@@ -1870,12 +1865,12 @@ class ExplainToolkit(Attributes):
                           The y values are useful for color-coding in the shap dependence plots."""
             )
             include_ys = False
-        
+
         if not is_list(method):
             methods = [method]
         else:
-            methods = method 
-        
+            methods = method
+
         correct_names = ["shap", "tree_interpreter", "lime"]
         r = [[m in correct_names][0] for m in methods]
         if not all(r):
@@ -1883,23 +1878,23 @@ class ExplainToolkit(Attributes):
             raise ValueError(
                 f"Invalid method ({methods[ind]})! Method must be one of the following: 'shap', 'tree_interpreter', 'lime'"
             )
-        
+
         for estimator_name, estimator in self.estimators.items():
-            for method in methods: 
-            
+            for method in methods:
+
                 df = self.local_obj._get_feature_contributions(
                     estimator=estimator,
                     X=self.X,
                     shap_kws=shap_kws,
-                    lime_kws=lime_kws, 
-                    n_jobs=n_jobs, 
-                    method = method, 
-                    estimator_output=self.estimator_output
+                    lime_kws=lime_kws,
+                    n_jobs=n_jobs,
+                    method=method,
+                    estimator_output=self.estimator_output,
                 )
-            
+
                 values = df[self.feature_names]
-                bias = df['Bias'] 
-            
+                bias = df["Bias"]
+
                 dataset[f"{method}_values__{estimator_name}"] = (
                     ["n_examples", "n_features"],
                     values,
@@ -1917,43 +1912,43 @@ class ExplainToolkit(Attributes):
 
         results_ds = to_xarray(dataset)
         self.attrs_dict["features"] = self.feature_names
-        self.attrs_dict['method'] = methods
+        self.attrs_dict["method"] = methods
         results_ds = self._append_attributes(results_ds)
 
         return results_ds
-        
+
     def average_attributions(
         self,
         method=None,
         data=None,
         performance_based=False,
         n_samples=100,
-        shap_kws=None, 
+        shap_kws=None,
         lime_kws=None,
-        n_jobs=1
+        n_jobs=1,
     ):
         """
         Computes the individual feature contributions to a predicted outcome for
         a series of examples either based on tree interpreter (only Tree-based methods)
         , Shapley Additive Explanations, or Local Interpretable Model-Agnostic Explanations (LIME).
-        
-        The primary difference between average_attributions and local_attributions is the 
-        performance-based determiniation of examples to compute the local attributions from. 
+
+        The primary difference between average_attributions and local_attributions is the
+        performance-based determiniation of examples to compute the local attributions from.
         average_attributions can start with the full dataset and determine the top n_samples
-        to compute explanations for. 
+        to compute explanations for.
 
         Parameters
         -----------
         method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` (default is None)
             Can use SHAP, treeinterpreter, or LIME to compute the feature attributions.
             SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
-            select decision-tree based estimators in scikit-learn (e.g., random forests). 
+            select decision-tree based estimators in scikit-learn (e.g., random forests).
 
         data : dataframe or a list of dataframes, shape (n_examples, n_features) (Default is None)
-            Local attribution data for each estimator. 
+            Local attribution data for each estimator.
             Results from explainer.local_attributions. If None, then the local attributions are computed
-            internally. 
-            
+            internally.
+
         performance_based : boolean (default=False)
             If True, will average feature contributions over the best and worst
             performing of the given X. The number of examples to average over
@@ -2002,28 +1997,30 @@ class ExplainToolkit(Attributes):
         """
         if data is not None:
             if not is_dataset(data):
-                raise ValueError('Data needs to be a xarray.Dataset from ExplainToolkit.local_attributions.')
-            methods = data.attrs['method']
+                raise ValueError(
+                    "Data needs to be a xarray.Dataset from ExplainToolkit.local_attributions."
+                )
+            methods = data.attrs["method"]
         else:
             if method is None:
-                raise ValueError('Set the method if not providing a Dataset.')
-        
+                raise ValueError("Set the method if not providing a Dataset.")
+
             if not is_list(method):
                 methods = [method]
             else:
-                methods = method 
-        
+                methods = method
+
         results = {}
-        
-        for method in methods: 
+
+        for method in methods:
             results_df = self.local_obj._average_attributions(
                 data=data,
-                method=method, 
+                method=method,
                 performance_based=performance_based,
                 n_samples=n_samples,
-                shap_kws=shap_kws, 
+                shap_kws=shap_kws,
                 lime_kws=lime_kws,
-                n_jobs=n_jobs
+                n_jobs=n_jobs,
             )
 
             # Add metadata
@@ -2034,7 +2031,7 @@ class ExplainToolkit(Attributes):
             results_df = self._append_attributes(results_df)
 
             results[method] = results_df
-            
+
         return results
 
     def plot_contributions(
@@ -2053,8 +2050,8 @@ class ExplainToolkit(Attributes):
         contrib : Nested pandas.DataFrame or dict of Nested pandas.DataFrame
             Results of :func:`~ExplainToolkit.local_attributions` or :func:`~ExplainToolkit.average_attributions`
             :func:`~ExplainToolkit.local_attributions` returns an xarray.Dataset which can be valid for multiple examples.
-            For plotting, :func:`~ExplainToolkit.average_attributions` is used to average attributions and their 
-            feature values. 
+            For plotting, :func:`~ExplainToolkit.average_attributions` is used to average attributions and their
+            feature values.
 
         features : string or list of strings (default=None)
 
@@ -2103,12 +2100,12 @@ class ExplainToolkit(Attributes):
         """
         if is_dataset(contrib):
             contrib = self.average_attributions(data=contrib, performance_based=False)
-            
-        keys = list(contrib.keys())   
-        
+
+        keys = list(contrib.keys())
+
         if estimator_names is None:
             estimator_names = contrib[keys[0]].attrs["estimators used"]
-            
+
         elif is_str(estimator_names):
             estimator_names = [estimator_names]
 
@@ -2118,12 +2115,15 @@ class ExplainToolkit(Attributes):
 
         # initialize a plotting object
         only_one_panel = (
-            contrib[keys[0]].index[0][0] == "non_performance" and len(estimator_names) == 1
+            contrib[keys[0]].index[0][0] == "non_performance"
+            and len(estimator_names) == 1
             and len(keys) == 1
         )
-        
+
         base_font_size = kwargs.get("base_font_size", 16 if only_one_panel else 11)
-        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
+        plot_obj = PlotFeatureContributions(
+            BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws
+        )
         kwargs["estimator_output"] = self.estimator_output
 
         return plot_obj.plot_contributions(
@@ -2136,9 +2136,9 @@ class ExplainToolkit(Attributes):
 
     def shap(self, shap_kws={"masker": None, "algorithm": "auto"}, shap_kwargs=None):
         """
-        Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_. 
-        By default, we set algorithm = ``'auto'``, so that the best algorithm 
-        for a model is determined internally in the SHAP package. 
+        Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_.
+        By default, we set algorithm = ``'auto'``, so that the best algorithm
+        for a model is determined internally in the SHAP package.
 
         Parameters
         ------------------
@@ -2186,11 +2186,14 @@ class ExplainToolkit(Attributes):
         ...                          shap.maskers.Partition(X, max_samples=100, clustering="correlation"),
         ...                          'algorithm' : 'auto'})
         """
-        warnings.warn(f'explainer.shap is deprecated. Use explainer.local_attributions in the future', 
-                      DeprecationWarning, stacklevel=2)
-        
-        shap_kwargs=shap_kws
-        
+        warnings.warn(
+            f"explainer.shap is deprecated. Use explainer.local_attributions in the future",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        shap_kwargs = shap_kws
+
         dataset = {}
         include_ys = True
         if len(self.y) < 1:
@@ -2230,7 +2233,7 @@ class ExplainToolkit(Attributes):
 
     def scatter_plot(
         self,
-        dataset, 
+        dataset,
         estimator_name,
         method=None,
         plot_type="summary",
@@ -2251,16 +2254,16 @@ class ExplainToolkit(Attributes):
             if 'dependence', plots a partial depedence style plot
 
         dataset : xarray.Dataset
-            Results from :func:`~ExplainToolkit.local_attributions`. 
-            Dataset containing feature attribution values, their biases, and 
-            the input feature values. 
-            
+            Results from :func:`~ExplainToolkit.local_attributions`.
+            Dataset containing feature attribution values, their biases, and
+            the input feature values.
+
         method : ``'shap'`` , ``'tree_interpreter'``, or ``'lime'`` (default is None)
             Can use SHAP, treeinterpreter, or LIME to compute the feature attributions.
             SHAP and LIME are estimator-agnostic while treeinterpreter can only be used on
-            select decision-tree based estimators in scikit-learn (e.g., random forests). 
-            If None, method is determine from the values Dataset. Otherwise, an 
-            error is raised. 
+            select decision-tree based estimators in scikit-learn (e.g., random forests).
+            If None, method is determine from the values Dataset. Otherwise, an
+            error is raised.
 
         features : string or list of strings (default=None)
             features to plots if plot_type is 'dependence'.
@@ -2274,7 +2277,7 @@ class ExplainToolkit(Attributes):
         display_units : dict
             For plotting purposes. Dictionary that maps the feature names
             to their units.
-            E.g., ``display_units = { 'dwpt2m' : '$^\circ$C', }``
+            E.g., ``display_units = { 'dwpt2m' : '$^\\circ$C', }``
 
         to_probability : boolean
             if True, values are multiplied by 100.
@@ -2317,15 +2320,15 @@ class ExplainToolkit(Attributes):
             else:
                 methods = [method]
         else:
-            methods = dataset.attrs['method']
-            
-        X = pd.DataFrame(dataset['X'].values, columns=dataset.attrs['features'])
-        
-        if plot_type == 'summary' and len(methods) > 1:
-            raise ValueError('At the moment, summary plots can only handle one method') 
-        elif plot_type == 'summary':
-            dataset = dataset[f'{methods[0]}_values__{estimator_name}'].values
-        
+            methods = dataset.attrs["method"]
+
+        X = pd.DataFrame(dataset["X"].values, columns=dataset.attrs["features"])
+
+        if plot_type == "summary" and len(methods) > 1:
+            raise ValueError("At the moment, summary plots can only handle one method")
+        elif plot_type == "summary":
+            dataset = dataset[f"{methods[0]}_values__{estimator_name}"].values
+
         if plot_type not in ["summary", "dependence"]:
             raise ValueError("Invalid plot_type! Must be 'summary' or 'dependence'")
 
@@ -2334,9 +2337,11 @@ class ExplainToolkit(Attributes):
             fontsize = 12
         else:
             fontsize = 12 if len(features) <= 6 else 16
-            
+
         base_font_size = kwargs.get("base_font_size", fontsize)
-        plot_obj = PlotFeatureContributions(BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws)
+        plot_obj = PlotFeatureContributions(
+            BASE_FONT_SIZE=base_font_size, seaborn_kws=self.seaborn_kws
+        )
         plot_obj.feature_names = self.feature_names
         return plot_obj.scatter_plot(
             attr_values=dataset,
@@ -2346,7 +2351,7 @@ class ExplainToolkit(Attributes):
             display_feature_names=display_feature_names,
             display_units=display_units,
             estimator_name=estimator_name,
-            methods=methods, 
+            methods=methods,
             **kwargs,
         )
 
@@ -2423,9 +2428,7 @@ class ExplainToolkit(Attributes):
 
         """
         if is_list(data):
-            assert len(data) == len(
-                panels
-            ), "Panels and Data must have the same number of elements"
+            assert len(data) == len(panels), "Panels and Data must have the same number of elements"
         else:
             data = [data]
 
@@ -2436,10 +2439,7 @@ class ExplainToolkit(Attributes):
                 f.split("rankings__")[1] for f in list(data[0].data_vars) if "rank" in f
             ]
             missing = np.array(
-                [
-                    True if f not in available_estimators else False
-                    for f in given_estimator_names
-                ]
+                [True if f not in available_estimators else False for f in given_estimator_names]
             )
             missing_estimators = list(np.array(given_estimator_names)[missing])
             if any(missing):
@@ -2455,9 +2455,7 @@ class ExplainToolkit(Attributes):
 
         for r, (method, estimator_name) in zip(data, panels):
             available_methods = [
-                d.split("__")[0]
-                for d in list(r.data_vars)
-                if f"rankings__{estimator_name}" in d
+                d.split("__")[0] for d in list(r.data_vars) if f"rankings__{estimator_name}" in d
             ]
             if f"{method}_rankings" not in available_methods:
                 raise ValueError(
@@ -2515,9 +2513,7 @@ class ExplainToolkit(Attributes):
 
         axis = "columns" if isinstance(example, pd.DataFrame) else "index"
         if set(getattr(example, axis)) != set(important_vars):
-            raise ValueError(
-                "The example dataframe/series must have important_vars as columns!"
-            )
+            raise ValueError("The example dataframe/series must have important_vars as columns!")
 
         f, axes = box_and_whisker(
             self.X,
@@ -2573,9 +2569,7 @@ class ExplainToolkit(Attributes):
 
         return f, axes
 
-    def get_important_vars(
-        self, perm_imp_data, multipass=True, n_vars=10, combine=False
-    ):
+    def get_important_vars(self, perm_imp_data, multipass=True, n_vars=10, combine=False):
         """
         Retrieve the most important variables from permutation importance.
         Can combine rankings from different estimators and only keep those variables that
@@ -2680,14 +2674,14 @@ class ExplainToolkit(Attributes):
                 setattr(s, "estimator_output", results.attrs["estimator_output"])
                 estimator_names = [results.attrs["estimators used"]]
             except:
-               
+
                 try:
                     setattr(s, "estimator output", results.attrs["estimator output"])
                     estimator_names = [results.attrs["estimators used"]]
                 except:
                     setattr(s, "estimator_output", results.attrs["model_output"])
                     estimator_names = [results.attrs["models used"]]
-                    
+
             if not is_list(estimator_names):
                 estimator_names = [estimator_names]
 
@@ -2698,7 +2692,7 @@ class ExplainToolkit(Attributes):
             setattr(s, "estimators used", estimator_names)
 
             # in the case of shap_values.
-            if dtype == 'dataset':
+            if dtype == "dataset":
                 if "X" in results.data_vars:
                     feature_names = results.attrs["features"]
                     X = pd.DataFrame(results["X"].values, columns=feature_names)
@@ -2710,7 +2704,7 @@ class ExplainToolkit(Attributes):
 
         return results
 
-    def save(self, fname, data, complevel=5, df_save_func='to_json', **kwargs):
+    def save(self, fname, data, complevel=5, df_save_func="to_json", **kwargs):
         """
         Save results of a computation (permutation importance, calc_ale, calc_pd, etc)
 
@@ -2720,15 +2714,15 @@ class ExplainToolkit(Attributes):
             filename to store the results in (including path)
         data : ExplainToolkit results
             the results of a ExplainToolkit calculation. Can be a dataframe or dataset.
-        complevel : int 
-            Compression level for the netCDF file (default=5) 
+        complevel : int
+            Compression level for the netCDF file (default=5)
         df_save_func : 'to_json', 'to_pickle', 'to_csv', 'to_feather', or other str
             The dataframe attribute used to save a pandas dataframe. To use
-            `to_feather` pyarrow must be installed. 
-        kwargs : dict 
+            `to_feather` pyarrow must be installed.
+        kwargs : dict
                 Args passed to either xarray.Dataset.to_netcdf()
                 (https://docs.xarray.dev/en/stable/generated/xarray.Dataset.to_netcdf.html)
-                or to 
+                or to
 
         Examples
         -------
