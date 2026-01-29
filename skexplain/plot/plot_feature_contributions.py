@@ -79,6 +79,14 @@ def waterfall(
     row_height = 0.5
     rng = range(num_features - 1, -1, -1)
     order = np.argsort(-np.abs(values))
+
+    # Convert pandas Series to numpy arrays to avoid indexing issues in pandas 2.x
+    values_array = values.to_numpy() if hasattr(values, 'to_numpy') else np.array(values)
+    features_array = features.to_numpy() if hasattr(features, 'to_numpy') and features is not None else (np.array(features) if features is not None else None)
+    if lower_bounds is not None:
+        lower_bounds_array = lower_bounds.to_numpy() if hasattr(lower_bounds, 'to_numpy') else np.array(lower_bounds)
+        upper_bounds_array = upper_bounds.to_numpy() if hasattr(upper_bounds, 'to_numpy') else np.array(upper_bounds)
+
     pos_lefts = []
     pos_inds = []
     pos_widths = []
@@ -100,21 +108,21 @@ def waterfall(
 
     # compute the locations of the individual features and plot the dashed connecting lines
     for i in range(num_individual):
-        sval = values.iloc[int(order[i])]
+        sval = values_array[order[i]]
         loc -= sval
         if sval >= 0:
             pos_inds.append(rng[i])
             pos_widths.append(sval)
             if lower_bounds is not None:
-                pos_low.append(lower_bounds.iloc[int(order[i])])
-                pos_high.append(upper_bounds.iloc[int(order[i])])
+                pos_low.append(lower_bounds_array[order[i]])
+                pos_high.append(upper_bounds_array[order[i]])
             pos_lefts.append(loc)
         else:
             neg_inds.append(rng[i])
             neg_widths.append(sval)
             if lower_bounds is not None:
-                neg_low.append(lower_bounds.iloc[int(order[i])])
-                neg_high.append(upper_bounds.iloc[int(order[i])])
+                neg_low.append(lower_bounds_array[order[i]])
+                neg_high.append(upper_bounds_array[order[i]])
             neg_lefts.append(loc)
         if num_individual != num_features or i + 4 < num_individual:
             ax.plot(
@@ -129,7 +137,7 @@ def waterfall(
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
         else:
-            feat_val = features.iloc[int(order[i])]
+            feat_val = features_array[order[i]]
             if abs(feat_val) < 1:
                 fmt = "%0.03f"
             elif abs(feat_val) > 10:
