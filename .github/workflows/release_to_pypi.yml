@@ -40,18 +40,11 @@ jobs:
       - name: Display distributions
         run: ls -lh dist/
 
-      # Primary: Trusted Publishing (no token needed)
       - name: Publish distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-
-      # Fallback: API Token method
-      # If Trusted Publishing fails, comment out the step above
-      # and uncomment the step below:
-      # - name: Publish distribution to PyPI (API Token)
-      #   uses: pypa/gh-action-pypi-publish@release/v1
-      #   with:
-      #     user: __token__
-      #     password: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
