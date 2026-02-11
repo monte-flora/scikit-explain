@@ -6,17 +6,17 @@ on:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write
 
 jobs:
   build-n-publish:
     name: Build and publish to PyPI
     runs-on: ubuntu-latest
 
-    # Uncomment for Trusted Publishing (recommended):
-    # environment:
-    #   name: pypi
-    #   url: https://pypi.org/p/scikit-explain
+    environment:
+      name: pypi
+      url: https://pypi.org/p/scikit-explain
 
     steps:
       - name: Checkout source
@@ -40,20 +40,19 @@ jobs:
       - name: Display distributions
         run: ls -lh dist/
 
-      # Option A: Publish with Trusted Publishing (no token needed)
-      # Uncomment this and comment out Option B below
-      # - name: Publish distribution to PyPI (Trusted Publishing)
-      #   uses: pypa/gh-action-pypi-publish@release/v1
-
-      # Option B: Publish with API Token (current method)
-      # Comment this out if using Trusted Publishing above
-      - name: Publish distribution to PyPI (API Token)
+      # Primary: Trusted Publishing (no token needed)
+      - name: Publish distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
 
-      # Optional: Create GitHub Release
+      # Fallback: API Token method
+      # If Trusted Publishing fails, comment out the step above
+      # and uncomment the step below:
+      # - name: Publish distribution to PyPI (API Token)
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     user: __token__
+      #     password: ${{ secrets.PYPI_API_TOKEN }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
