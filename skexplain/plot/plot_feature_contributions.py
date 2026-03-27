@@ -50,13 +50,29 @@ def waterfall(
 
     Parameters
     ----------
-    shap_values : Explanation
-        A one-dimensional Explanation object that contains the feature values and SHAP values to plot.
-    max_display : str
-        The maximum number of features to plot.
-    show : bool
-        Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
-        to be customized further after it has been created.
+    data : pandas DataFrame
+        Feature contribution results (e.g., from SHAP or similar method).
+    key : hashable
+        Row key/index to select from data.
+    model_name : str
+        Name of the model in data.
+    features : list of str
+        Feature names to plot.
+    ax : matplotlib Axes, optional
+        Pre-existing axes for the plot.
+    fig : matplotlib Figure, optional
+        Pre-existing figure for the plot.
+    display_feature_names : dict, optional
+        Maps internal feature names to readable display names.
+    display_units : dict, optional
+        Maps feature names to unit strings.
+    label_fontsize : int, default 8
+        Font size for feature labels.
+    **kwargs :
+        max_display : int
+            Maximum number of features to display.
+        num_features : int
+            Number of features to plot (defaults to min of max_display and total features).
     """
     max_display = kwargs.get("max_display")
     all_features = data.attrs["features"]
@@ -443,7 +459,7 @@ def add_summary_plot_cb(
     y=1.05,
     ax=None,
 ):
-    # Add colorbar.
+    """Add a colorbar to a SHAP-style summary (beeswarm) plot."""
     import matplotlib.cm as cm
 
     m = cm.ScalarMappable(cmap=color)

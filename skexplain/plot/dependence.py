@@ -371,7 +371,7 @@ def dependence_plot(
 
 
 def get_interaction_index(feature_ind, interaction_index, attr_values, X, feature_names):
-    """ """
+    """Determine the best interaction feature index for dependence plot coloring."""
     # guess what other feature as the stongest interaction with the plotted feature
     if not hasattr(feature_ind, "__len__"):
         if interaction_index == "auto":

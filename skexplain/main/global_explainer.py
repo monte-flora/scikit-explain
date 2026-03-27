@@ -964,7 +964,7 @@ class GlobalExplainer(Attributes):
         original_feature_values = [self.X[features[i]].values for i in range(2)]
 
         bin_edges = [
-            np.unique(np.percentile(v, np.linspace(0.0, 100.0, n_bins + 1), interpolation="lower"))
+            np.unique(np.percentile(v, np.linspace(0.0, 100.0, n_bins + 1), method="lower"))
             for v in original_feature_values
         ]
 

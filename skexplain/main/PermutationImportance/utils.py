@@ -125,7 +125,7 @@ def conditional_permutations(data, n_bins, random_state):
             np.percentile(
                 feature_values,
                 np.linspace(0, 100, n_bins + 1),
-                interpolation="lower",
+                method="lower",
             )
         )
 

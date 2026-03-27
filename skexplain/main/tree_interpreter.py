@@ -79,7 +79,7 @@ class TreeInterpreter:
             leaf_to_path[path[-1]] = path
 
         # remove the single-dimensional inner arrays
-        values = tree.tree_.value.squeeze(axis=1)
+        values = tree.tree_.value.squeeze()
 
         # reshape if squeezed into a single float
         if len(values.shape) == 0:
