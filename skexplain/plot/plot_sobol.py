@@ -5,6 +5,29 @@ import pandas as pd
 def sobol_plot(
     results, est_name=None, ax=None, display_feature_names={}, n_features=None, kind="bar"
 ):
+    """Plot Sobol sensitivity indices (1st order and higher order) as a stacked bar or barh chart.
+
+    Parameters
+    ----------
+    results : xarray.Dataset
+        Results from ExplainToolkit.sobol (contains sobol_total_rankings, sobol_1st_scores,
+        and sobol_interact_scores variables).
+    est_name : str, optional
+        Estimator name suffix used in the dataset variable names. If None, inferred
+        from the first data variable.
+    ax : matplotlib Axes, optional
+        Pre-existing axes for the plot. If None, a new figure and axes are created.
+    display_feature_names : dict, optional
+        Maps internal feature names to readable display names.
+    n_features : int, optional
+        Number of top features to plot. If None, all features are plotted.
+    kind : {'bar', 'barh'}, default 'bar'
+        Type of bar chart. 'bar' for vertical, 'barh' for horizontal.
+
+    Returns
+    -------
+    ax : matplotlib Axes
+    """
     if ax is None:
         f, ax = plt.subplots(dpi=300, figsize=(6, 4))
 

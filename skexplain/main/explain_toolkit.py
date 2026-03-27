@@ -2361,10 +2361,10 @@ class ExplainToolkit(Attributes):
 
         Parameters
         -------------
-        panels: List of 2-tuple of (estimator name, method) to determine the sub-panel
+        panels: List of 2-tuple of (method, estimator name) to determine the sub-panel
                 matrixing for the plotting. E.g., If you wanted to compare multi-pass to
                 single-pass permutation importance for a random forest:
-               ``panels  = [('Random Forest', 'multipass'), ('Random Forest', 'singlepass')``
+               ``panels  = [('multipass', 'Random Forest'), ('singlepass', 'Random Forest')]``
                 The available ranking methods in skexplain include 'multipass', 'singlepass',
                 'perm_based', 'ale_variance', or 'ale_variance_interactions'.
 
@@ -2417,12 +2417,14 @@ class ExplainToolkit(Attributes):
         ...                       subsample=0.5,
         ...                       n_bootstrap=20,
         ...                       )
-        >>> explainer.plot_importance(data=perm_imp_results, method='multipass')
+        >>> explainer.plot_importance(data=perm_imp_results,
+        ...     panels=[('multipass', 'Random Forest')])
 
 
-        >>> #If we want to annonate pairs of highly correlated feature pairs
-        >>> explainer.plot_importance(data=perm_imp_results, method='multipass',
-        ...                     plot_correlated_features=True)
+        >>> #If we want to annotate pairs of highly correlated feature pairs
+        >>> explainer.plot_importance(data=perm_imp_results,
+        ...     panels=[('multipass', 'Random Forest')],
+        ...     plot_correlated_features=True)
 
         .. image :: ../../images/multi_pass_perm_imp.png
 

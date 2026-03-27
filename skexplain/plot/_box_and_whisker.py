@@ -22,7 +22,25 @@ def rounding(v):
 def box_and_whisker(
     X_train, top_preds, example, display_feature_names={}, display_units={}, **kwargs
 ):
-    """Create interpretability graphic"""
+    """Create a box-and-whisker plot for the top predictor features with
+    the current example's values annotated.
+
+    Parameters
+    ----------
+    X_train : pandas DataFrame
+        Training data used to compute feature distributions.
+    top_preds : list of str
+        Top predictor feature names to plot (one subplot per feature).
+    example : dict or pandas Series
+        The current example's feature values, overlaid as vertical lines.
+    display_feature_names : dict, optional
+        Maps internal feature names to readable display names.
+    display_units : dict, optional
+        Maps feature names to unit strings for axis labels.
+    **kwargs :
+        bar_color : str, default 'lightblue'
+            Fill color for the box plots.
+    """
     color = kwargs.get("bar_color", "lightblue")
 
     f, axes = plt.subplots(dpi=300, nrows=len(top_preds), figsize=(4, 5))

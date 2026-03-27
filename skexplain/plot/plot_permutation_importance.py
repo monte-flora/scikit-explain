@@ -109,7 +109,7 @@ class PlotImportance(PlotStructure):
         -----------------
             data : xarray.Dataset or list of xarray.Dataset
                 Permutation importance dataset for one or more metrics
-            panels: list of 2-tuples of estimator names and rank method
+            panels: list of 2-tuples of (method, estimator name)
                 E.g., panels = [('singlepass', 'Random Forest',
                                 ('multipass', 'Random Forest') ]
                 will plot the singlepass and multipass results for the
