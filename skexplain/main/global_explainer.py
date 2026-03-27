@@ -815,7 +815,7 @@ class GlobalExplainer(Attributes):
                 np.percentile(
                     original_feature_values,
                     np.linspace(0, 100, n_bins + 1),
-                    interpolation="lower",
+                    method="lower",
                 )
             )
             # Initialize an empty ale array
