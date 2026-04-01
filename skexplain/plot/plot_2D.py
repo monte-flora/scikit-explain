@@ -120,8 +120,8 @@ class PlotInterpret2D(PlotStructure):
         data,
         features,
         estimator_names,
-        display_feature_names={},
-        display_units={},
+        display_feature_names=None,
+        display_units=None,
         to_probability=False,
         cbar_kwargs=None,
         **kwargs,
@@ -129,6 +129,11 @@ class PlotInterpret2D(PlotStructure):
         """
         Generic function for 2-D PDP/ALE
         """
+        if display_feature_names is None:
+            display_feature_names = {}
+        if display_units is None:
+            display_units = {}
+
         contours = kwargs.get("contours", False)
         kde_curves = kwargs.get("kde_curves", True)
         scatter = kwargs.get("scatter", True)

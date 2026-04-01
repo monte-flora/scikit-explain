@@ -1,13 +1,10 @@
-Multiclassification 
--------------------------
+Multiclass Classification
+--------------------------
 
-These demonstrations of multiclassification in scikit-explain
-are generated from tutorial notebooks that are `available on GitHub <https://github.com/monte-flora/scikit-explain/blob/master/tutorial_notebooks/multiclassification.ipynb>`_
-
+scikit-explain supports multiclass classification for permutation importance, ALE, and SHAP.
 
 .. toctree::
     :glob:
     :maxdepth: 1
 
-    notebooks/multiclassification
-    
+    notebooks/11_multiclass

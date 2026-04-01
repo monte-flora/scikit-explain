@@ -234,7 +234,8 @@ class TestInterpretCurves(TestLR):
             estimators=self.lr_estimator, X=self.X, y=self.y
         )
         ale_1d = explainer.ale(features='all')
-        mec = explainer.main_effect_complexity(ale=ale_1d)[self.lr_estimator_name]
+        mec_ds = explainer.main_effect_complexity(ale=ale_1d)
+        mec = float(mec_ds[f"mec__{self.lr_estimator_name}"].values)
         self.assertAlmostEqual(mec, 1., 4)
 
 

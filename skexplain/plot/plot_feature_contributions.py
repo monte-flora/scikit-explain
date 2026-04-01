@@ -35,8 +35,8 @@ def waterfall(
     features,
     ax=None,
     fig=None,
-    display_feature_names={},
-    display_units={},
+    display_feature_names=None,
+    display_units=None,
     label_fontsize=8,
     **kwargs,
 ):
@@ -78,6 +78,11 @@ def waterfall(
     all_features = data.attrs["features"]
     feature_names = np.array([display_feature_names.get(f, f) for f in features])
     units = np.array([display_units.get(f, "") for f in features])
+
+    if display_feature_names is None:
+        display_feature_names = {}
+    if display_units is None:
+        display_units = {}
 
     vars_c = [f"{var}_contrib" for var in features if "Bias" not in var]
     vars_val = [f"{var}_val" for var in features if "Bias" not in var]
@@ -503,8 +508,8 @@ class PlotFeatureContributions(PlotStructure):
         estimator_names,
         features,
         to_only_varname=None,
-        display_feature_names={},
-        display_units={},
+        display_feature_names=None,
+        display_units=None,
         **kwargs,
     ):
         """
@@ -516,6 +521,11 @@ class PlotFeatureContributions(PlotStructure):
                 a single row/example from the
                 result dataframe from tree_interpreter_simple
         """
+        if display_feature_names is None:
+            display_feature_names = {}
+        if display_units is None:
+            display_units = {}
+
         methods = list(data.keys())
 
         kwargs["max_display"] = kwargs.get("max_display", 10)
@@ -706,8 +716,8 @@ class PlotFeatureContributions(PlotStructure):
         features,
         methods,
         plot_type,
-        display_feature_names={},
-        display_units={},
+        display_feature_names=None,
+        display_units=None,
         feature_values=None,
         target_values=None,
         interaction_index="auto",
@@ -719,6 +729,11 @@ class PlotFeatureContributions(PlotStructure):
         Plot SHAP-style summary or dependence plot.
 
         """
+        if display_feature_names is None:
+            display_feature_names = {}
+        if display_units is None:
+            display_units = {}
+
         max_display = kwargs.get("max_display", 10)
         alpha = kwargs.get("alpha", 0.8)
         add_colorbar = kwargs.get("add_colorbar", True)

@@ -1,15 +1,12 @@
-ExplainToolkit
+ExplainToolkit API
 ---------------------
 
-.. toctree::
-    :glob:
-    :maxdepth: 1
-
-    notebooks/explain_toolkit
-
+``ExplainToolkit`` is the primary interface for scikit-explain.
+It provides methods for computing and plotting feature importance,
+feature effects, local attributions, and feature interactions.
 
 .. automodule:: skexplain.main.explain_toolkit
     :members:
-    
-.. toctree::
-    :maxdepth: 2
+
+.. autoclass:: skexplain.plot.config.PlotConfig
+    :members:

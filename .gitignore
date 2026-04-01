@@ -1,2 +1,6 @@
 *.pyc
 test.py
+.venv/
+docs/_build/
+__pycache__/
+*.egg-info/
