@@ -2270,7 +2270,7 @@ class GlobalExplainer(Attributes):
         sample_size=100,
         subsample=1.0,
         n_jobs=1,
-        clustering_kwargs={"n_clusters": 10},
+        clustering_kwargs=None,
     ):
         """
         The group only permutation feature importance (GOPFI) from Au et al. 2021
@@ -2282,6 +2282,9 @@ class GlobalExplainer(Attributes):
         Description of the parameters provided in ExplainToolkit.
 
         """
+        if clustering_kwargs is None:
+            clustering_kwargs = {"n_clusters": 10}
+
         parallel = Parallel(n_jobs=n_jobs)
         only = True if perm_method == "grouped_only" else False
 

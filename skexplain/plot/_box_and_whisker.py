@@ -20,7 +20,7 @@ def rounding(v):
 
 
 def box_and_whisker(
-    X_train, top_preds, example, display_feature_names={}, display_units={}, **kwargs
+    X_train, top_preds, example, display_feature_names=None, display_units=None, **kwargs
 ):
     """Create a box-and-whisker plot for the top predictor features with
     the current example's values annotated.
@@ -41,6 +41,11 @@ def box_and_whisker(
         bar_color : str, default 'lightblue'
             Fill color for the box plots.
     """
+    if display_feature_names is None:
+        display_feature_names = {}
+    if display_units is None:
+        display_units = {}
+
     color = kwargs.get("bar_color", "lightblue")
 
     f, axes = plt.subplots(dpi=300, nrows=len(top_preds), figsize=(4, 5))

@@ -30,11 +30,11 @@ class PlotInterpretCurves(PlotStructure):
         data,
         features,
         estimator_names,
-        display_feature_names={},
-        display_units={},
+        display_feature_names=None,
+        display_units=None,
         to_probability=False,
         add_hist=True,
-        line_kws={},
+        line_kws=None,
         **kwargs,
     ):
         """
@@ -57,6 +57,13 @@ class PlotInterpretCurves(PlotStructure):
 
 
         """
+        if display_feature_names is None:
+            display_feature_names = {}
+        if display_units is None:
+            display_units = {}
+        if line_kws is None:
+            line_kws = {}
+
         self.display_feature_names = display_feature_names
         self.display_units = display_units
 

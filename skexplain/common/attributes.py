@@ -3,15 +3,16 @@ import pandas as pd
 from collections import OrderedDict
 from .utils import is_list, to_list
 from sklearn.utils.validation import check_is_fitted
+from sklearn.exceptions import NotFittedError
 
 
 class Attributes:
     """
     The Attributes class handles checking and setting the attributes
-    for the InterpretToolkit, GlobalInterpret, and LocalInterpret classes.
+    for the ExplainToolkit, GlobalExplainer, and LocalExplainer classes.
 
     Attributes is a base class to be inherited by those classes and
-    should never be instantiated
+    should never be instantiated.
     """
 
     def set_estimator_attribute(self, estimator_objs, estimator_names):
@@ -47,11 +48,16 @@ class Attributes:
                 estimator_names
             ), "Number of estimator objects is not equal to the number of estimator names given!"
 
-        # Check that the estimator objects have been fit!
-
-        # if not estimator_is_none:
-        #    for m in estimator_objs:
-        #        check_is_fitted(m)
+        # Check that the estimator objects have been fit.
+        if not estimator_is_none:
+            for m in estimator_objs:
+                try:
+                    check_is_fitted(m)
+                except NotFittedError:
+                    raise NotFittedError(
+                        f"{type(m).__name__} has not been fitted. "
+                        f"Call .fit() before passing to ExplainToolkit."
+                    )
 
         # Check that the estimator objects have predict or predict_proba.
         if not estimator_is_none:

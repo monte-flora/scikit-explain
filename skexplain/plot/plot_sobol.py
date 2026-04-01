@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def sobol_plot(
-    results, est_name=None, ax=None, display_feature_names={}, n_features=None, kind="bar"
+    results, est_name=None, ax=None, display_feature_names=None, n_features=None, kind="bar"
 ):
     """Plot Sobol sensitivity indices (1st order and higher order) as a stacked bar or barh chart.
 
@@ -28,6 +28,9 @@ def sobol_plot(
     -------
     ax : matplotlib Axes
     """
+    if display_feature_names is None:
+        display_feature_names = {}
+
     if ax is None:
         f, ax = plt.subplots(dpi=300, figsize=(6, 4))
 

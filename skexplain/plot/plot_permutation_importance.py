@@ -96,7 +96,7 @@ class PlotImportance(PlotStructure):
         self,
         data,
         panels,
-        display_feature_names={},
+        display_feature_names=None,
         feature_colors=None,
         num_vars_to_plot=10,
         estimator_output="raw",
@@ -132,6 +132,9 @@ class PlotImportance(PlotStructure):
                 - rho_threshold
 
         """
+        if display_feature_names is None:
+            display_feature_names = {}
+
         xlabels = kwargs.get("xlabels", None)
         ylabels = kwargs.get("ylabels", None)
         xticks = kwargs.get("xticks", None)

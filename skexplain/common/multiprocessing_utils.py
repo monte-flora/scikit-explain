@@ -150,15 +150,21 @@ def run_parallel(
         # results is modified only by the main process, not by the pool workers.
         pbar.update()
 
-    if 0 <= n_jobs < 1:
-        n_jobs = int(n_jobs * mp.cpu_count())
+    if n_jobs == -1:
+        # Use all available CPUs (sklearn convention)
+        n_jobs = mp.cpu_count()
+    elif n_jobs < -1:
+        # Use (cpu_count + 1 + n_jobs) CPUs, e.g. -2 means all but one
+        n_jobs = max(1, mp.cpu_count() + 1 + n_jobs)
+    elif 0 < n_jobs < 1:
+        n_jobs = max(1, int(n_jobs * mp.cpu_count()))
     else:
         n_jobs = int(n_jobs)
 
+    if n_jobs < 1:
+        n_jobs = 1
+
     if n_jobs > mp.cpu_count():
-        print(
-            f"User requested {n_jobs} processors, but system only has {mp.cpu_count()}! Setting n_jobs to CPU count."
-        )
         n_jobs = mp.cpu_count()
 
     is_parallel = True if n_jobs != 1 else False

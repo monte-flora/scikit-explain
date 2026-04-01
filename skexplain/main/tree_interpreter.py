@@ -4,11 +4,11 @@ from multiprocessing.pool import Pool
 
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, _tree
-from distutils.version import LooseVersion
+from packaging.version import Version
 
 from tqdm import tqdm
 
-if LooseVersion(sklearn.__version__) < LooseVersion("0.17"):
+if Version(sklearn.__version__) < Version("0.17"):
     raise Exception("treeinterpreter requires scikit-learn 0.17 or later")
 
 

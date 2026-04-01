@@ -44,7 +44,7 @@ copyright = '2021, Montgomery Flora; Shawn Handler'
 author = 'Montgomery Flora; Shawn Handler'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.0.7'
+release = 'v0.1.7'
 
 # -- General configuration ---------------------------------------------------
 
@@ -71,6 +71,9 @@ autodoc_default_options = {
 autosummary_generate = True
 numpydoc_show_class_members = False
 
+# Don't execute notebooks during doc build (they require trained models)
+nbsphinx_execute = 'never'
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -96,7 +99,7 @@ release = 'latest'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.

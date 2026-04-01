@@ -59,8 +59,8 @@ class PlotScatter(PlotStructure):
         X,
         y,
         features,
-        display_feature_names={},
-        display_units={},
+        display_feature_names=None,
+        display_units=None,
         subsample=1.0,
         peak_val=None,
         kde=False,
@@ -69,8 +69,10 @@ class PlotScatter(PlotStructure):
         """
         Plot KDE between two features and color-code by the target variable
         """
-
-        # TODO: Plot relationships for multiple features!!
+        if display_feature_names is None:
+            display_feature_names = {}
+        if display_units is None:
+            display_units = {}
 
         estimator_names = list(estimators.keys())
         n_panels = len(estimator_names)
