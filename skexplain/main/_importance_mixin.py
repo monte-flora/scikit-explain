@@ -3,12 +3,13 @@ import xarray as xr
 
 from ..common.utils import is_str, to_xarray, check_all_features_for_ale
 from ..common.importance_utils import retrieve_important_vars, combine_top_features, compute_importance
-from ._validation import normalize_features, normalize_estimator_names
+from ._validation import normalize_features, normalize_estimator_names, track_timing
 
 
 class ImportanceMixin:
     """Mixin providing feature-importance methods for ExplainToolkit."""
 
+    @track_timing
     def permutation_importance(
         self,
         n_vars,
@@ -188,6 +189,7 @@ class ImportanceMixin:
 
         return results_ds
 
+    @track_timing
     def grouped_permutation_importance(
         self,
         perm_method,
@@ -336,6 +338,7 @@ class ImportanceMixin:
 
         return results_ds
 
+    @track_timing
     def ale_variance(
         self,
         ale,
