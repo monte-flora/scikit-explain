@@ -9,7 +9,7 @@ class IOMixin:
 
     def load(self, fnames, dtype="dataset"):
         """
-        Load results of a computation (permutation importance, calc_ale, calc_pd, etc)
+        Load results of a computation (permutation importance, ale, pd, etc)
 
         Parameters
         ----------
@@ -78,7 +78,7 @@ class IOMixin:
 
     def save(self, fname, data, complevel=5, df_save_func="to_json", **kwargs):
         """
-        Save results of a computation (permutation importance, calc_ale, calc_pd, etc)
+        Save results of a computation (permutation importance, ale, pd, etc)
 
         Parameters
         ----------
@@ -105,7 +105,7 @@ class IOMixin:
         ...                             X=X,
         ...                             y=y,
         ...                            )
-        >>> perm_imp_results = explainer.calc_permutation_importance(
+        >>> perm_imp_results = explainer.permutation_importance(
         ...                       n_vars=10,
         ...                       evaluation_fn = 'norm_aupdc',
         ...                       direction = 'backward',

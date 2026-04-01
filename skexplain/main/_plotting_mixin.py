@@ -162,11 +162,11 @@ class PlottingMixin:
         ...                             X=X,
         ...                             y=y,
         ...                            )
-        >>> pd = explainer.calc_pd(features='all')
+        >>> pd_ds = explainer.pd(features='all')
         >>> # Provide a small subset of features to plot
         >>> important_vars = ['sfc_temp', 'temp2m', 'sfcT_hrs_bl_frez',
         ...     'tmp2m_hrs_bl_frez','uplwav_flux']
-        >>> explainer.plot_pd(pd, features=important_vars)
+        >>> explainer.plot_pd(pd_ds, features=important_vars)
 
         """
         estimator_names = normalize_estimator_names(estimator_names, self.estimator_names)
@@ -273,7 +273,7 @@ class PlottingMixin:
         ...     'tmp2m_hrs_bl_frez','uplwav_flux']
         >>> explainer.plot_ale(ale, features=important_vars)
 
-        .. image :: ../../images/ale_1d.png
+        .. image :: /_static/images/ale_1d.png
         """
         estimator_names = normalize_estimator_names(estimator_names, self.estimator_names)
 
@@ -350,20 +350,16 @@ class PlottingMixin:
         >>> import shap
         >>> estimators = skexplain.load_models() # pre-fit estimators within skexplain
         >>> X, y = skexplain.load_data() # training data
-        >>> # Only give the X you want contributions for.
-        >>> # In this case, we are using a single example.
         >>> single_example = X.iloc[[0]]
         >>> explainer = skexplain.ExplainToolkit(estimators=estimators,
         ...                             X=single_example,
         ...                            )
-        >>> # Create a background dataset; randomly sample 100 X
         >>> background_dataset = shap.sample(X, 100)
-        >>> contrib_ds = explainer.local_contributions(method='shap',
-        ...                   background_dataset=background_dataset)
-
+        >>> contrib_ds = explainer.local_attributions(method='shap',
+        ...     shap_kws={'masker': background_dataset, 'algorithm': 'auto'})
         >>> explainer.plot_contributions(contrib_ds)
 
-        .. image :: ../../images/feature_contribution_single.png
+        .. image :: /_static/images/feature_contribution_single.png
         """
         if display_feature_names is None:
             display_feature_names = self._plot_config.display_feature_names or {}
@@ -468,21 +464,17 @@ class PlottingMixin:
         ...                             X=X,
         ...                             y=y,
         ...                            )
-        >>> # Create a background dataset; randomly sample 100 X
-        >>> background_dataset = shap.sample(X, 100)
-        >>> shap_results = explainer.shap(background_dataset)
-        >>> print(estimator_names)
-        ... ['Random Forest', ]
-        >>> shap_values, bias = shap_results[estimator_names[0]]
+        >>> results = explainer.local_attributions(method='shap')
         >>> # Plot the SHAP-summary style plot
-        >>> explainer.plot_shap(plot_type='summary',shap_values=shap_values,)
-
+        >>> explainer.scatter_plot(results, estimator_name='Random Forest',
+        ...     plot_type='summary')
         >>> # Plot the SHAP-dependence style plot
-        >>> important_vars = ['sfc_temp', 'temp2m', 'sfcT_hrs_bl_frez', 'tmp2m_hrs_bl_frez','uplwav_flux']
-        >>> explainer.plot_shap(plot_type='dependence',
-        ...            shap_values=shap_values, features=important_vars)
+        >>> important_vars = ['sfc_temp', 'temp2m', 'sfcT_hrs_bl_frez',
+        ...     'tmp2m_hrs_bl_frez', 'uplwav_flux']
+        >>> explainer.scatter_plot(results, estimator_name='Random Forest',
+        ...     plot_type='dependence', features=important_vars)
 
-        .. image :: ../../images/shap_dependence.png
+        .. image :: /_static/images/shap_dependence.png
 
         """
         if display_feature_names is None:
@@ -602,7 +594,7 @@ class PlottingMixin:
         ...     panels=[('multipass', 'Random Forest')],
         ...     plot_correlated_features=True)
 
-        .. image :: ../../images/multi_pass_perm_imp.png
+        .. image :: /_static/images/multi_pass_perm_imp.png
 
         """
         if is_list(data):
