@@ -1,10 +1,11 @@
 from ..common.utils import to_xarray, check_all_features_for_ale
-from ._validation import normalize_features, normalize_estimator_names
+from ._validation import normalize_features, normalize_estimator_names, track_timing
 
 
 class CurvesMixin:
     """Mixin providing ICE / PD / ALE curve methods and main-effect complexity."""
 
+    @track_timing
     def ice(
         self,
         features,
@@ -91,6 +92,7 @@ class CurvesMixin:
 
         return results_ds
 
+    @track_timing
     def pd(
         self,
         features,
@@ -173,6 +175,7 @@ class CurvesMixin:
 
         return results_ds
 
+    @track_timing
     def ale(
         self,
         features=None,
@@ -271,6 +274,7 @@ class CurvesMixin:
 
         return results_ds
 
+    @track_timing
     def main_effect_complexity(self, ale, estimator_names=None, max_segments=10, approx_error=0.05):
         """
         Compute the Main Effect Complexity (MEC; Molnar et al. 2019) [5]_.

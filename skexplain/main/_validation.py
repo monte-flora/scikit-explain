@@ -1,7 +1,12 @@
 """Shared validation and normalization helpers for ExplainToolkit methods."""
 
 import itertools
+import time
+import functools
+import logging
 from ..common.utils import is_str, is_list
+
+logger = logging.getLogger("skexplain")
 
 
 def normalize_features(features, all_features, allow_2d=False):
@@ -55,3 +60,27 @@ def normalize_estimator_names(names, default_names):
     if is_str(names):
         return [names]
     return list(names)
+
+
+def track_timing(method):
+    """Decorator that records computation time in the returned dataset's attrs.
+
+    Adds ``computation_time_seconds`` to ``self.attrs_dict`` before
+    ``_append_attributes`` is called. Also logs the elapsed time.
+
+    Only works on methods whose ``self`` has an ``attrs_dict`` attribute.
+    """
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        start = time.perf_counter()
+        result = method(self, *args, **kwargs)
+        elapsed = time.perf_counter() - start
+        self.attrs_dict["computation_time_seconds"] = round(elapsed, 3)
+        # Update attrs on the returned result if it has attrs (Dataset/DataFrame)
+        if hasattr(result, "attrs"):
+            result.attrs["computation_time_seconds"] = round(elapsed, 3)
+        logger.info(
+            "%s completed in %.2fs", method.__name__, elapsed,
+        )
+        return result
+    return wrapper

@@ -2,6 +2,7 @@ import numpy as np
 import warnings
 
 from ..common.utils import to_xarray, is_str, is_list, is_dataset
+from ._validation import track_timing
 
 
 class AttributionMixin:
@@ -26,6 +27,7 @@ class AttributionMixin:
             lime_kws=lime_kws,
         )
 
+    @track_timing
     def local_attributions(self, method, shap_kws=None, lime_kws=None, n_jobs=1):
         """
         Compute the SHapley Additive Explanations (SHAP) values [13]_ [14]_ [15]_,

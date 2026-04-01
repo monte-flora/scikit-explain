@@ -1,20 +1,24 @@
+"""Parallelization utilities for scikit-explain.
+
+Uses joblib.Parallel as the single backend for all parallel computation.
+Provides tqdm progress bars and structured logging for failures.
+"""
+
 import multiprocessing as mp
 import itertools
-from multiprocessing.pool import Pool
-from datetime import datetime
-
-from tqdm import tqdm
-
-# from tqdm.notebook import tqdm
+import logging
+import time
 import traceback
-from collections import ChainMap
 import warnings
+import contextlib
 from copy import copy
 
+from tqdm import tqdm
 from joblib import delayed, Parallel
 import joblib
-import time
-import contextlib
+
+
+logger = logging.getLogger("skexplain")
 
 # Ignore the warning for joblib to set njobs=1 for
 # models like RandomForest
@@ -23,7 +27,7 @@ warnings.simplefilter("ignore", UserWarning)
 
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
-    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+    """Context manager to patch joblib to report into tqdm progress bar given as argument."""
 
     class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
         def __call__(self, *args, **kwargs):
@@ -39,75 +43,51 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def text_progessbar(seq, total=None):
-    step = 1
-    tick = time.time()
-    while True:
-        time_diff = time.time() - tick
-        avg_speed = time_diff / step
-        total_str = f"of {total if total else ''}"
-        print(
-            "step",
-            step,
-            "%.2f" % time_diff,
-            "avg: %.2f iter/sec" % avg_speed,
-            total_str,
-        )
-        step += 1
-        yield next(seq)
-
-
-all_bar_funcs = {
-    "tqdm": lambda args: lambda x: tqdm(x, **args),
-    "txt": lambda args: lambda x: text_progessbar(x, **args),
-    "False": lambda args: iter,
-    "None": lambda args: iter,
-}
-
-
-def ParallelExecutor(use_bar="tqdm", joblib_args={}, tqdm_args={}):
-    def aprun(bar=use_bar, **tqdm_args):
-        def tmp(op_iter):
-            if str(bar) in all_bar_funcs.keys():
-                bar_func = all_bar_funcs[str(bar)](tqdm_args)
-            else:
-                raise ValueError("Value %s not supported as bar type" % bar)
-            return Parallel(**joblib_args)(bar_func(op_iter))
-
-        return tmp
-
-    return aprun
-
-
-class LogExceptions(object):
-    def __init__(self, func):
-        self.func = func
-
-    def error(self, msg, *args, **kwargs):
-        """Shortcut to multiprocessing's logger"""
-        return mp.get_logger().error(msg, *args, **kwargs)
-
-    def __call__(self, *args, **kwargs):
-        try:
-            result = self.func(*args, **kwargs)
-
-        except Exception as e:
-            # Here we add some debugging help. If multiprocessing's
-            # debugging is on, it will arrange to log the traceback
-            self.error(traceback.format_exc())
-            # Re-raise the original exception so the Pool worker can
-            # clean up
-            raise
-
-        # It was fine, give a normal answer
-        return result
-
-
 def to_iterator(*lists):
-    """
-    turn list
-    """
+    """Create a Cartesian product iterator from multiple lists."""
     return itertools.product(*lists)
+
+
+def _resolve_n_jobs(n_jobs):
+    """Resolve n_jobs to a concrete positive integer.
+
+    Follows the sklearn convention:
+      - n_jobs=1: serial execution
+      - n_jobs=-1: use all CPUs
+      - n_jobs=-2: use all CPUs except one
+      - 0 < n_jobs < 1: fraction of available CPUs
+      - n_jobs > 1: literal number of CPUs
+
+    Parameters
+    ----------
+    n_jobs : int or float
+        Number of jobs specification.
+
+    Returns
+    -------
+    int
+        Resolved number of jobs (>= 1).
+    """
+    cpu_count = mp.cpu_count()
+
+    if n_jobs == -1:
+        return cpu_count
+    elif n_jobs < -1:
+        return max(1, cpu_count + 1 + n_jobs)
+    elif 0 < n_jobs < 1:
+        return max(1, int(n_jobs * cpu_count))
+    else:
+        n_jobs = int(n_jobs)
+
+    if n_jobs < 1:
+        return 1
+    if n_jobs > cpu_count:
+        logger.info(
+            "Requested %d jobs but only %d CPUs available. Using %d.",
+            n_jobs, cpu_count, cpu_count,
+        )
+        return cpu_count
+    return n_jobs
 
 
 def run_parallel(
@@ -115,79 +95,134 @@ def run_parallel(
     args_iterator,
     n_jobs,
     description=None,
-    kwargs={},
+    kwargs=None,
     nprocs_to_use=None,
     total=None,
 ):
+    """Run a function over an iterator of arguments, optionally in parallel.
+
+    Uses joblib.Parallel with the 'loky' backend for fork-safe parallelism.
+    Displays a tqdm progress bar during execution.
+
+    Parameters
+    ----------
+    func : callable
+        The function to execute. Called as ``func(*args, **kwargs)``
+        for each item in ``args_iterator``.
+    args_iterator : iterable
+        Each element is a tuple of positional arguments for ``func``.
+        If an element is a string, it is wrapped in a tuple.
+    n_jobs : int or float
+        Number of parallel jobs. See ``_resolve_n_jobs`` for conventions.
+        n_jobs=1 runs in serial.
+    description : str, optional
+        Label for the tqdm progress bar.
+    kwargs : dict, optional
+        Keyword arguments passed to every call of ``func``.
+    nprocs_to_use : int, optional
+        Deprecated. Use ``n_jobs`` instead.
+    total : int, optional
+        Ignored (computed from args_iterator).
+
+    Returns
+    -------
+    list
+        Results from each call to ``func``, in order.
     """
-    Runs a series of python scripts in parallel. Scripts uses the tqdm to create a
-    progress bar. If n_jobs == 1, then process is run in serial.
-    Args:
-    -------------------------
-        func : callable
-            python function, the function to be parallelized; can be a function which issues a series of python scripts
-        args_iterator :  iterable, list,
-            python iterator, the arguments of func to be iterated over
-                             it can be the iterator itself or a series of list
-        n_jobs : int or float,
-            if int, taken as the literal number of processors to use
-            if float (between 0 and 1), taken as the percentage of available processors to use
-        kwargs : dict
-            keyword arguments to be passed to the func
-    """
+    if kwargs is None:
+        kwargs = {}
+
     if nprocs_to_use is not None:
-        warnings.warn("nprocs_to_use will deprecated and replaced by n_jobs.", DeprecationWarning)
+        warnings.warn(
+            "nprocs_to_use is deprecated; use n_jobs instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         n_jobs = nprocs_to_use
 
-    iter_copy = copy(args_iterator)
+    # Materialize the iterator to get total count
+    args_list = list(args_iterator)
+    total = len(args_list)
+    n_jobs = _resolve_n_jobs(n_jobs)
 
-    total = len(list(iter_copy))
-    pbar = tqdm(total=total, desc=description)
-    results = []
+    is_parallel = n_jobs != 1
 
-    def update(*a):
-        # This is called whenever a process returns a result.
-        # results is modified only by the main process, not by the pool workers.
-        pbar.update()
+    logger.debug(
+        "run_parallel: %s (%d tasks, n_jobs=%d, parallel=%s)",
+        description or "unnamed", total, n_jobs, is_parallel,
+    )
 
-    if n_jobs == -1:
-        # Use all available CPUs (sklearn convention)
-        n_jobs = mp.cpu_count()
-    elif n_jobs < -1:
-        # Use (cpu_count + 1 + n_jobs) CPUs, e.g. -2 means all but one
-        n_jobs = max(1, mp.cpu_count() + 1 + n_jobs)
-    elif 0 < n_jobs < 1:
-        n_jobs = max(1, int(n_jobs * mp.cpu_count()))
+    start_time = time.perf_counter()
+
+    if is_parallel:
+        with tqdm_joblib(tqdm(total=total, desc=description)):
+            results = Parallel(n_jobs=n_jobs, backend="loky")(
+                delayed(_safe_call)(func, _ensure_tuple(args), kwargs)
+                for args in args_list
+            )
     else:
-        n_jobs = int(n_jobs)
+        results = []
+        pbar = tqdm(total=total, desc=description)
+        for args in args_list:
+            results.append(_safe_call(func, _ensure_tuple(args), kwargs))
+            pbar.update()
+        pbar.close()
 
-    if n_jobs < 1:
-        n_jobs = 1
-
-    if n_jobs > mp.cpu_count():
-        n_jobs = mp.cpu_count()
-
-    is_parallel = True if n_jobs != 1 else False
-
-    if is_parallel:
-        pool = Pool(processes=n_jobs)
-
-    ps = []
-    results = []
-    for args in args_iterator:
-        if isinstance(args, str):
-            args = (args,)
-
-        if is_parallel:
-            p = pool.apply_async(LogExceptions(func), args=args, kwds=kwargs, callback=update)
-            ps.append(p)
-        else:
-            results.append(LogExceptions(func)(*args, **kwargs))
-            update()
-
-    if is_parallel:
-        pool.close()
-        pool.join()
-        results = [p.get() for p in ps]
+    elapsed = time.perf_counter() - start_time
+    logger.info(
+        "run_parallel: %s completed in %.2fs (%d tasks, n_jobs=%d)",
+        description or "unnamed", elapsed, total, n_jobs,
+    )
 
     return results
+
+
+def _ensure_tuple(args):
+    """Wrap a single string arg in a tuple."""
+    if isinstance(args, str):
+        return (args,)
+    return args
+
+
+def _safe_call(func, args, kwargs):
+    """Call func with logging on failure."""
+    try:
+        return func(*args, **kwargs)
+    except Exception:
+        logger.error(
+            "Parallel task failed:\n  func: %s\n  args: %s\n%s",
+            func.__name__ if hasattr(func, '__name__') else str(func),
+            str(args)[:200],
+            traceback.format_exc(),
+        )
+        raise
+
+
+# Keep backward-compatible imports
+def ParallelExecutor(use_bar="tqdm", joblib_args=None, tqdm_args=None):
+    """Create a parallel executor with a progress bar.
+
+    .. deprecated::
+        Use ``run_parallel`` instead.
+    """
+    if joblib_args is None:
+        joblib_args = {}
+    if tqdm_args is None:
+        tqdm_args = {}
+
+    all_bar_funcs = {
+        "tqdm": lambda args: lambda x: tqdm(x, **args),
+        "False": lambda args: iter,
+        "None": lambda args: iter,
+    }
+
+    def aprun(bar=use_bar, **tqdm_args):
+        def tmp(op_iter):
+            if str(bar) in all_bar_funcs.keys():
+                bar_func = all_bar_funcs[str(bar)](tqdm_args)
+            else:
+                raise ValueError("Value %s not supported as bar type" % bar)
+            return Parallel(**joblib_args)(bar_func(op_iter))
+        return tmp
+
+    return aprun

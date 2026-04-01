@@ -2,12 +2,13 @@ import warnings
 import xarray as xr
 
 from ..common.utils import check_all_features_for_ale
-from ._validation import normalize_estimator_names
+from ._validation import normalize_estimator_names, track_timing
 
 
 class InteractionMixin:
     """Mixin providing feature-interaction methods for ExplainToolkit."""
 
+    @track_timing
     def perm_based_interaction(
         self,
         features,
@@ -117,6 +118,7 @@ class InteractionMixin:
 
         return results_ds
 
+    @track_timing
     def friedman_h_stat(
         self, dataset_1d=None, dataset_2d=None, features=None, estimator_names=None, **kwargs
     ):
@@ -217,6 +219,7 @@ class InteractionMixin:
 
         return results_ds
 
+    @track_timing
     def interaction_strength(self, ale, estimator_names=None, **kwargs):
         """
         Compute the InterAction Strength (IAS) statistic from Molnar et al. (2019) [5]_.
@@ -289,6 +292,7 @@ class InteractionMixin:
 
         return results_ds
 
+    @track_timing
     def sobol_indices(self, n_bootstrap=5000, class_index=1):
         """
         Compute the 1st Order and Total order Sobol Indices. Useful for diagnosing feature
