@@ -222,28 +222,23 @@ class AttributionMixin:
         ---------
         >>> import skexplain
         >>> import shap
-        >>> # pre-fit estimators within skexplain
         >>> estimators = skexplain.load_models()
-        >>> X, y = skexplain.load_data() # training data
-        >>> # Only give the X you want contributions for.
-        >>> # In this case, we are using a single example.
+        >>> X, y = skexplain.load_data()
         >>> single_example = X.iloc[[0]]
-        >>> explainer = skexplain.ExplainToolkit(estimators=estimators
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators,
         ...                             X=single_example,
         ...                            )
-        >>> # Create a background dataset; randomly sample 100 X
-        >>> background_dataset = shap.sample(X, 100)
-        >>> contrib_ds = explainer.average_contributions(method='shap',
-        ...                   background_dataset=background_dataset)
+        >>> contrib_ds = explainer.local_attributions(method='shap',
+        ...     shap_kws={'masker': shap.sample(X, 100), 'algorithm': 'auto'})
+        >>> avg_contrib = explainer.average_attributions(data=contrib_ds)
 
         >>> # For the performance-based contributions,
         >>> # provide the full set of X and y values.
-        >>> explainer = skexplain.ExplainToolkit(estimators=estimators
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators,
         ...                             X=X,
-        ...                            y=y,
+        ...                             y=y,
         ...                            )
-        >>> contrib_ds = explainer.average_contributions(method='shap',
-        ...                   background_dataset=background_dataset,
+        >>> avg_contrib = explainer.average_attributions(method='shap',
         ...                   performance_based=True, n_samples=100)
 
         """

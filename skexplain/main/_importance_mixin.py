@@ -126,8 +126,7 @@ class ImportanceMixin:
         >>> # pre-fit estimators within skexplain
         >>> estimators = skexplain.load_models()
         >>> X, y = skexplain.load_data() # training data
-        >>> # Only compute for the first model
-        >>> explainer = skexplain.ExplainToolkit(estimators=estimators[0],
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
@@ -294,8 +293,7 @@ class ImportanceMixin:
         >>> # pre-fit estimators within skexplain
         >>> estimators = skexplain.load_models()
         >>> X, y = skexplain.load_data() # training data
-        >>> # Only compute for the first model
-        >>> explainer = skexplain.ExplainToolkit(estimators=estimators[0],
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators,
         ...                             X=X,
         ...                             y=y,
         ...                            )
