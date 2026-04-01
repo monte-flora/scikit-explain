@@ -227,7 +227,8 @@ def to_skexplain_importance(
         This is useful when comparing importance across different methods.
     """
     bootstrap = False
-    if method == "sage":
+    importances_std = None
+    if method in ("sage", "grouped_sage") and hasattr(importances, "values") and hasattr(importances, "std"):
         importances_std = importances.std
         importances = importances.values
     elif method == "coefs":
@@ -267,7 +268,7 @@ def to_skexplain_importance(
     else:
         scores_ranked = importances[ranked_indices]
 
-    if method == "sage":
+    if method in ("sage", "grouped_sage") and importances_std is not None:
         std_ranked = importances_std[ranked_indices]
 
     features_ranked = np.array(feature_names)[ranked_indices]
@@ -293,9 +294,9 @@ def to_skexplain_importance(
         scores_ranked,
     )
 
-    if method == "sage":
-        data[f"sage_scores_std__{estimator_name}"] = (
-            [f"n_vars_sage"],
+    if method in ("sage", "grouped_sage") and importances_std is not None:
+        data[f"{method}_scores_std__{estimator_name}"] = (
+            [f"n_vars_{method}"],
             std_ranked,
         )
 
@@ -305,6 +306,46 @@ def to_skexplain_importance(
     data.attrs["estimator output"] = "probability"
 
     return data
+
+
+def group_sage(sage_results, groups, estimator_name=None):
+    """Group SAGE importance values by feature groups.
+
+    Parameters
+    ----------
+    sage_results : xarray.Dataset
+        Results from ``ExplainToolkit.sage()`` or ``to_skexplain_importance``
+        with method='sage'.
+    groups : dict
+        Feature groups. Keys are group names, values are lists of feature names.
+    estimator_name : str, optional
+        Estimator name. If None, inferred from the dataset.
+
+    Returns
+    -------
+    xarray.Dataset
+        Grouped SAGE importance values.
+    """
+    if estimator_name is None:
+        estimator_name = list(sage_results.data_vars)[0].split("__")[-1]
+
+    features = list(sage_results[f"sage_rankings__{estimator_name}"].values)
+    scores = sage_results[f"sage_scores__{estimator_name}"].values.flatten()
+
+    group_vals = np.zeros(len(groups))
+    group_names = []
+    for i, (group_name, group_features) in enumerate(groups.items()):
+        indices = [features.index(f) for f in group_features if f in features]
+        group_vals[i] = np.sum(scores[indices])
+        group_names.append(group_name)
+
+    return to_skexplain_importance(
+        group_vals,
+        estimator_name=estimator_name,
+        feature_names=group_names,
+        method="grouped_sage",
+        normalize=False,
+    )
 
 
 def combine_top_features(results_dict, n_vars=None):
