@@ -12,8 +12,12 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 import platform
-from distutils.sysconfig import get_config_var
-from distutils.version import LooseVersion
+try:
+    from sysconfig import get_config_var
+except ImportError:
+    from distutils.sysconfig import get_config_var
+
+from packaging.version import Version
 
 
 # Package meta-data.
@@ -48,8 +52,8 @@ EXTRAS = {
 
 if sys.platform == "darwin":
     if "MACOSX_DEPLOYMENT_TARGET" not in os.environ:
-        current_system = LooseVersion(platform.mac_ver()[0])
-        python_target = LooseVersion(get_config_var("MACOSX_DEPLOYMENT_TARGET"))
+        current_system = Version(platform.mac_ver()[0])
+        python_target = Version(get_config_var("MACOSX_DEPLOYMENT_TARGET"))
         if python_target < "10.9" and current_system >= "10.9":
             os.environ["MACOSX_DEPLOYMENT_TARGET"] = "10.9"
 
