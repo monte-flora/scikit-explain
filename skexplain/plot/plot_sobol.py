@@ -3,7 +3,8 @@ import pandas as pd
 
 
 def sobol_plot(
-    results, est_name=None, ax=None, display_feature_names=None, n_features=None, kind="bar"
+    results, est_name=None, ax=None, display_feature_names=None, n_features=None,
+    kind="bar", fontsize=None,
 ):
     """Plot Sobol sensitivity indices (1st order and higher order) as a stacked bar or barh chart.
 
@@ -59,12 +60,19 @@ def sobol_plot(
 
     ax = df_result.plot(ax=ax, x="variable", kind=kind, stacked=True, rot=rot)
 
+    # Scale tick and label font sizes
+    if fontsize is None:
+        fontsize = 11
+    tick_fontsize = max(8, fontsize - 2)
+
     if kind == "bar":
         ax.set_xlabel("")
-        ax.set_ylabel("Total Sobol Index\n(1st order + higher order)")
+        ax.set_ylabel("Total Sobol Index\n(1st order + higher order)", fontsize=fontsize)
     else:
         ax.set_ylabel("")
-        ax.set_xlabel("Total Sobol Index\n(1st order + higher order)")
+        ax.set_xlabel("Total Sobol Index\n(1st order + higher order)", fontsize=fontsize)
         ax.invert_yaxis()
+
+    ax.tick_params(axis="both", labelsize=tick_fontsize)
 
     return ax

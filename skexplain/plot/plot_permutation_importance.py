@@ -144,6 +144,7 @@ class PlotImportance(PlotStructure):
         rho_threshold = kwargs.get("rho_threshold", 0.8)
         plot_reference_score = kwargs.get("plot_reference_score", True)
         plot_error = kwargs.get("plot_error", True)
+        show_method_subtitle = kwargs.get("show_method_subtitle", True)
 
         only_one_method = all([m[0] == panels[0][0] for m in panels])
         only_one_estimator = all([m[1] == panels[0][1] for m in panels])
@@ -234,17 +235,33 @@ class PlotImportance(PlotStructure):
                 )
 
             if plot_reference_score:
+                ref_label_fontsize = self.FONT_SIZES["teensie"]
+                # Small nudge to the right so text doesn't sit on the dashed line
+                x_range = np.ptp(scores_to_plot) if len(scores_to_plot) > 0 else 1.0
+                nudge = max(0.01, x_range * 0.02)
                 if "forward" in method:
-                    ax.axvline(
-                        results[f"all_permuted_score__{estimator_name}"].mean(), color="k", ls=":"
+                    ref_score = results[f"all_permuted_score__{estimator_name}"].mean()
+                    ax.axvline(ref_score, color="k", ls=":", alpha=0.7, zorder=1)
+                    ax.text(
+                        ref_score + nudge, len(scores_to_plot) / 2, "Original Score",
+                        fontsize=ref_label_fontsize,
+                        va="center", ha="left", color="0.3",
+                        rotation=90,
                     )
                 elif "backward" in method:
-                    ax.axvline(
-                        results[f"original_score__{estimator_name}"].mean(), color="k", ls="--"
+                    ref_score = results[f"original_score__{estimator_name}"].mean()
+                    ax.axvline(ref_score, color="k", ls="--", alpha=0.7, zorder=1)
+                    ax.text(
+                        ref_score + nudge, len(scores_to_plot) / 2, "Original Score",
+                        fontsize=ref_label_fontsize,
+                        va="center", ha="left", color="0.3",
+                        rotation=90,
                     )
 
-            # Despine
+            # Despine — keep bottom spine and ticks for x-axis clarity
             self.despine_plt(ax)
+            ax.spines["bottom"].set_visible(True)
+            ax.tick_params(axis="x", which="both", length=3)
 
             elinewidth = 0.9 if n_panels <= 3 else 0.5
 
@@ -333,11 +350,12 @@ class PlotImportance(PlotStructure):
             else:
                 self.set_n_ticks(ax, option="x")
 
-        xlabel = (
-            self.DISPLAY_NAMES_DICT.get(method, method)
-            if (only_one_method and xlabels is None)
-            else ""
-        )
+        if show_method_subtitle and only_one_method and xlabels is None:
+            xlabel = self.DISPLAY_NAMES_DICT.get(method, method)
+        elif xlabels is not None:
+            xlabel = ""
+        else:
+            xlabel = ""
 
         major_ax = self.set_major_axis_labels(
             fig,

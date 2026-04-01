@@ -59,20 +59,34 @@ class PlotStructure:
         plt.rc("legend", fontsize=self.FONT_SIZES["teensie"])  # legend fontsize
         plt.rc("figure", titlesize=self.FONT_SIZES["big"])  # fontsize of the figure title
 
+    # Golden ratio for aesthetically pleasing proportions
+    GOLDEN_RATIO = 1.618
+
     def get_fig_props(self, n_panels, **kwargs):
-        """Determine appropriate figure properties"""
-        width_slope = 0.875
-        height_slope = 0.45
-        intercept = 3.0 - width_slope
-        figsize = (
-            min((n_panels * width_slope) + intercept, 19),
-            min((n_panels * height_slope) + intercept, 12),
-        )
+        """Determine appropriate figure properties using the golden ratio.
 
-        wspace = (-0.03 * n_panels) + 0.85
-        hspace = (0.0175 * n_panels) + 0.3
-
+        Each panel targets a golden-ratio aspect (width slightly > height).
+        Total figure size scales with panel count while maintaining
+        pleasing proportions.
+        """
         n_columns = kwargs.get("n_columns", 3)
+        n_columns = min(n_columns, n_panels)
+        n_rows = max(1, int(np.ceil(n_panels / n_columns)))
+
+        # Per-panel dimensions based on golden ratio
+        panel_width = 3.5
+        panel_height = panel_width / self.GOLDEN_RATIO  # ~2.16
+
+        # Total figure size with padding for axis labels and legend
+        total_width = max(6, min(n_columns * panel_width + 1.0, 19))
+        total_height = max(4.5, min(n_rows * (panel_height + 1.0) + 1.5, 14))
+
+        figsize = (total_width, total_height)
+
+        # Spacing scales inversely with panel count
+        wspace = max(0.3, 0.85 - 0.03 * n_panels)
+        hspace = max(0.3, 0.30 + 0.02 * n_panels)
+
         wspace = wspace + 0.25 if n_columns > 3 else wspace
 
         kwargs["figsize"] = kwargs.get("figsize", figsize)
@@ -424,6 +438,7 @@ class PlotStructure:
         physical units)
         """
         fontsize = kwargs.get("fontsize", self.FONT_SIZES["tiny"])
+        fontweight = kwargs.get("fontweight", "normal")
         if xaxis_label is not None:
             xaxis_label_pretty = self.display_feature_names.get(xaxis_label, xaxis_label)
             units = self.display_units.get(xaxis_label, "")
@@ -432,7 +447,7 @@ class PlotStructure:
             else:
                 xaxis_label_with_units = f"{xaxis_label_pretty} ({units})"
 
-            ax.set_xlabel(xaxis_label_with_units, fontsize=fontsize)
+            ax.set_xlabel(xaxis_label_with_units, fontsize=fontsize, fontweight=fontweight)
 
         if yaxis_label is not None:
             yaxis_label_pretty = self.display_feature_names.get(yaxis_label, yaxis_label)
@@ -442,16 +457,13 @@ class PlotStructure:
             else:
                 yaxis_label_with_units = f"{yaxis_label_pretty} ({units})"
 
-            ax.set_ylabel(yaxis_label_with_units, fontsize=fontsize)
+            ax.set_ylabel(yaxis_label_with_units, fontsize=fontsize, fontweight=fontweight)
 
     def set_legend(self, n_panels, fig, ax, major_ax=None, **kwargs):
         """
-        Set a single legend on the bottom of a figure
-        for a set of subplots.
+        Set a single legend at the bottom of a figure,
+        outside the subplot area so it never overlaps panels.
         """
-        if major_ax is None:
-            major_ax = self.set_major_axis_labels(fig)
-
         fontsize = kwargs.get("fontsize", "medium")
         ncol = kwargs.get("ncol", 3)
         handles = kwargs.get("handles", None)
@@ -463,28 +475,38 @@ class PlotStructure:
         if labels is None:
             _, labels = ax.get_legend_handles_labels()
 
-        if n_panels > 3:
-            bbox_to_anchor = (0.5, -0.35)
+        bbox_to_anchor = kwargs.get("bbox_to_anchor", None)
+
+        if bbox_to_anchor is not None:
+            # User override — use major_ax approach for backward compat
+            if major_ax is None:
+                major_ax = self.set_major_axis_labels(fig)
+            major_ax.legend(
+                handles, labels,
+                loc="lower center",
+                bbox_to_anchor=bbox_to_anchor,
+                fancybox=True, shadow=True,
+                ncol=ncol, fontsize=fontsize,
+            )
         else:
-            bbox_to_anchor = (0.5, -0.5)
-
-        bbox_to_anchor = kwargs.get("bbox_to_anchor", bbox_to_anchor)
-
-        # Shrink current axis's height by 10% on the bottom
-        box = major_ax.get_position()
-        major_ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
-
-        # Put a legend below current axis
-        major_ax.legend(
-            handles,
-            labels,
-            loc="lower center",
-            bbox_to_anchor=bbox_to_anchor,
-            fancybox=True,
-            shadow=True,
-            ncol=ncol,
-            fontsize=fontsize,
-        )
+            # Render layout first so we can query actual subplot positions
+            fig.canvas.draw()
+            # Find the lowest subplot bottom edge
+            bottoms = [ax_i.get_position().y0 for ax_i in fig.get_axes()
+                       if ax_i.get_visible() and ax_i.get_label() != '<colorbar>']
+            if bottoms:
+                lowest = min(bottoms)
+            else:
+                lowest = 0.1
+            # Place legend centered just below the lowest subplot
+            legend_y = max(0.0, lowest - 0.08)
+            fig.legend(
+                handles, labels,
+                loc="upper center",
+                bbox_to_anchor=(0.5, legend_y),
+                fancybox=True, shadow=True,
+                ncol=ncol, fontsize=fontsize,
+            )
 
     def set_minor_ticks(self, ax):
         """
