@@ -174,7 +174,7 @@ class PlotInterpretCurves(PlotStructure):
             if n_panels < 10:
                 self.set_minor_ticks(lineplt_ax)
 
-            self.set_axis_label(lineplt_ax, xaxis_label="".join(feature))
+            self.set_axis_label(lineplt_ax, xaxis_label="".join(feature), fontweight="bold")
             lineplt_ax.axhline(y=0.0, color="k", alpha=0.8, linewidth=0.8, linestyle="dashed")
 
             # nticks = 5 if n_panels < 10 else 3

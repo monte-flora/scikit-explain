@@ -169,8 +169,11 @@ class PlotInterpret2D(PlotStructure):
             n_columns = len(estimator_names)
 
         if n_panels == 1:
-            figsize = (6, 3)
+            figsize = (6, 5)
             fontsize = 8
+        elif n_panels == 2:
+            figsize = (10, 5)
+            fontsize = 9
         else:
             figsize = (10, 8)
             fontsize = 10
@@ -353,6 +356,7 @@ class PlotInterpret2D(PlotStructure):
                 xaxis_label=feature_set[0],
                 yaxis_label=feature_set[1],
                 fontsize=fontsize,
+                fontweight="bold",
             )
             # Add a colorbar
             if (
