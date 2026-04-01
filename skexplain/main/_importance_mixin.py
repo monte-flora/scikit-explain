@@ -1,8 +1,12 @@
 import itertools
+import numpy as np
 import xarray as xr
 
 from ..common.utils import is_str, to_xarray, check_all_features_for_ale
-from ..common.importance_utils import retrieve_important_vars, combine_top_features, compute_importance
+from ..common.importance_utils import (
+    retrieve_important_vars, combine_top_features, compute_importance,
+    to_skexplain_importance,
+)
 from ._validation import normalize_features, normalize_estimator_names, track_timing
 
 
@@ -547,3 +551,161 @@ class ImportanceMixin:
             return results
         else:
             return combine_top_features(results, n_vars=n_vars)
+
+    @track_timing
+    def sage(
+        self,
+        background=None,
+        groups=None,
+        n_background=50,
+        n_jobs=1,
+        random_state=42,
+        loss=None,
+        **sage_kws,
+    ):
+        """
+        Compute SAGE (Shapley Additive Global importancE) values [16]_.
+
+        SAGE measures each feature's global importance by estimating its
+        contribution to model performance using Shapley values. Unlike
+        permutation importance, SAGE properly accounts for feature interactions.
+
+        Requires the optional ``sage-importance`` package::
+
+            pip install sage-importance
+
+        Parameters
+        ----------
+        background : array-like, optional
+            Background dataset for the marginal imputer. If None, uses ``self.X``.
+
+        groups : dict, optional
+            Feature groups for grouped SAGE. Keys are group names, values are lists
+            of feature names. When provided, uses ``sage.GroupedMarginalImputer``.
+            E.g., ``{'temperature': ['temp2m', 'sfc_temp'], 'wind': ['wind10m', 'fric_vel']}``
+
+        n_background : int, default=50
+            Number of random samples from the background data to use for the imputer.
+
+        n_jobs : int, default=1
+            Number of parallel jobs for the SAGE estimator.
+
+        random_state : int, default=42
+            Random seed for reproducibility.
+
+        loss : str, optional
+            Loss function for the SAGE estimator. If None, auto-detected:
+            ``'cross entropy'`` for classifiers, ``'mse'`` for regressors.
+
+        **sage_kws
+            Additional keyword arguments passed to ``sage.PermutationEstimator.__call__``.
+            E.g., ``batch_size``, ``detect_convergence``, ``thresh``, ``n_permutations``.
+
+        Returns
+        -------
+        results : xarray.Dataset
+            Dataset with SAGE importance rankings and scores for each estimator.
+            Variables: ``sage_rankings__{est_name}``, ``sage_scores__{est_name}``,
+            ``sage_scores_std__{est_name}``.
+
+            When ``groups`` is provided, uses method name ``grouped_sage``.
+
+        References
+        ----------
+        .. [16] Covert, I., Lundberg, S., and Lee, S.-I., 2020:
+                Understanding Global Feature Contributions With Additive
+                Importance Measures. NeurIPS.
+
+        Examples
+        --------
+        >>> import skexplain
+        >>> estimators = skexplain.load_models()
+        >>> X, y = skexplain.load_data()
+        >>> explainer = skexplain.ExplainToolkit(estimators=estimators, X=X, y=y)
+        >>> sage_results = explainer.sage()
+        >>> explainer.plot_importance(
+        ...     data=sage_results,
+        ...     panels=[('sage', 'Random Forest')],
+        ... )
+        """
+        try:
+            import sage
+        except ImportError:
+            raise ImportError(
+                "The 'sage-importance' package is required for SAGE computation. "
+                "Install it with: pip install sage-importance"
+            )
+
+        if background is None:
+            background = self.X
+
+        rs = np.random.RandomState(random_state)
+        n_bg = min(n_background, len(background))
+        random_inds = rs.choice(len(background), size=n_bg, replace=False)
+        try:
+            X_bg = background.values[random_inds, :]
+        except AttributeError:
+            X_bg = background[random_inds, :]
+
+        method_name = "grouped_sage" if groups is not None else "sage"
+
+        results_list = []
+        for estimator_name, estimator in self.estimators.items():
+            # Determine model function and loss
+            if loss is not None:
+                loss_ = loss
+            elif hasattr(estimator, "predict_proba"):
+                loss_ = "cross entropy"
+            else:
+                loss_ = "mse"
+
+            model_fn = (
+                estimator.predict_proba
+                if hasattr(estimator, "predict_proba")
+                else estimator.predict
+            )
+
+            # Set up the imputer
+            if groups is not None:
+                # Convert group names → list of index lists
+                group_indices = [
+                    [self.feature_names.index(f) for f in feats]
+                    for feats in groups.values()
+                ]
+                imputer = sage.GroupedMarginalImputer(model_fn, X_bg, group_indices)
+                feature_names = list(groups.keys())
+            else:
+                imputer = sage.MarginalImputer(model_fn, X_bg)
+                feature_names = self.feature_names
+
+            # Compute SAGE
+            estimator_sage = sage.PermutationEstimator(
+                imputer, loss_, n_jobs=n_jobs, random_state=rs,
+            )
+
+            try:
+                X_vals = self.X.values
+            except AttributeError:
+                X_vals = self.X
+
+            sage_values = estimator_sage(X_vals, self.y, **sage_kws)
+
+            # Convert to skexplain format
+            result_ds = to_skexplain_importance(
+                sage_values,
+                estimator_name=estimator_name,
+                feature_names=feature_names,
+                method=method_name,
+                normalize=False,
+            )
+            results_list.append(result_ds)
+
+        # Merge results from all estimators
+        results_ds = xr.merge(results_list, combine_attrs="override")
+
+        self.attrs_dict["method"] = method_name
+        if groups is not None:
+            self.attrs_dict["feature_groups"] = {k: list(v) for k, v in groups.items()}
+        results_ds = self._append_attributes(results_ds)
+
+        return results_ds

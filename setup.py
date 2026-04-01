@@ -29,7 +29,7 @@ URL = "https://github.com/monte-flora/scikit-explain/"
 EMAIL = "monte.flora@noaa.gov"
 AUTHOR = "Montgomery Flora"
 REQUIRES_PYTHON = ">=3.8.0"
-VERSION = "0.1.7"
+VERSION = "1.0.0"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -48,6 +48,7 @@ REQUIRED = [
 # What packages are optional?
 EXTRAS = {
     "interactive": ["jupyter"],
+    "sage": ["sage-importance"],
 }
 
 if sys.platform == "darwin":

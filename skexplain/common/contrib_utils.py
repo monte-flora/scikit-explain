@@ -18,7 +18,11 @@ def group_local_values(explain_ds, groups, X, inds=None):
         inds = np.arange(len(X))
 
     estimator_name = explain_ds.attrs["estimators used"]
+    if isinstance(estimator_name, (list, np.ndarray)):
+        estimator_name = estimator_name[0]
     method = explain_ds.attrs["method"]
+    if isinstance(method, (list, np.ndarray)):
+        method = method[0]
 
     explain_df = pd.DataFrame(
         explain_ds[f"{method}_values__{estimator_name}"], columns=explain_ds.attrs["features"]
