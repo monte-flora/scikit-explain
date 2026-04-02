@@ -8,4 +8,9 @@ tqdm
 ipywidgets
 statsmodels
 seaborn>=0.11.0
+packaging
 jupyter
+# Testing
+hypothesis
+# Optional (SAGE)
+sage-importance
