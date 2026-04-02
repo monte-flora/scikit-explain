@@ -701,32 +701,36 @@ class GlobalExplainer(Attributes):
         elif self.estimator_output == "raw":
             prediction_method = estimator.predict
 
+        # P4: Pre-convert to numpy; compute feature indices once
+        X_all = self.X.values
+        feat_indices = [self.feature_names.index(f) for f in features]
+
+        # P1: Pre-compute the full Cartesian grid
+        grid_points = np.array(list(cartesian(grid)))  # shape: (n_grid, n_features_in_grid)
+        n_grid = len(grid_points)
+
         pd_values = []
 
-        # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
-            # get samples
-            X = self.X.iloc[idx, :].reset_index(drop=True)
-            feature_values = [X[f].to_numpy() for f in features]
-            averaged_predictions = []
-            # for each value, set all indices to the value,
-            # make prediction, store mean prediction
-            for value_set in cartesian(grid):
-                X_temp = X.copy()
-                for i, feature in enumerate(features):
-                    X_temp.loc[:, feature] = value_set[i]
-                    predictions = prediction_method(X_temp.values)
+            X_boot = X_all[idx]  # numpy fancy indexing (no copy needed for read)
+            n_samples = len(idx)
+            feature_values = [X_boot[:, fi] for fi in feat_indices]
 
-                # average over samples
-                averaged_predictions.append(np.mean(predictions, axis=0))
+            # P1: Batch all grid points into a single predict call.
+            # Tile X for each grid point, overwrite the target feature(s).
+            X_tiled = np.tile(X_boot, (n_grid, 1))  # shape: (n_grid * n_samples, n_features)
+            for gi, fi in enumerate(feat_indices):
+                # For each grid point i, set rows [i*n:(i+1)*n] to grid_points[i, gi]
+                for i in range(n_grid):
+                    X_tiled[i * n_samples:(i + 1) * n_samples, fi] = grid_points[i, gi]
 
-            averaged_predictions = np.array(averaged_predictions).T
+            all_preds = prediction_method(X_tiled)
 
             if self.estimator_output == "probability":
-                # Binary classification, shape is (2, n_points).
-                # we output the effect of **positive** class
-                # and convert to percentages
-                averaged_predictions = averaged_predictions[class_index]
+                all_preds = all_preds[:, class_index]
+
+            # Reshape to (n_grid, n_samples) and average over samples
+            averaged_predictions = all_preds.reshape(n_grid, n_samples).mean(axis=1)
 
             # Center the predictions
             averaged_predictions -= np.mean(averaged_predictions)
@@ -829,68 +833,64 @@ class GlobalExplainer(Attributes):
             # Initialize an empty ale array
             ale = np.zeros((n_bootstrap, len(bin_edges)))
 
+        # Pre-convert to numpy for the entire bootstrap loop (P4: avoid DataFrame overhead)
+        X_all = self.X.values
+        feat_idx = self.feature_names.index(feature)
+        is_categorical = self.X[feature].dtype.name == "category"
+        n_ale_bins = len(bin_edges) - 1 if not is_categorical else len(bin_edges)
+
+        if self.estimator_output == "probability":
+            def predict_fn(X_arr):
+                return estimator.predict_proba(X_arr)[:, class_index]
+        else:
+            predict_fn = estimator.predict
+
         # for each bootstrap set
         for k, idx in enumerate(bootstrap_indices):
-            X = self.X.iloc[idx, :].reset_index(drop=True)
+            X_boot = X_all[idx].copy()  # numpy fancy indexing (fast)
+            n_samples = len(idx)
+            feature_values = X_boot[:, feat_idx]
 
-            # Find the ranges to calculate the local effects over
-            # Using xdata ensures each bin gets the same number of X
-            feature_values = X[feature].values
-
-            # if right=True, then the smallest value in data is not included in a bin.
-            # Thus, Define the bins the feature samples fall into. Shift and clip to ensure we are
-            # getting the index of the left bin edge and the smallest sample retains its index
-            # of 0.
-            if self.X[feature].dtype.name != "category":
+            # Compute bin indices
+            if not is_categorical:
                 indices = np.clip(np.digitize(feature_values, bin_edges, right=True) - 1, 0, None)
             else:
-                # indices for discrete data
                 indices = np.digitize(feature_values, bin_edges) - 1
 
-            # Assign the feature quantile values (based on its bin index) to two copied training datasets,
-            # one for each bin edge. Then compute the difference between the corresponding predictions
-            predictions = []
-            for offset in range(2):
-                X_temp = X.copy()
-                ###print(feature, np.unique(bin_edges), np.unique(indices), offset)
-                # TODO: ran into an error when using too small of sample size
-                # There seems to be an issue with the binning.
-                X_temp[feature] = bin_edges[indices + offset]
-                if self.estimator_output == "probability":
-                    predictions.append(estimator.predict_proba(X_temp.values)[:, class_index])
-                elif self.estimator_output == "raw":
-                    predictions.append(estimator.predict(X_temp.values))
+            # P2: Batch both bin-edge predictions into a single predict call
+            X_low = X_boot.copy()
+            X_low[:, feat_idx] = bin_edges[indices]
+            X_high = X_boot.copy()
+            X_high[:, feat_idx] = bin_edges[indices + 1]
+            X_both = np.vstack([X_low, X_high])
+            all_preds = predict_fn(X_both)
+            preds_low = all_preds[:n_samples]
+            preds_high = all_preds[n_samples:]
 
             # The individual (local) effects.
-            effects = predictions[1] - predictions[0]
+            effects = preds_high - preds_low
 
-            # Group the effects by their bin index
-            index_groupby = pd.DataFrame({"index": indices, "effects": effects}).groupby("index")
-
-            # Compute the mean local effect for each bin
-            mean_effects = index_groupby.mean().to_numpy().flatten()
+            # P6: Replace pandas groupby with numpy bincount
+            bin_sums = np.bincount(indices, weights=effects, minlength=n_ale_bins)
+            bin_counts = np.bincount(indices, minlength=n_ale_bins)
+            mean_effects = np.where(bin_counts > 0, bin_sums / bin_counts, 0)
 
             # Accumulate (cumulative sum) the mean local effects.
-            # Adding a 0 at the lower boundary of the first bin
-            # for the interpolation step in the next step
-            ale_uninterpolated = np.array([0, *np.cumsum(mean_effects)])
+            ale_uninterpolated = np.concatenate([[0], np.cumsum(mean_effects)])
 
             # Interpolate the ale to the center of the bins.
             try:
                 ale[k, :] = 0.5 * (ale_uninterpolated[1:] + ale_uninterpolated[:-1])
             except Exception as e:
-                # traceback.print_exc()
                 raise ValueError(
-                    f"""
-                                 Broadcast error!
-                                 The value of n_bins ({n_bins}) is likely too 
-                                 high relative to the sample size of the data. Either increase
-                                 the data size (if using subsample) or use less bins. 
-                                 """
+                    f"Broadcast error! The value of n_bins ({n_bins}) is likely too "
+                    f"high relative to the sample size. Either increase the data size "
+                    f"(if using subsample) or use fewer bins."
                 )
 
-            # Center the ALE by substracting the bin-size weighted mean.
-            ale[k, :] -= np.sum(ale[k, :] * index_groupby.size() / X.shape[0])
+            # Center the ALE by subtracting the bin-size weighted mean.
+            bin_props = bin_counts / n_samples
+            ale[k, :] -= np.sum(ale[k, :] * bin_props[:n_ale_bins])
 
         results = self._store_results(
             method="ale",

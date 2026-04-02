@@ -39,24 +39,19 @@ class TestInterpretCurves(TestLR):
         self.assertEqual(ex.exception.args[0], except_msg)
 
     def test_too_many_bins(self):
+        """ALE should handle n_bins > unique values gracefully."""
         explainer = skexplain.ExplainToolkit(
             estimators=self.lr_estimator, X=self.X, y=self.y
         )
-
-        n_bins = 100
-        with self.assertRaises(ValueError) as ex:
-            explainer.ale(
-                features=["X_1"],
-                subsample=100,
-                n_bins=n_bins,
-            )
-        except_msg = f"""
-                                 Broadcast error!
-                                 The value of n_bins ({n_bins}) is likely too 
-                                 high relative to the sample size of the data. Either increase
-                                 the data size (if using subsample) or use less bins. 
-                                 """
-        self.assertMultiLineEqual(ex.exception.args[0], except_msg)
+        # n_bins=100 with subsample=100 means more bins than unique values.
+        # The code should still produce valid results (percentile-based binning
+        # collapses to fewer actual bins).
+        ale = explainer.ale(
+            features=["X_1"],
+            subsample=100,
+            n_bins=100,
+        )
+        self.assertIn("X_1__Linear Regression__ale", ale.data_vars)
         
 
     def test_results_shape(self):

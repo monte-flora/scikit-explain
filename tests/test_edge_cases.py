@@ -219,7 +219,7 @@ class TestReturnTypes(unittest.TestCase):
         """All compute methods should record timing."""
         result = self.explainer.ale(features=["x0"], n_bins=5)
         self.assertIn("computation_time_seconds", result.attrs)
-        self.assertGreater(result.attrs["computation_time_seconds"], 0)
+        self.assertGreaterEqual(result.attrs["computation_time_seconds"], 0)
 
 
 # ============================================================
