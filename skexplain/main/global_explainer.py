@@ -1228,6 +1228,16 @@ class GlobalExplainer(Attributes):
         xdata = np.array([np.unique(original_feature_values)])
         xdata.sort()
 
+        # Determine the full set of categories from the original data
+        # so all bootstrap iterations produce ALE values aligned to the same categories.
+        X_full = self.X.copy()
+        if (X_full[feature].dtype.name != "category") or (not X_full[feature].cat.ordered):
+            X_full[feature] = X_full[feature].astype("string")
+            full_groups_order = order_groups(X_full, feature)
+            all_categories = full_groups_order.index.values
+        else:
+            all_categories = X_full[feature].cat.categories.values
+
         # Initialize an empty ale array
         ale = []
 
@@ -1355,7 +1365,11 @@ class GlobalExplainer(Attributes):
 
             # Subtract the mean value to get the centered value.
             ale_temp = res_df["ale"] - sum(res_df["ale"] * groups_props)
-            ale.append(ale_temp)
+
+            # Reindex to the full set of categories so all bootstrap
+            # iterations have the same length. Missing categories get NaN.
+            ale_temp = ale_temp.reindex(all_categories, fill_value=np.nan)
+            ale.append(ale_temp.values)
 
         ale = np.array(ale, dtype=float)
 

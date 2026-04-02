@@ -2,9 +2,10 @@
 # Unit test for the ALE and PD 
 # code in Scikit-Explain.
 #===================================================
-import sys, os 
+import sys, os
 sys.path.insert(0, os.path.dirname(os.getcwd()))
 
+import unittest
 import shap
 import numpy as np
 import skexplain
@@ -237,6 +238,49 @@ class TestInterpretCurves(TestLR):
         mec_ds = explainer.main_effect_complexity(ale=ale_1d)
         mec = float(mec_ds[f"mec__{self.lr_estimator_name}"].values)
         self.assertAlmostEqual(mec, 1., 4)
+
+
+class TestCategoricalALEHighCardinality(unittest.TestCase):
+    """Test categorical ALE with high-cardinality features (issue #86)."""
+
+    def setUp(self):
+        import pandas as pd
+        self.y = pd.DataFrame({"target": range(0, 100)})
+        self.X = pd.DataFrame({
+            "continuous": range(0, 100),
+            "low_card": pd.Categorical([1.1]*25 + [1.2]*25 + [1.3]*25 + [1.4]*25),
+            "high_card": pd.Categorical(np.linspace(0, 10, num=100)),
+            "med_card": pd.Categorical(list(np.linspace(0, 10, num=50)) * 2),
+        })
+        self.rf = RandomForestRegressor(n_estimators=10, random_state=42)
+        self.rf.fit(self.X, self.y)
+
+    def test_high_cardinality_categorical_ale(self):
+        """High cardinality categorical feature should not crash (issue #86)."""
+        explainer = skexplain.ExplainToolkit(
+            estimators=("rf", self.rf), X=self.X, y=self.y,
+        )
+        ale = explainer.ale(features="high_card", n_bootstrap=2, n_bins=5)
+        self.assertIn("high_card__rf__ale", ale.data_vars)
+
+    def test_medium_cardinality_categorical_ale(self):
+        """Medium cardinality categorical with duplicates should work."""
+        explainer = skexplain.ExplainToolkit(
+            estimators=("rf", self.rf), X=self.X, y=self.y,
+        )
+        ale = explainer.ale(features="med_card", n_bootstrap=2, n_bins=5)
+        self.assertIn("med_card__rf__ale", ale.data_vars)
+
+    def test_low_cardinality_categorical_ale(self):
+        """Low cardinality categorical should work as before."""
+        explainer = skexplain.ExplainToolkit(
+            estimators=("rf", self.rf), X=self.X, y=self.y,
+        )
+        ale = explainer.ale(features="low_card", n_bootstrap=2, n_bins=5)
+        self.assertIn("low_card__rf__ale", ale.data_vars)
+        # Should have shape (n_bootstrap, n_categories)
+        self.assertEqual(ale["low_card__rf__ale"].shape[0], 2)
+        self.assertEqual(ale["low_card__rf__ale"].shape[1], 4)
 
 
 if __name__ == "__main__":
