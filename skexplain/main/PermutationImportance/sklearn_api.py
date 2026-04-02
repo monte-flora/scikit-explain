@@ -207,7 +207,20 @@ class model_scorer(object):
         (self.X_score, self.y_score) = scoring_data
 
         permuted_set = [self.get_permuted_data(idx, var_idx) for idx in range(self.n_permute)]
-        scores = np.array([self._scorer(*arg) for arg in permuted_set])
+
+        if self.n_permute > 1 and var_idx is not None:
+            # Batch all permutations into a single predict call for speed.
+            # Stack X arrays, predict once, then split and evaluate.
+            X_all = np.vstack([X for X, _ in permuted_set])
+            n_per = len(permuted_set[0][0])
+            all_preds = self.prediction_fn(self.model, X_all)
+            scores = []
+            for i, (_, y_i) in enumerate(permuted_set):
+                preds_i = all_preds[i * n_per:(i + 1) * n_per]
+                scores.append(self.evaluation_fn(y_i, preds_i))
+            scores = np.array(scores)
+        else:
+            scores = np.array([self._scorer(*arg) for arg in permuted_set])
 
         return np.array(scores)
 

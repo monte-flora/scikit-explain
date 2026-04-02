@@ -145,7 +145,10 @@ def run_parallel(
     total = len(args_list)
     n_jobs = _resolve_n_jobs(n_jobs)
 
-    is_parallel = n_jobs != 1
+    # Auto-select: only go parallel if there are enough tasks to justify
+    # the overhead of spawning workers. For small task counts, serial is faster.
+    MIN_TASKS_FOR_PARALLEL = 3
+    is_parallel = n_jobs != 1 and total >= MIN_TASKS_FOR_PARALLEL
 
     logger.debug(
         "run_parallel: %s (%d tasks, n_jobs=%d, parallel=%s)",
@@ -155,8 +158,11 @@ def run_parallel(
     start_time = time.perf_counter()
 
     if is_parallel:
+        # Use 'threading' backend by default — avoids pickling overhead
+        # and works well when the GIL is released (sklearn predict, numpy ops).
+        backend = "threading"
         with tqdm_joblib(tqdm(total=total, desc=description)):
-            results = Parallel(n_jobs=n_jobs, backend="loky")(
+            results = Parallel(n_jobs=n_jobs, backend=backend)(
                 delayed(_safe_call)(func, _ensure_tuple(args), kwargs)
                 for args in args_list
             )

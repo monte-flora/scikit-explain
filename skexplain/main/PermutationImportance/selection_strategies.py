@@ -169,12 +169,32 @@ class PermutationImportanceSelectionStrategy(SelectionStrategy):
             scoring_inputs.index if isinstance(scoring_inputs, pd.DataFrame) else None
         )
 
+        # Pre-convert to numpy for fast column swapping
+        self._scoring_np = (
+            scoring_inputs.values if isinstance(scoring_inputs, pd.DataFrame)
+            else np.asarray(scoring_inputs)
+        )
+        self._shuffled_np = (
+            self.shuffled_scoring_inputs.values
+            if isinstance(self.shuffled_scoring_inputs, pd.DataFrame)
+            else np.asarray(self.shuffled_scoring_inputs)
+        )
+
     def generate_datasets(self, important_variables):
         """Check each of the non-important variables. Dataset has columns which
-        are important shuffled
+        are important shuffled.
         :returns: (training_data, scoring_data)
         """
         scoring_inputs, scoring_outputs = self.scoring_data
+
+        # Fast path: numpy in-place column swap instead of pd.concat reassembly
+        if hasattr(self, '_scoring_np'):
+            complete = self._scoring_np.copy()
+            for i in important_variables:
+                complete[:, i] = self._shuffled_np[:, i]
+            return self.training_data, (complete, scoring_outputs)
+
+        # Fallback: original pandas path
         complete_scoring_inputs = make_data_from_columns(
             [
                 get_data_subset(

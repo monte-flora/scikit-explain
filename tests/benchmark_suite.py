@@ -96,13 +96,128 @@ def run_benchmarks(n_samples=2000):
     return results
 
 
+def run_stress_test():
+    """Heavy benchmark: 10000 samples, 30 features, 100 trees."""
+    N, F, T = 10000, 30, 100
+    print(f"\n{'='*60}")
+    print(f"STRESS TEST: {N} samples, {F} features, {T}-tree RF")
+    print(f"{'='*60}")
+
+    np.random.seed(42)
+    X = pd.DataFrame(
+        np.random.randn(N, F),
+        columns=[f"f{i}" for i in range(F)],
+    )
+    y = (X["f0"] * 2 + X["f1"] - X["f2"] * 0.5 > 0).astype(int).values
+    rf = RandomForestClassifier(
+        n_estimators=T, max_depth=8, random_state=42, n_jobs=1,
+    )
+    rf.fit(X, y)
+    exp = skexplain.ExplainToolkit([("RF", rf)], X=X, y=y)
+
+    results = {}
+
+    # Baseline: raw predict overhead
+    results["predict_proba_10x"] = bench(
+        f"Raw predict_proba ×10 ({N} samples)",
+        lambda: [rf.predict_proba(X.values) for _ in range(10)],
+        n_runs=3,
+    )
+
+    # Permutation importance
+    results["perm_imp_10v_10p"] = bench(
+        "Perm Imp (10 vars, 10 permutes)",
+        lambda: exp.permutation_importance(n_vars=10, evaluation_fn="auc", n_permute=10),
+        n_runs=2,
+    )
+
+    # ALE
+    results["ale_1d_all_1boot"] = bench(
+        f"ALE 1D (all {F} features, 30 bins, 1 boot)",
+        lambda: exp.ale(features="all", n_bins=30),
+        n_runs=2,
+    )
+
+    results["ale_1d_all_10boot"] = bench(
+        f"ALE 1D (all {F} features, 30 bins, 10 boot)",
+        lambda: exp.ale(features="all", n_bins=30, n_bootstrap=10),
+        n_runs=2,
+    )
+
+    results["ale_1d_10feat_20boot"] = bench(
+        "ALE 1D (10 features, 30 bins, 20 boot)",
+        lambda: exp.ale(features=[f"f{i}" for i in range(10)], n_bins=30, n_bootstrap=20),
+        n_runs=2,
+    )
+
+    # PD
+    results["pd_1d_5feat_1boot"] = bench(
+        "PD 1D (5 feat, 30 bins, 1 boot)",
+        lambda: exp.pd(features=[f"f{i}" for i in range(5)], n_bins=30),
+        n_runs=2,
+    )
+
+    results["pd_1d_5feat_10boot"] = bench(
+        "PD 1D (5 feat, 30 bins, 10 boot)",
+        lambda: exp.pd(features=[f"f{i}" for i in range(5)], n_bins=30, n_bootstrap=10),
+        n_runs=2,
+    )
+
+    results["pd_1d_5feat_20boot"] = bench(
+        "PD 1D (5 feat, 30 bins, 20 boot)",
+        lambda: exp.pd(features=[f"f{i}" for i in range(5)], n_bins=30, n_bootstrap=20),
+        n_runs=2,
+    )
+
+    # ICE
+    results["ice_3feat_30bins_200sub"] = bench(
+        "ICE (3 feat, 30 bins, 200 sub)",
+        lambda: exp.ice(features=["f0", "f1", "f2"], n_bins=30, subsample=200),
+        n_runs=2,
+    )
+
+    # 2D ALE
+    results["ale_2d_1pair_20bins"] = bench(
+        "2D ALE (1 pair, 20 bins)",
+        lambda: exp.ale(features=[("f0", "f1")], n_bins=20),
+        n_runs=2,
+    )
+
+    results["ale_2d_3pairs_15bins"] = bench(
+        "2D ALE (3 pairs, 15 bins)",
+        lambda: exp.ale(features=[("f0", "f1"), ("f0", "f2"), ("f1", "f2")], n_bins=15),
+        n_runs=2,
+    )
+
+    # Parallel comparison
+    results["ale_1d_all_1boot_2jobs"] = bench(
+        f"ALE 1D (all {F}, 30 bins, 1 boot, n_jobs=2)",
+        lambda: exp.ale(features="all", n_bins=30, n_jobs=2),
+        n_runs=2,
+    )
+
+    results["pd_1d_5feat_10boot_2jobs"] = bench(
+        "PD 1D (5 feat, 30 bins, 10 boot, n_jobs=2)",
+        lambda: exp.pd(features=[f"f{i}" for i in range(5)], n_bins=30, n_bootstrap=10, n_jobs=2),
+        n_runs=2,
+    )
+
+    return results
+
+
 if __name__ == "__main__":
-    all_results = {}
-    for n in [2000]:
-        all_results[n] = run_benchmarks(n)
+    # Standard benchmark
+    std_results = run_benchmarks(2000)
+
+    # Stress test
+    stress_results = run_stress_test()
 
     print(f"\n{'='*60}")
-    print("Summary (seconds)")
+    print("SUMMARY")
     print(f"{'='*60}")
-    for method, t in all_results[2000].items():
+    print("\nStandard (2000 samples, 10 features, 50 trees):")
+    for method, t in std_results.items():
+        print(f"  {method}: {t:.4f}s")
+    print(f"\nStress (10000 samples, 30 features, 100 trees):")
+    for method, t in stress_results.items():
         print(f"  {method}: {t:.4f}s")
