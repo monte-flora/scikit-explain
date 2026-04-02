@@ -297,7 +297,7 @@ class PlotImportance(PlotStructure):
                     zorder=2,
                 )
 
-            if plot_correlated_features:
+            if plot_correlated_features and method in self.SINGLE_VAR_METHODS:
                 self._add_correlated_brackets(
                     ax,
                     np.arange(len(scores_to_plot)),
